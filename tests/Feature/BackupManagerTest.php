@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\File;
 use Modsx\BackupManager;
 use Modsx\BackupRepository;
 use Modsx\Exceptions\ModsxException;
+use Modsx\ModsxServiceProvider;
 use Modsx\ModuleLocator;
 
 beforeEach(function () {
@@ -44,7 +45,11 @@ it('copies every directory of a module and writes a manifest', function () {
 
     expect($manifest['module'])->toBe('Blog')
         ->and($manifest['paths'])->toBe($result['paths'])
-        ->and($manifest['prefix'])->toBe('modsx');
+        ->and($manifest['prefix'])->toBe('modsx')
+        // Regression: this was a hardcoded constant that went stale at every
+        // release from v0.2.0 onward. It must come from the same place the
+        // command banner does, not be duplicated.
+        ->and($manifest['modsx_version'])->toBe(ModsxServiceProvider::version());
 });
 
 it('leaves no staging directory behind', function () {

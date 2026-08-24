@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-08-25
+
+### Fixed
+
+- The package version reported in the command banner and written to every
+  backup manifest (`modsx_version` in `modsx.json`) was a hardcoded constant
+  that had drifted out of date at every release since v0.1.0 — v0.2.0 through
+  v0.2.2 all reported `0.1.0`. It is now read from Composer's own installed-
+  package metadata (`Composer\InstalledVersions`) instead of a value that has
+  to be remembered and bumped by hand.
+
 ## [0.2.2] - 2026-08-25
 
 ### Changed

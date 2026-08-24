@@ -21,7 +21,7 @@ trait InteractsWithModules
         |  \/  |/ _ \|   \/ __|\ \/ /
         | |\/| | (_) | |) \__ \ >  <
         |_|  |_|\___/|___/|___//_/\_\  v
-        LOGO.ModsxServiceProvider::VERSION."\n";
+        LOGO.ModsxServiceProvider::version()."\n";
     }
 
     protected function banner(): void

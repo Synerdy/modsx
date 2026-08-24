@@ -73,7 +73,7 @@ class BackupManager
                 'paths' => $paths,
                 'php_version' => PHP_VERSION,
                 'laravel_version' => app()->version(),
-                'modsx_version' => ModsxServiceProvider::VERSION,
+                'modsx_version' => ModsxServiceProvider::version(),
             ]);
 
             if (! File::moveDirectory($staging, $target)) {

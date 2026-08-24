@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modsx;
 
+use Composer\InstalledVersions;
 use Illuminate\Support\ServiceProvider;
 use Modsx\Console\BackupCommand;
 use Modsx\Console\BackupListCommand;
@@ -18,7 +19,22 @@ use Modsx\Console\RestoreCommand;
 
 class ModsxServiceProvider extends ServiceProvider
 {
-    public const VERSION = '0.1.0';
+    private const PACKAGE_NAME = 'synerdy/modsx';
+
+    /**
+     * The installed package version, read from Composer's own metadata rather
+     * than a hand-maintained constant - which drifted out of date at every
+     * release before this (v0.2.0 through v0.2.2 all shipped reporting
+     * "0.1.0" in the banner and in every backup manifest).
+     */
+    public static function version(): string
+    {
+        if (! class_exists(InstalledVersions::class) || ! InstalledVersions::isInstalled(self::PACKAGE_NAME)) {
+            return 'dev';
+        }
+
+        return InstalledVersions::getPrettyVersion(self::PACKAGE_NAME) ?? 'dev';
+    }
 
     public function register(): void
     {
