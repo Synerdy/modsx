@@ -26,6 +26,11 @@ class ModsxServiceProvider extends ServiceProvider
      * than a hand-maintained constant - which drifted out of date at every
      * release before this (v0.2.0 through v0.2.2 all shipped reporting
      * "0.1.0" in the banner and in every backup manifest).
+     *
+     * Always returned without a leading "v" (Composer reports the git tag
+     * verbatim, e.g. "v0.2.3"), so this is a plain semver string wherever it
+     * is used - callers that want a "v" prefix, such as the command banner,
+     * add their own.
      */
     public static function version(): string
     {
@@ -33,7 +38,9 @@ class ModsxServiceProvider extends ServiceProvider
             return 'dev';
         }
 
-        return InstalledVersions::getPrettyVersion(self::PACKAGE_NAME) ?? 'dev';
+        $version = InstalledVersions::getPrettyVersion(self::PACKAGE_NAME) ?? 'dev';
+
+        return (string) preg_replace('/^v(?=\d)/i', '', $version);
     }
 
     public function register(): void

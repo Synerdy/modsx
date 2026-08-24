@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-08-25
+
+### Fixed
+
+- `ModsxServiceProvider::version()` (added in v0.2.3) returned Composer's
+  pretty version verbatim, which includes the leading "v" from the git tag
+  (e.g. "v0.2.3"). Combined with the literal "v" already in the command
+  banner, this printed "vv0.2.3"; in the backup manifest it wrote
+  `"modsx_version": "v0.2.3"` instead of a plain semver string. `version()`
+  now always strips a leading "v".
+
 ## [0.2.3] - 2026-08-25
 
 ### Fixed
