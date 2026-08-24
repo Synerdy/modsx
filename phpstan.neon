@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+
+    level: 6
+
+    tmpDir: .phpstan.cache
+
+    ignoreErrors:
+        -
+            # False positive: PHPStan considers "$only?->kebab ?? '*'" and
+            # "$only->kebab ?? '*'" equivalent because both type-check to the
+            # same result, but they are not - $only is genuinely nullable here
+            # (all() passes null), and dropping the nullsafe operator would add
+            # a PHP "Attempt to read property on null" warning on every call
+            # that lists every module, which is the common case.
+            identifier: nullsafe.neverNull
+            path: src/ModuleLocator.php

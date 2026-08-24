@@ -1,0 +1,420 @@
+# Modsx — convention-based modules for Laravel
+
+[![Latest Version](https://img.shields.io/packagist/v/synerdy/modsx.svg)](https://packagist.org/packages/synerdy/modsx)
+[![Tests](https://github.com/Synerdy/modsx/actions/workflows/tests.yml/badge.svg)](https://github.com/Synerdy/modsx/actions)
+[![License](https://img.shields.io/packagist/l/synerdy/modsx.svg)](LICENSE)
+
+Organise a Laravel application into modules using nothing but a directory-naming convention — then back them up, version them and restore them from the command line.
+
+**Read this in another language:** [Polski](README.pl.md)
+
+---
+
+## The idea
+
+Most Laravel module packages ask you to restructure your application: a separate source tree, a service provider per module, custom autoloading, their own routing and view namespaces. That is a lot of machinery to adopt, and a lot to unwind if you change your mind.
+
+Modsx takes the opposite approach. **A module is just a set of directories that share a name.** You create them yourself, in the places Laravel already puts things:
+
+```
+resources/views/modsx-blog/
+app/Http/Controllers/ModsxBlog/
+```
+
+That is a module. It works immediately — Laravel resolves those views and controllers exactly as it always has, because nothing about the framework has changed. No provider, no namespace registration, no autoload rules.
+
+This package doesn't create that structure and plays no part in running it. It only **finds** it and manages it: backup, versioning, restore, removal.
+
+Three things follow from this:
+
+- **You can adopt the convention without installing anything.** Start prefixing directories today; install the package the day you actually want backups.
+- **You can uninstall it and lose nothing.** Remove the package and your modules keep working — they were never anything but ordinary Laravel directories.
+- **It composes with the rest of the ecosystem.** Livewire, Filament, Inertia, Folio — anything that reads from `app/`, `resources/` or `routes/` sees ordinary directories, because that is what they are.
+
+The trade-off is honest: this is not a package manager. It does not resolve dependencies between modules, does not manage Composer requirements, and does not touch your database. See [Limitations](#limitations).
+
+---
+
+## Requirements
+
+| | |
+|---|---|
+| PHP | 8.3+ |
+| Laravel | 12.x, 13.x |
+
+---
+
+## Installation
+
+```bash
+composer require synerdy/modsx
+```
+
+The service provider is auto-discovered. To change anything, publish the config:
+
+```bash
+php artisan vendor:publish --tag=modsx-config
+```
+
+Backups are written to `ModulesX/` in your project root. You almost certainly want them out of version control:
+
+```gitignore
+# .gitignore
+/ModulesX
+```
+
+Committing them instead is a legitimate choice if you want module versions to travel with the repository — just be aware that a backup is a full directory copy, so the repo will grow with every one.
+
+---
+
+## Naming convention
+
+**This is the one section worth reading carefully.** Everything else follows from it.
+
+A module has a single canonical name in **StudlyCase**:
+
+```
+Blog        UserProfile        AdminPanel
+```
+
+Two directory forms are derived from that name, and Modsx matches **both**:
+
+| Where | Form | `Blog` | `UserProfile` |
+|---|---|---|---|
+| Directories under `resources/`, `public/`, `lang/` | `modsx-` + kebab-case | `modsx-blog` | `modsx-user-profile` |
+| PHP namespace directories under `app/`, `database/` | `Modsx` + StudlyCase | `ModsxBlog` | `ModsxUserProfile` |
+
+This is Laravel's own convention, not an invention of this package — the framework maps `App\View\Components\UserProfile` to `<x-user-profile>` using exactly the same StudlyCase ↔ kebab-case conversion. If your directories already follow Laravel's naming, they already follow this one.
+
+> **Both forms must come from the same name.**
+>
+> `modsx-userprofile` and `ModsxUserProfile` are **two different modules**: the first is `Userprofile`, the second is `UserProfile`. Back up `UserProfile` and the `modsx-userprofile` views are silently left behind.
+>
+> Write the name in StudlyCase first, then convert: `UserProfile` → `user-profile`, never `userprofile`. If you suspect you've already made this mistake somewhere, `php artisan modules:doctor` will find it.
+
+The `modsx` prefix itself is configurable, so if you prefer `mod-` or your company's initials, change it once and the same rules apply.
+
+### Example layout
+
+```
+app/
+├── Http/Controllers/ModsxBlog/
+│   ├── PostController.php
+│   └── CategoryController.php
+├── Livewire/ModsxBlog/
+│   └── PostList.php
+├── Models/ModsxBlog/
+│   └── Post.php
+└── Services/ModsxBlog/
+    └── PostPublisher.php
+
+resources/
+├── views/modsx-blog/
+│   ├── index.blade.php
+│   └── show.blade.php
+├── views/components/modsx-blog/
+│   └── post-card.blade.php
+├── css/modsx-blog/
+│   └── blog.css
+└── js/modsx-blog/
+    └── editor.js
+```
+
+None of these directories is mandatory. A module can be a single view folder.
+
+### Livewire
+
+Livewire 3 and 4 work without special handling, because Livewire discovers components by directory:
+
+```
+app/Livewire/ModsxBlog/PostList.php               → <livewire:modsx-blog.post-list />
+resources/views/livewire/modsx-blog/post-list.blade.php
+```
+
+Livewire 4 single-file components live under `resources/views/components/`, so the same prefix applies:
+
+```
+resources/views/components/modsx-blog/post-list.blade.php
+```
+
+There is nothing Livewire-specific in this package — it sees ordinary directories, which is precisely why it keeps working across Livewire versions.
+
+---
+
+## Commands
+
+Run any command without arguments and it will prompt you, with a picker for existing names rather than free-text entry.
+
+| Command | Purpose |
+|---|---|
+| `modules:list` | Modules currently present in the application |
+| `modules:path {name?}` | Directories belonging to a module |
+| `modules:backup {name?}` | Copy a module to a new numbered version |
+| `modules:backuplist {name?}` | Available backup versions |
+| `modules:delete {name?}` | Back up, then remove the module |
+| `modules:restore {name?} {version?}` | Back up the current state, then restore a version |
+| `modules:diff {name?} {version?}` | Compare current state against a backup version |
+| `modules:info {name?}` | Show size, file count, and backup history |
+| `modules:prune {name?}` | Remove old versions, keeping the newest |
+| `modules:doctor` | Check for naming problems and orphaned backups |
+
+### `modules:list`
+
+```bash
+php artisan modules:list
+php artisan modules:list --json
+```
+
+```
+ Module        Directories   Backups   Latest
+ Blog          4             3         0003
+ UserProfile   2             -         -
+```
+
+A module appears here if **any** of its directories exists.
+
+### `modules:path`
+
+Shows exactly which directories Modsx considers part of a module — that is, exactly what a backup would copy. Worth running before your first `modules:delete`.
+
+```bash
+php artisan modules:path Blog
+php artisan modules:path            # every module
+php artisan modules:path --json
+```
+
+### `modules:backup`
+
+Copies every directory belonging to the module into a new sequential version.
+
+```bash
+php artisan modules:backup Blog
+```
+
+```
+ModulesX/
+└── Blog/
+    ├── 0001/
+    │   ├── modsx.json
+    │   ├── app/Http/Controllers/ModsxBlog/
+    │   └── resources/views/modsx-blog/
+    └── 0002/
+        └── ...
+```
+
+Version numbers come from the highest existing number, never from whatever the filesystem lists last, and the command refuses to write to a path that already exists. Versions are never overwritten and never reused.
+
+Each version carries a `modsx.json` manifest recording the module name, creation time, the exact source paths, and the PHP, Laravel and package versions in use. Restore reads it, so it puts directories back where they came from rather than inferring their location.
+
+The whole copy is assembled in a staging directory and moved into place at the end, so an interrupted backup leaves no half-written version behind.
+
+### `modules:backuplist`
+
+```bash
+php artisan modules:backuplist                    # every module
+php artisan modules:backuplist Blog
+php artisan modules:backuplist Blog --limit=5     # newest 5
+php artisan modules:backuplist --json
+```
+
+```
+ Blog
+ Version   Created                     Directories
+ 0001      2026-08-20T09:14:02+02:00   2
+ 0002      2026-08-21T17:40:55+02:00   2
+```
+
+### `modules:delete`
+
+**Backs up first**, and removes nothing unless the backup succeeded.
+
+```bash
+php artisan modules:delete Blog
+php artisan modules:delete Blog --force          # skip the prompt, for CI
+php artisan modules:delete Blog --skip-backup    # if you really mean it
+```
+
+The directories that will be removed are listed before the confirmation prompt, and the version number created by the backup is printed, so you always know what to pass to `modules:restore`.
+
+### `modules:restore`
+
+```bash
+php artisan modules:restore Blog          # newest version
+php artisan modules:restore Blog 0003     # a specific version
+php artisan modules:restore               # interactive
+```
+
+The sequence is:
+
+1. Back up the module's current state, so the restore is itself reversible.
+2. Remove the current directories.
+3. Copy the chosen version back into the application.
+
+Everything is copied out of the backup **before** the application is touched, so a corrupt or incomplete backup is discovered while the current state is still intact.
+
+If the module isn't currently in the application, steps 1 and 2 are skipped and this becomes an **install from backup** — which is how you move a module between projects: copy `ModulesX/Blog/` across and restore it.
+
+### `modules:prune`
+
+```bash
+php artisan modules:prune                          # every module, config default
+php artisan modules:prune Blog --keep=5
+php artisan modules:prune --keep=3 --dry-run       # show the plan, change nothing
+php artisan modules:prune --dry-run --json         # machine-readable plan, for CI
+```
+
+Lists exactly which versions would go, then asks. The newest version is never removed, whatever `--keep` is set to.
+
+### `modules:diff`
+
+```bash
+php artisan modules:diff Blog          # against the newest version
+php artisan modules:diff Blog 0003     # against a specific version
+php artisan modules:diff               # interactive
+php artisan modules:diff Blog --json
+```
+
+Compares the module in your application against a backup version, **file by file**, using a content hash:
+
+- **Added** — in the application now, not in that version. A restore would delete these.
+- **Modified** — in both, but the contents differ. A restore would overwrite these.
+- **Removed** — in that version, gone from the application. A restore would bring these back.
+- **Unchanged** — identical on both sides.
+
+The comparison is on file contents, not directory names, so a module whose files were all rewritten in place is reported as modified rather than unchanged.
+
+```bash
+php artisan modules:diff Blog --summary   # counts only, no file list
+```
+
+Worth running before `modules:restore`: it tells you exactly what you are about to lose.
+
+### `modules:info`
+
+```bash
+php artisan modules:info Blog
+php artisan modules:info --json
+```
+
+Shows:
+
+- **Current state**: whether the module exists in the application, how many directories and files it has, and its total size on disk
+- **Backup history**: number of backed-up versions, total backup size, and a table of each version with its creation date and size
+
+Useful for understanding storage usage and deciding whether to prune old versions.
+
+### `modules:doctor`
+
+```bash
+php artisan modules:doctor
+php artisan modules:doctor --json    # exit code 1 if problems were found, for CI
+```
+
+Reports:
+
+- **Modules whose names differ only in word boundaries**, such as `Userprofile` alongside `UserProfile`. Both are valid names, so nothing else flags this — but it is almost always one module that was meant to be one module, and it will be backed up as two.
+- Modules present in only one of the two directory forms (informational).
+- Backups with no matching module in the application (informational).
+
+---
+
+## Configuration
+
+`config/modsx.php`:
+
+```php
+return [
+
+    // Directory prefix. 'modsx' matches modsx-blog and ModsxBlog.
+    'prefix' => env('MODSX_PREFIX', 'modsx'),
+
+    // Where versioned backups are written.
+    'backup_path' => env('MODSX_BACKUP_PATH', base_path('ModulesX')),
+
+    // Only these paths are scanned. Keeping the list tight is what keeps
+    // discovery fast: a full scan of the project root would walk storage/,
+    // .git/ and public/build/.
+    'scan_paths' => [
+        'app', 'config', 'database', 'lang', 'public', 'resources', 'routes', 'tests',
+    ],
+
+    // Directory names never descended into.
+    'exclude' => [
+        'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea', '.vscode',
+    ],
+
+    // 4 gives 0001, 0002, ...
+    'version_padding' => 4,
+
+    // Default for modules:prune.
+    'prune' => ['keep' => 5],
+
+];
+```
+
+Two notes:
+
+- If you change `prefix` after creating modules, rename the existing directories to match. Nothing is found under the old prefix.
+- The backup directory is never scanned for modules, wherever you point it — including inside a path that is otherwise scanned.
+
+---
+
+## Limitations
+
+Deliberate, and worth knowing before you rely on this:
+
+- **Directories only.** Single files belonging to a module — `routes/modsx-blog.php`, `config/modsx-blog.php`, migration files, `lang/en/modsx-blog.php` — are **not** backed up, deleted or restored. Keep module code in directories, or handle those files yourself.
+- **No database.** Restoring an older version does not roll back migrations or touch data. If a version change implies a schema change, that part is on you.
+- **No dependency resolution.** Modsx doesn't know that `Blog` needs `Users`. Restoring one won't restore the other.
+- **No Composer integration.** Third-party packages a module depends on remain your `composer.json`'s problem.
+- **Backups are plain directory copies.** No compression, no deduplication. A large module backed up fifty times occupies fifty copies — hence `modules:prune`.
+- **Restore is not fully atomic.** Each directory is moved into place individually. The window is small and the pre-restore backup is your recovery path, but a machine that dies mid-restore can leave some directories updated and others not.
+
+---
+
+## FAQ
+
+**Do I need this package to use the convention?**
+No. That's the point. Prefix your directories and everything works. Install the package when you want backups.
+
+**What happens to my modules if I uninstall it?**
+Nothing. They are ordinary Laravel directories and were never anything else. Only `ModulesX/` becomes unmanaged, and that is just files you can keep or delete.
+
+**Does it conflict with `nwidart/laravel-modules`?**
+The two solve the same problem in incompatible ways, so running both is a bad idea. They won't clash on disk, though: the default backup directory is `ModulesX/` precisely to stay clear of that package's `Modules/` source tree.
+
+**Can I move a module to another project?**
+Yes. Copy `ModulesX/Blog/` into the target project's backup directory and run `php artisan modules:restore Blog`. Namespaces survive because the directory layout does.
+
+**Why numbered versions instead of timestamps?**
+They're short, they sort correctly, and they're easy to pick at a prompt. The creation time is in the manifest.
+
+**Can two modules share a directory?**
+No. A directory belongs to exactly one module — the one its name encodes.
+
+**Is it safe to run in production?**
+The commands are developer tools. They confirm before destroying anything and refuse to run non-interactively without `--force`, but a deploy pipeline is not where module directories should be moving around.
+
+---
+
+## Roadmap
+
+- [ ] Optional backup of module-related single files
+- [ ] ZIP archives as an alternative to directory copies
+- [ ] `modules:export` — export a module to a standalone ZIP for distribution
+
+---
+
+## Contributing
+
+Issues and pull requests welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+```bash
+composer install
+composer test
+composer lint
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
