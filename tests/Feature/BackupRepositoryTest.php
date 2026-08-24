@@ -44,7 +44,7 @@ it('ignores directories that are not version numbers', function () {
 
 it('only lists modules that actually have versions', function () {
     $this->makeBackupVersion('Blog', '0001');
-    mkdir($this->root.'/ModulesX/Empty', 0777, true);
+    mkdir($this->root.'/modsx-backups/Empty', 0777, true);
 
     expect(app(BackupRepository::class)->modules())->toBe(['Blog']);
 });

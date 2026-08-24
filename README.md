@@ -56,11 +56,11 @@ The service provider is auto-discovered. To change anything, publish the config:
 php artisan vendor:publish --tag=modsx-config
 ```
 
-Backups are written to `ModulesX/` in your project root. You almost certainly want them out of version control:
+Backups are written to `modsx-backups/` in your project root. You almost certainly want them out of version control:
 
 ```gitignore
 # .gitignore
-/ModulesX
+/modsx-backups
 ```
 
 Committing them instead is a legitimate choice if you want module versions to travel with the repository — just be aware that a backup is a full directory copy, so the repo will grow with every one.
@@ -192,7 +192,7 @@ php artisan modsx:backup Blog
 ```
 
 ```
-ModulesX/
+modsx-backups/
 └── Blog/
     ├── 0001/
     │   ├── modsx.json
@@ -252,7 +252,7 @@ The sequence is:
 
 Everything is copied out of the backup **before** the application is touched, so a corrupt or incomplete backup is discovered while the current state is still intact.
 
-If the module isn't currently in the application, steps 1 and 2 are skipped and this becomes an **install from backup** — which is how you move a module between projects: copy `ModulesX/Blog/` across and restore it.
+If the module isn't currently in the application, steps 1 and 2 are skipped and this becomes an **install from backup** — which is how you move a module between projects: copy `modsx-backups/Blog/` across and restore it.
 
 ### `modsx:prune`
 
@@ -329,7 +329,7 @@ return [
     'prefix' => env('MODSX_PREFIX', 'modsx'),
 
     // Where versioned backups are written.
-    'backup_path' => env('MODSX_BACKUP_PATH', base_path('ModulesX')),
+    'backup_path' => env('MODSX_BACKUP_PATH', base_path('modsx-backups')),
 
     // Only these paths are scanned. Keeping the list tight is what keeps
     // discovery fast: a full scan of the project root would walk storage/,
@@ -378,13 +378,13 @@ Deliberate, and worth knowing before you rely on this:
 No. That's the point. Prefix your directories and everything works. Install the package when you want backups.
 
 **What happens to my modules if I uninstall it?**
-Nothing. They are ordinary Laravel directories and were never anything else. Only `ModulesX/` becomes unmanaged, and that is just files you can keep or delete.
+Nothing. They are ordinary Laravel directories and were never anything else. Only `modsx-backups/` becomes unmanaged, and that is just files you can keep or delete.
 
 **Does it conflict with `nwidart/laravel-modules`?**
-The two solve the same problem in incompatible ways, so running both is a bad idea. They won't clash on disk, though: the default backup directory is `ModulesX/` precisely to stay clear of that package's `Modules/` source tree.
+The two solve the same problem in incompatible ways, so running both is a bad idea. They won't clash on disk, though: the default backup directory is `modsx-backups/` precisely to stay clear of that package's `Modules/` source tree.
 
 **Can I move a module to another project?**
-Yes. Copy `ModulesX/Blog/` into the target project's backup directory and run `php artisan modsx:restore Blog`. Namespaces survive because the directory layout does.
+Yes. Copy `modsx-backups/Blog/` into the target project's backup directory and run `php artisan modsx:restore Blog`. Namespaces survive because the directory layout does.
 
 **Why numbered versions instead of timestamps?**
 They're short, they sort correctly, and they're easy to pick at a prompt. The creation time is in the manifest.

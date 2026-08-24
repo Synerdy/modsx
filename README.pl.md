@@ -56,11 +56,11 @@ Service provider jest wykrywany automatycznie. Żeby cokolwiek zmienić, opublik
 php artisan vendor:publish --tag=modsx-config
 ```
 
-Backupy trafiają do `ModulesX/` w katalogu głównym projektu. Prawie na pewno chcesz je trzymać poza kontrolą wersji:
+Backupy trafiają do `modsx-backups/` w katalogu głównym projektu. Prawie na pewno chcesz je trzymać poza kontrolą wersji:
 
 ```gitignore
 # .gitignore
-/ModulesX
+/modsx-backups
 ```
 
 Zostawienie ich w Gicie też jest sensownym wyborem, jeśli chcesz, żeby wersje modułów podróżowały razem z repozytorium — pamiętaj tylko, że backup to pełna kopia katalogów, więc repo urośnie przy każdym.
@@ -192,7 +192,7 @@ php artisan modsx:backup Blog
 ```
 
 ```
-ModulesX/
+modsx-backups/
 └── Blog/
     ├── 0001/
     │   ├── modsx.json
@@ -252,7 +252,7 @@ Kolejność działań:
 
 Wszystko jest wyciągane z backupu **zanim** cokolwiek zostanie ruszone w aplikacji, więc uszkodzony lub niekompletny backup ujawnia się, gdy bieżący stan jest jeszcze nienaruszony.
 
-Jeśli modułu nie ma aktualnie w aplikacji, kroki 1 i 2 są pomijane i staje się to **instalacją z backupu** — i tak właśnie przenosi się moduł między projektami: kopiujesz `ModulesX/Blog/` i przywracasz.
+Jeśli modułu nie ma aktualnie w aplikacji, kroki 1 i 2 są pomijane i staje się to **instalacją z backupu** — i tak właśnie przenosi się moduł między projektami: kopiujesz `modsx-backups/Blog/` i przywracasz.
 
 ### `modsx:prune`
 
@@ -329,7 +329,7 @@ return [
     'prefix' => env('MODSX_PREFIX', 'modsx'),
 
     // Gdzie zapisywane są wersjonowane backupy.
-    'backup_path' => env('MODSX_BACKUP_PATH', base_path('ModulesX')),
+    'backup_path' => env('MODSX_BACKUP_PATH', base_path('modsx-backups')),
 
     // Przeszukiwane są tylko te ścieżki. Krótka lista to właśnie to,
     // co utrzymuje szybkość wykrywania: pełny skan katalogu głównego
@@ -378,13 +378,13 @@ Dwie uwagi:
 Nie. O to właśnie chodzi. Prefiksujesz katalogi i wszystko działa. Pakiet instalujesz wtedy, gdy chcesz backupy.
 
 **Co się stanie z modułami, jeśli go odinstaluję?**
-Nic. To zwykłe katalogi Laravela i nigdy nie były niczym innym. Bez opieki zostaje tylko `ModulesX/` — a to zwykłe pliki, które możesz zachować albo usunąć.
+Nic. To zwykłe katalogi Laravela i nigdy nie były niczym innym. Bez opieki zostaje tylko `modsx-backups/` — a to zwykłe pliki, które możesz zachować albo usunąć.
 
 **Czy gryzie się z `nwidart/laravel-modules`?**
-Oba rozwiązują ten sam problem w niekompatybilny sposób, więc używanie obu naraz to zły pomysł. Na dysku się jednak nie pobiją: domyślny katalog backupu to `ModulesX/` właśnie po to, żeby ominąć drzewo źródeł `Modules/` tamtego pakietu.
+Oba rozwiązują ten sam problem w niekompatybilny sposób, więc używanie obu naraz to zły pomysł. Na dysku się jednak nie pobiją: domyślny katalog backupu to `modsx-backups/` właśnie po to, żeby ominąć drzewo źródeł `Modules/` tamtego pakietu.
 
 **Czy mogę przenieść moduł do innego projektu?**
-Tak. Skopiuj `ModulesX/Blog/` do katalogu backupów w projekcie docelowym i uruchom `php artisan modsx:restore Blog`. Przestrzenie nazw przeżywają, bo przeżywa układ katalogów.
+Tak. Skopiuj `modsx-backups/Blog/` do katalogu backupów w projekcie docelowym i uruchom `php artisan modsx:restore Blog`. Przestrzenie nazw przeżywają, bo przeżywa układ katalogów.
 
 **Dlaczego numerowane wersje, a nie znaczniki czasu?**
 Są krótkie, poprawnie się sortują i łatwo je wybrać w promptcie. Czas utworzenia jest w manifeście.

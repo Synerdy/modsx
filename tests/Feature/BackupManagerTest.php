@@ -23,9 +23,9 @@ it('finds both directory forms of a module', function () {
 it('never treats the backup tree as application code, even inside a scanned path', function () {
     // Worst case: someone points the backup directory at a directory that is
     // itself scanned. The backup must still not be discovered as a module.
-    config()->set('modsx.backup_path', $this->root.'/resources/ModulesX');
+    config()->set('modsx.backup_path', $this->root.'/resources/modsx-backups');
 
-    $this->makeModuleDirectory('resources/ModulesX/Blog/0001/resources/views/modsx-blog', 'index.blade.php', 'old');
+    $this->makeModuleDirectory('resources/modsx-backups/Blog/0001/resources/views/modsx-blog', 'index.blade.php', 'old');
 
     expect(app(ModuleLocator::class)->paths('Blog'))->toBe([
         'app/Http/Controllers/ModsxBlog',
@@ -37,8 +37,8 @@ it('copies every directory of a module and writes a manifest', function () {
     $result = app(BackupManager::class)->backup('Blog');
 
     expect($result['version'])->toBe('0001')
-        ->and(File::isDirectory($this->root.'/ModulesX/Blog/0001/app/Http/Controllers/ModsxBlog'))->toBeTrue()
-        ->and(File::isDirectory($this->root.'/ModulesX/Blog/0001/resources/views/modsx-blog'))->toBeTrue();
+        ->and(File::isDirectory($this->root.'/modsx-backups/Blog/0001/app/Http/Controllers/ModsxBlog'))->toBeTrue()
+        ->and(File::isDirectory($this->root.'/modsx-backups/Blog/0001/resources/views/modsx-blog'))->toBeTrue();
 
     $manifest = app(BackupRepository::class)->manifest('Blog', '0001');
 
@@ -51,7 +51,7 @@ it('leaves no staging directory behind', function () {
     app(BackupManager::class)->backup('Blog');
 
     $leftovers = array_filter(
-        File::directories($this->root.'/ModulesX/Blog'),
+        File::directories($this->root.'/modsx-backups/Blog'),
         static fn (string $path): bool => str_contains(basename($path), '.modsx-tmp-')
     );
 
@@ -63,7 +63,7 @@ it('refuses to write over something already occupying the target path', function
 
     // The next number is 0002; something non-numeric already sits there, so
     // versions() cannot see it. Merging into it would corrupt whatever it is.
-    File::put($this->root.'/ModulesX/Blog/0002', 'not a version directory');
+    File::put($this->root.'/modsx-backups/Blog/0002', 'not a version directory');
 
     app(BackupManager::class)->backup('Blog');
 })->throws(ModsxException::class);

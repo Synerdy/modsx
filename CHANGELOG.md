@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-25
+
+### Changed
+
+- Default backup directory renamed from `ModulesX/` to `modsx-backups/`
+  (`MODSX_BACKUP_PATH`). `ModulesX` differed from the package's own `Modsx`
+  namespace prefix by the case of a single letter, which read as confusingly
+  close to a real module directory even though the scanner never treated it as
+  one. `modsx-backups` keeps the reason `ModulesX` existed in the first place —
+  staying clear of the `Modules/` directory used by `nwidart/laravel-modules` —
+  without doubling as a near-miss of the package's own naming convention.
+
 ## [0.2.1] - 2026-08-25
 
 ### Changed

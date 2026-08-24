@@ -26,7 +26,7 @@ abstract class TestCase extends Orchestra
 
         $this->app->setBasePath($this->root);
 
-        config()->set('modsx.backup_path', $this->root.'/ModulesX');
+        config()->set('modsx.backup_path', $this->root.'/modsx-backups');
     }
 
     protected function tearDown(): void
@@ -59,7 +59,7 @@ abstract class TestCase extends Orchestra
      */
     protected function makeBackupVersion(string $module, string $version): string
     {
-        $path = $this->root.'/ModulesX/'.$module.'/'.$version;
+        $path = $this->root.'/modsx-backups/'.$module.'/'.$version;
 
         File::ensureDirectoryExists($path);
 

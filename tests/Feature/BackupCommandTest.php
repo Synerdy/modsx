@@ -12,8 +12,8 @@ beforeEach(function () {
 it('copies a module into a new backup version', function () {
     $this->artisan('modsx:backup Blog')->assertExitCode(0);
 
-    expect(File::isDirectory($this->root.'/ModulesX/Blog/0001/app/Http/Controllers/ModsxBlog'))->toBeTrue()
-        ->and(File::isDirectory($this->root.'/ModulesX/Blog/0001/resources/views/modsx-blog'))->toBeTrue();
+    expect(File::isDirectory($this->root.'/modsx-backups/Blog/0001/app/Http/Controllers/ModsxBlog'))->toBeTrue()
+        ->and(File::isDirectory($this->root.'/modsx-backups/Blog/0001/resources/views/modsx-blog'))->toBeTrue();
 });
 
 it('reports the version it created', function () {
@@ -25,7 +25,7 @@ it('reports the version it created', function () {
 it('fails when the module is not in the application', function () {
     $this->artisan('modsx:backup DoesNotExist')->assertExitCode(1);
 
-    expect(File::isDirectory($this->root.'/ModulesX/DoesNotExist'))->toBeFalse();
+    expect(File::isDirectory($this->root.'/modsx-backups/DoesNotExist'))->toBeFalse();
 });
 
 it('suppresses the banner when asked, for use from other commands', function () {

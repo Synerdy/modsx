@@ -53,7 +53,7 @@ it('has nothing to prune once every module has --keep versions or fewer', functi
 });
 
 it('reports no backups found as json', function () {
-    File::deleteDirectory($this->root.'/ModulesX');
+    File::deleteDirectory($this->root.'/modsx-backups');
 
     $output = json_decode(artisanOutput('modsx:prune --json'), true);
 

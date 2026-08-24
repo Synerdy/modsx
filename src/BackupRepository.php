@@ -23,7 +23,7 @@ class BackupRepository
 
     public function root(): string
     {
-        $path = (string) $this->config->get('modsx.backup_path', base_path('ModulesX'));
+        $path = (string) $this->config->get('modsx.backup_path', base_path('modsx-backups'));
 
         return rtrim(str_replace('\\', '/', $path), '/');
     }

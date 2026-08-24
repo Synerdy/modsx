@@ -10,7 +10,7 @@ return [
     // Where versioned backups are written. Kept outside the framework's own
     // directories so it never collides with another module package's source
     // tree (e.g. nwidart/laravel-modules uses "Modules/").
-    'backup_path' => env('MODSX_BACKUP_PATH', base_path('ModulesX')),
+    'backup_path' => env('MODSX_BACKUP_PATH', base_path('modsx-backups')),
 
     // Only these directories are scanned. Keeping this list tight keeps
     // discovery fast and prevents Modsx from ever walking into storage/framework,

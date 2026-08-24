@@ -210,7 +210,7 @@ class ModuleLocator
 
     private function backupPath(): string
     {
-        return (string) $this->config->get('modsx.backup_path', base_path('ModulesX'));
+        return (string) $this->config->get('modsx.backup_path', base_path('modsx-backups'));
     }
 
     /**
