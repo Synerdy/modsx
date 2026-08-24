@@ -11,7 +11,7 @@ beforeEach(function () {
 });
 
 it('backs up before removing the module', function () {
-    $this->artisan('modules:delete Blog --force')->assertExitCode(0);
+    $this->artisan('modsx:delete Blog --force')->assertExitCode(0);
 
     expect(File::isDirectory($this->root.'/app/Http/Controllers/ModsxBlog'))->toBeFalse()
         ->and(File::isDirectory($this->root.'/resources/views/modsx-blog'))->toBeFalse()
@@ -19,19 +19,19 @@ it('backs up before removing the module', function () {
 });
 
 it('skips the backup when told to', function () {
-    $this->artisan('modules:delete Blog --force --skip-backup')->assertExitCode(0);
+    $this->artisan('modsx:delete Blog --force --skip-backup')->assertExitCode(0);
 
     expect(File::isDirectory($this->root.'/app/Http/Controllers/ModsxBlog'))->toBeFalse()
         ->and(app(BackupRepository::class)->versions('Blog'))->toBe([]);
 });
 
 it('changes nothing without --force in non-interactive mode', function () {
-    $this->artisan('modules:delete Blog --no-interaction')->assertExitCode(0);
+    $this->artisan('modsx:delete Blog --no-interaction')->assertExitCode(0);
 
     expect(File::isDirectory($this->root.'/app/Http/Controllers/ModsxBlog'))->toBeTrue()
         ->and(app(BackupRepository::class)->versions('Blog'))->toBe([]);
 });
 
 it('fails when the module is not in the application', function () {
-    $this->artisan('modules:delete DoesNotExist --force')->assertExitCode(1);
+    $this->artisan('modsx:delete DoesNotExist --force')->assertExitCode(1);
 });

@@ -28,7 +28,7 @@ return [
     'version_padding' => 4,
 
     'prune' => [
-        // Default number of most recent versions `modules:prune` keeps
+        // Default number of most recent versions `modsx:prune` keeps
         // per module when --keep is not passed explicitly.
         'keep' => (int) env('MODSX_PRUNE_KEEP', 5),
     ],

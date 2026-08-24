@@ -17,7 +17,7 @@ it('restores the newest version by default', function () {
     File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
     app(BackupManager::class)->backup('Blog');
 
-    $this->artisan('modules:restore Blog --force --no-interaction')->assertExitCode(0);
+    $this->artisan('modsx:restore Blog --force --no-interaction')->assertExitCode(0);
 
     expect(File::get($this->root.'/resources/views/modsx-blog/index.blade.php'))->toBe('v2');
 });
@@ -27,7 +27,7 @@ it('restores a specific version', function () {
     File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
     app(BackupManager::class)->backup('Blog');
 
-    $this->artisan('modules:restore Blog 0001 --force')->assertExitCode(0);
+    $this->artisan('modsx:restore Blog 0001 --force')->assertExitCode(0);
 
     expect(File::get($this->root.'/resources/views/modsx-blog/index.blade.php'))->toBe('v1');
 });
@@ -35,7 +35,7 @@ it('restores a specific version', function () {
 it('backs up the current state before overwriting it', function () {
     app(BackupManager::class)->backup('Blog');
 
-    $this->artisan('modules:restore Blog 0001 --force')->assertExitCode(0);
+    $this->artisan('modsx:restore Blog 0001 --force')->assertExitCode(0);
 
     expect(app(BackupRepository::class)->versions('Blog'))->toBe(['0001', '0002']);
 });
@@ -44,7 +44,7 @@ it('installs a module from backup when it is absent from the application', funct
     app(BackupManager::class)->backup('Blog');
     app(BackupManager::class)->delete('Blog');
 
-    $this->artisan('modules:restore Blog --force --no-interaction')->assertExitCode(0);
+    $this->artisan('modsx:restore Blog --force --no-interaction')->assertExitCode(0);
 
     expect(app(ModuleLocator::class)->exists('Blog'))->toBeTrue();
 });
@@ -53,18 +53,18 @@ it('changes nothing without --force in non-interactive mode', function () {
     app(BackupManager::class)->backup('Blog');
     File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'scratch');
 
-    $this->artisan('modules:restore Blog 0001 --no-interaction')->assertExitCode(0);
+    $this->artisan('modsx:restore Blog 0001 --no-interaction')->assertExitCode(0);
 
     expect(File::get($this->root.'/resources/views/modsx-blog/index.blade.php'))->toBe('scratch')
         ->and(app(BackupRepository::class)->versions('Blog'))->toBe(['0001']);
 });
 
 it('fails when the module has no backups', function () {
-    $this->artisan('modules:restore Blog --force')->assertExitCode(1);
+    $this->artisan('modsx:restore Blog --force')->assertExitCode(1);
 });
 
 it('fails when the requested version does not exist', function () {
     app(BackupManager::class)->backup('Blog');
 
-    $this->artisan('modules:restore Blog 9999 --force')->assertExitCode(1);
+    $this->artisan('modsx:restore Blog 9999 --force')->assertExitCode(1);
 });

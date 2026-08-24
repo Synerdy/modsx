@@ -13,7 +13,7 @@ class DoctorCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:doctor {--json : Output machine-readable JSON}';
+    protected $signature = 'modsx:doctor {--json : Output machine-readable JSON}';
 
     protected $description = 'Check module directories and backups for problems';
 

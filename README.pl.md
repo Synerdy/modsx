@@ -90,7 +90,7 @@ To konwencja samego Laravela, a nie wymysł tego pakietu — framework mapuje `A
 >
 > `modsx-userprofile` i `ModsxUserProfile` to **dwa różne moduły**: pierwszy to `Userprofile`, drugi `UserProfile`. Zrobisz backup `UserProfile` i widoki z `modsx-userprofile` zostaną po cichu pominięte.
 >
-> Najpierw zapisz nazwę w StudlyCase, potem konwertuj: `UserProfile` → `user-profile`, nigdy `userprofile`. Jeśli podejrzewasz, że gdzieś już Ci się to przydarzyło, `php artisan modules:doctor` to znajdzie.
+> Najpierw zapisz nazwę w StudlyCase, potem konwertuj: `UserProfile` → `user-profile`, nigdy `userprofile`. Jeśli podejrzewasz, że gdzieś już Ci się to przydarzyło, `php artisan modsx:doctor` to znajdzie.
 
 Sam prefiks `modsx` jest konfigurowalny, więc jeśli wolisz `mod-` albo inicjały firmy, zmieniasz go raz i obowiązują te same reguły.
 
@@ -147,22 +147,22 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 
 | Komenda | Do czego |
 |---|---|
-| `modules:list` | Moduły obecne w aplikacji |
-| `modules:path {name?}` | Katalogi należące do modułu |
-| `modules:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
-| `modules:backuplist {name?}` | Dostępne wersje w backupie |
-| `modules:delete {name?}` | Robi backup, po czym usuwa moduł |
-| `modules:restore {name?} {version?}` | Backupuje stan bieżący, po czym przywraca wersję |
-| `modules:diff {name?} {version?}` | Porównanie stanu bieżącego z wersją w backupie |
-| `modules:info {name?}` | Rozmiar, liczba plików i historia backupów |
-| `modules:prune {name?}` | Usuwa stare wersje, zostawiając najnowsze |
-| `modules:doctor` | Szuka problemów z nazwami i osieroconych backupów |
+| `modsx:list` | Moduły obecne w aplikacji |
+| `modsx:path {name?}` | Katalogi należące do modułu |
+| `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
+| `modsx:backuplist {name?}` | Dostępne wersje w backupie |
+| `modsx:delete {name?}` | Robi backup, po czym usuwa moduł |
+| `modsx:restore {name?} {version?}` | Backupuje stan bieżący, po czym przywraca wersję |
+| `modsx:diff {name?} {version?}` | Porównanie stanu bieżącego z wersją w backupie |
+| `modsx:info {name?}` | Rozmiar, liczba plików i historia backupów |
+| `modsx:prune {name?}` | Usuwa stare wersje, zostawiając najnowsze |
+| `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
 
-### `modules:list`
+### `modsx:list`
 
 ```bash
-php artisan modules:list
-php artisan modules:list --json
+php artisan modsx:list
+php artisan modsx:list --json
 ```
 
 ```
@@ -173,22 +173,22 @@ php artisan modules:list --json
 
 Moduł pojawia się na liście, jeśli istnieje **którykolwiek** z jego katalogów.
 
-### `modules:path`
+### `modsx:path`
 
-Pokazuje, które dokładnie katalogi Modsx uznaje za część modułu — czyli dokładnie to, co skopiuje backup. Warto uruchomić przed pierwszym `modules:delete`.
+Pokazuje, które dokładnie katalogi Modsx uznaje za część modułu — czyli dokładnie to, co skopiuje backup. Warto uruchomić przed pierwszym `modsx:delete`.
 
 ```bash
-php artisan modules:path Blog
-php artisan modules:path            # wszystkie moduły
-php artisan modules:path --json
+php artisan modsx:path Blog
+php artisan modsx:path            # wszystkie moduły
+php artisan modsx:path --json
 ```
 
-### `modules:backup`
+### `modsx:backup`
 
 Kopiuje każdy katalog należący do modułu do nowej, kolejnej wersji.
 
 ```bash
-php artisan modules:backup Blog
+php artisan modsx:backup Blog
 ```
 
 ```
@@ -208,13 +208,13 @@ Każda wersja ma manifest `modsx.json` z nazwą modułu, czasem utworzenia, dok�
 
 Całość kopiowana jest najpierw do katalogu tymczasowego i dopiero na końcu przenoszona na miejsce, więc przerwany backup nie zostawia po sobie wersji zapisanej w połowie.
 
-### `modules:backuplist`
+### `modsx:backuplist`
 
 ```bash
-php artisan modules:backuplist                    # wszystkie moduły
-php artisan modules:backuplist Blog
-php artisan modules:backuplist Blog --limit=5     # 5 najnowszych
-php artisan modules:backuplist --json
+php artisan modsx:backuplist                    # wszystkie moduły
+php artisan modsx:backuplist Blog
+php artisan modsx:backuplist Blog --limit=5     # 5 najnowszych
+php artisan modsx:backuplist --json
 ```
 
 ```
@@ -224,24 +224,24 @@ php artisan modules:backuplist --json
  0002      2026-08-21T17:40:55+02:00   2
 ```
 
-### `modules:delete`
+### `modsx:delete`
 
 **Najpierw robi backup** i nie usuwa niczego, jeśli backup się nie powiódł.
 
 ```bash
-php artisan modules:delete Blog
-php artisan modules:delete Blog --force          # bez pytania, do CI
-php artisan modules:delete Blog --skip-backup    # jeśli naprawdę tego chcesz
+php artisan modsx:delete Blog
+php artisan modsx:delete Blog --force          # bez pytania, do CI
+php artisan modsx:delete Blog --skip-backup    # jeśli naprawdę tego chcesz
 ```
 
-Katalogi do usunięcia są wypisywane przed pytaniem o potwierdzenie, a numer utworzonej wersji jest drukowany — więc zawsze wiesz, co podać do `modules:restore`.
+Katalogi do usunięcia są wypisywane przed pytaniem o potwierdzenie, a numer utworzonej wersji jest drukowany — więc zawsze wiesz, co podać do `modsx:restore`.
 
-### `modules:restore`
+### `modsx:restore`
 
 ```bash
-php artisan modules:restore Blog          # najnowsza wersja
-php artisan modules:restore Blog 0003     # konkretna wersja
-php artisan modules:restore               # interaktywnie
+php artisan modsx:restore Blog          # najnowsza wersja
+php artisan modsx:restore Blog 0003     # konkretna wersja
+php artisan modsx:restore               # interaktywnie
 ```
 
 Kolejność działań:
@@ -254,24 +254,24 @@ Wszystko jest wyciągane z backupu **zanim** cokolwiek zostanie ruszone w aplika
 
 Jeśli modułu nie ma aktualnie w aplikacji, kroki 1 i 2 są pomijane i staje się to **instalacją z backupu** — i tak właśnie przenosi się moduł między projektami: kopiujesz `ModulesX/Blog/` i przywracasz.
 
-### `modules:prune`
+### `modsx:prune`
 
 ```bash
-php artisan modules:prune                          # wszystkie moduły, domyślna wartość z configu
-php artisan modules:prune Blog --keep=5
-php artisan modules:prune --keep=3 --dry-run       # pokazuje plan, nic nie zmienia
-php artisan modules:prune --dry-run --json         # plan w formacie JSON, do CI
+php artisan modsx:prune                          # wszystkie moduły, domyślna wartość z configu
+php artisan modsx:prune Blog --keep=5
+php artisan modsx:prune --keep=3 --dry-run       # pokazuje plan, nic nie zmienia
+php artisan modsx:prune --dry-run --json         # plan w formacie JSON, do CI
 ```
 
 Wypisuje dokładnie, które wersje znikną, i dopiero pyta. Najnowsza wersja nie jest usuwana nigdy, niezależnie od `--keep`.
 
-### `modules:diff`
+### `modsx:diff`
 
 ```bash
-php artisan modules:diff Blog          # względem najnowszej wersji
-php artisan modules:diff Blog 0003     # względem konkretnej wersji
-php artisan modules:diff               # interaktywnie
-php artisan modules:diff Blog --json
+php artisan modsx:diff Blog          # względem najnowszej wersji
+php artisan modsx:diff Blog 0003     # względem konkretnej wersji
+php artisan modsx:diff               # interaktywnie
+php artisan modsx:diff Blog --json
 ```
 
 Porównuje moduł w aplikacji z wersją w backupie **plik po pliku**, po skrócie zawartości:
@@ -284,16 +284,16 @@ Porównuje moduł w aplikacji z wersją w backupie **plik po pliku**, po skróci
 Porównywana jest zawartość plików, a nie nazwy katalogów, więc moduł, w którym przepisano wszystkie pliki w miejscu, zostanie pokazany jako zmieniony, a nie jako niezmieniony.
 
 ```bash
-php artisan modules:diff Blog --summary   # same liczby, bez listy plików
+php artisan modsx:diff Blog --summary   # same liczby, bez listy plików
 ```
 
-Warto uruchomić przed `modules:restore` — pokazuje dokładnie, co się za chwilę straci.
+Warto uruchomić przed `modsx:restore` — pokazuje dokładnie, co się za chwilę straci.
 
-### `modules:info`
+### `modsx:info`
 
 ```bash
-php artisan modules:info Blog
-php artisan modules:info --json
+php artisan modsx:info Blog
+php artisan modsx:info --json
 ```
 
 Pokazuje:
@@ -303,11 +303,11 @@ Pokazuje:
 
 Przydatne do zrozumienia zużycia miejsca na dysku i podjęcia decyzji, czy czyścić stare wersje.
 
-### `modules:doctor`
+### `modsx:doctor`
 
 ```bash
-php artisan modules:doctor
-php artisan modules:doctor --json    # kod wyjścia 1, gdy znaleziono problemy — do CI
+php artisan modsx:doctor
+php artisan modsx:doctor --json    # kod wyjścia 1, gdy znaleziono problemy — do CI
 ```
 
 Zgłasza:
@@ -346,7 +346,7 @@ return [
     // 4 daje 0001, 0002, ...
     'version_padding' => 4,
 
-    // Domyślna wartość dla modules:prune.
+    // Domyślna wartość dla modsx:prune.
     'prune' => ['keep' => 5],
 
 ];
@@ -367,7 +367,7 @@ Dwie uwagi:
 - **Bez bazy danych.** Przywrócenie starszej wersji nie cofa migracji ani nie rusza danych. Jeśli zmiana wersji oznacza zmianę schematu, to już Twoja część roboty.
 - **Bez rozwiązywania zależności.** Modsx nie wie, że `Blog` potrzebuje `Users`. Przywrócenie jednego nie przywróci drugiego.
 - **Bez integracji z Composerem.** Zewnętrzne pakiety, od których zależy moduł, pozostają problemem Twojego `composer.json`.
-- **Backupy to zwykłe kopie katalogów.** Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd `modules:prune`.
+- **Backupy to zwykłe kopie katalogów.** Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd `modsx:prune`.
 - **Przywracanie nie jest w pełni atomowe.** Każdy katalog przenoszony jest osobno. Okno jest małe, a backup sprzed przywracania jest drogą ratunkową, ale maszyna, która padnie w połowie, zostawi część katalogów zaktualizowanych, a część nie.
 
 ---
@@ -384,7 +384,7 @@ Nic. To zwykłe katalogi Laravela i nigdy nie były niczym innym. Bez opieki zos
 Oba rozwiązują ten sam problem w niekompatybilny sposób, więc używanie obu naraz to zły pomysł. Na dysku się jednak nie pobiją: domyślny katalog backupu to `ModulesX/` właśnie po to, żeby ominąć drzewo źródeł `Modules/` tamtego pakietu.
 
 **Czy mogę przenieść moduł do innego projektu?**
-Tak. Skopiuj `ModulesX/Blog/` do katalogu backupów w projekcie docelowym i uruchom `php artisan modules:restore Blog`. Przestrzenie nazw przeżywają, bo przeżywa układ katalogów.
+Tak. Skopiuj `ModulesX/Blog/` do katalogu backupów w projekcie docelowym i uruchom `php artisan modsx:restore Blog`. Przestrzenie nazw przeżywają, bo przeżywa układ katalogów.
 
 **Dlaczego numerowane wersje, a nie znaczniki czasu?**
 Są krótkie, poprawnie się sortują i łatwo je wybrać w promptcie. Czas utworzenia jest w manifeście.
@@ -401,7 +401,7 @@ To narzędzia deweloperskie. Pytają przed zniszczeniem czegokolwiek i odmawiaj�
 
 - [ ] Opcjonalny backup pojedynczych plików modułu
 - [ ] Archiwa ZIP jako alternatywa dla kopiowania katalogów
-- [ ] `modules:export` — eksport modułu do samodzielnego ZIP-a do dystrybucji
+- [ ] `modsx:export` — eksport modułu do samodzielnego ZIP-a do dystrybucji
 
 ---
 

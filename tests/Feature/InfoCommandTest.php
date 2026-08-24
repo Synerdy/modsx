@@ -10,7 +10,7 @@ beforeEach(function () {
 });
 
 it('reports the directories, file count and size of a module', function () {
-    $info = json_decode(artisanOutput('modules:info Blog --json'), true);
+    $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
 
     expect($info['module'])->toBe('Blog')
         ->and($info['application']['present'])->toBeTrue()
@@ -24,7 +24,7 @@ it('reports backup versions with their sizes', function () {
     app(BackupManager::class)->backup('Blog');
     app(BackupManager::class)->backup('Blog');
 
-    $info = json_decode(artisanOutput('modules:info Blog --json'), true);
+    $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
 
     expect($info['backups']['count'])->toBe(2)
         ->and($info['backups']['versions'][0]['version'])->toBe('0001')
@@ -37,7 +37,7 @@ it('works for a module that exists only in backups', function () {
     app(BackupManager::class)->backup('Blog');
     app(BackupManager::class)->delete('Blog');
 
-    $info = json_decode(artisanOutput('modules:info Blog --json'), true);
+    $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
 
     expect($info['application']['present'])->toBeFalse()
         ->and($info['application']['files'])->toBe(0)
@@ -45,17 +45,17 @@ it('works for a module that exists only in backups', function () {
 });
 
 it('emits valid json with no banner in it', function () {
-    $raw = artisanOutput('modules:info Blog --json');
+    $raw = artisanOutput('modsx:info Blog --json');
 
     expect(json_decode($raw, true))->toBeArray()
         ->and($raw)->not->toContain('__');
 });
 
 it('fails for a module that is neither installed nor backed up', function () {
-    $this->artisan('modules:info Ghost --json')->assertExitCode(1);
+    $this->artisan('modsx:info Ghost --json')->assertExitCode(1);
 });
 
 it('rejects an invalid module name', function () {
-    $this->artisan('modules:info', ['name' => '../etc', '--json' => true])
+    $this->artisan('modsx:info', ['name' => '../etc', '--json' => true])
         ->assertExitCode(1);
 });

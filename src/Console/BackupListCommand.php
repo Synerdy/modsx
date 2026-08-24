@@ -13,7 +13,7 @@ class BackupListCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:backuplist
+    protected $signature = 'modsx:backuplist
                             {name? : Module name; omit for every module}
                             {--limit=0 : Show only the newest N versions; 0 shows all}
                             {--json : Output machine-readable JSON}';

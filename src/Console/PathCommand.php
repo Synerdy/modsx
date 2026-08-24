@@ -13,7 +13,7 @@ class PathCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:path
+    protected $signature = 'modsx:path
                             {name? : Module name; omit for every module}
                             {--json : Output machine-readable JSON}';
 

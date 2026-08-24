@@ -28,7 +28,7 @@ class DiffCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:diff
+    protected $signature = 'modsx:diff
                             {name? : Module name; omit to pick from a list}
                             {version? : Version to compare against; omit for the newest}
                             {--summary : Show counts only, without listing files}

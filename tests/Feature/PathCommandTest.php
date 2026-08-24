@@ -8,7 +8,7 @@ beforeEach(function () {
 });
 
 it('shows the directories that make up a named module', function () {
-    $output = json_decode(artisanOutput('modules:path Blog --json'), true);
+    $output = json_decode(artisanOutput('modsx:path Blog --json'), true);
 
     expect($output)->toBe([
         'Blog' => [
@@ -21,15 +21,15 @@ it('shows the directories that make up a named module', function () {
 it('shows every module when no name is given', function () {
     $this->makeModuleDirectory('resources/views/modsx-shop');
 
-    $output = json_decode(artisanOutput('modules:path --json'), true);
+    $output = json_decode(artisanOutput('modsx:path --json'), true);
 
     expect(array_keys($output))->toBe(['Blog', 'Shop']);
 });
 
 it('fails when the named module is not in the application', function () {
-    $this->artisan('modules:path Ghost --json')->assertExitCode(1);
+    $this->artisan('modsx:path Ghost --json')->assertExitCode(1);
 });
 
 it('rejects an invalid module name', function () {
-    $this->artisan('modules:path', ['name' => '../etc'])->assertExitCode(1);
+    $this->artisan('modsx:path', ['name' => '../etc'])->assertExitCode(1);
 });

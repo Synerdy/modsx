@@ -13,7 +13,7 @@ class ListCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:list {--json : Output machine-readable JSON}';
+    protected $signature = 'modsx:list {--json : Output machine-readable JSON}';
 
     protected $description = 'List the modules present in the application';
 

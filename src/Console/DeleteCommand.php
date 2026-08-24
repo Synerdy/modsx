@@ -14,7 +14,7 @@ class DeleteCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:delete
+    protected $signature = 'modsx:delete
                             {name? : Module name; omit to pick from a list}
                             {--force : Skip the confirmation prompt}
                             {--skip-backup : Delete without backing up first (dangerous)}';
@@ -56,7 +56,7 @@ class DeleteCommand extends Command
         }
 
         if (! $this->option('skip-backup')) {
-            $exitCode = $this->call('modules:backup', [
+            $exitCode = $this->call('modsx:backup', [
                 'name' => (string) $name,
                 '--quiet-banner' => true,
             ]);

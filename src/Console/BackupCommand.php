@@ -14,7 +14,7 @@ class BackupCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:backup
+    protected $signature = 'modsx:backup
                             {name? : Module name; omit to pick from a list}
                             {--quiet-banner : Suppress the banner, for use from other commands}';
 

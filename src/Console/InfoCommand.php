@@ -22,7 +22,7 @@ class InfoCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:info
+    protected $signature = 'modsx:info
                             {name? : Module name; omit to pick from a list}
                             {--json : Output machine-readable JSON}';
 
@@ -215,7 +215,7 @@ class InfoCommand extends Command
             }
         } else {
             $this->components->twoColumnDetail('Status', '<fg=yellow>not in the application</>');
-            $this->components->twoColumnDetail('Restore with', 'php artisan modules:restore '.$info['module']);
+            $this->components->twoColumnDetail('Restore with', 'php artisan modsx:restore '.$info['module']);
         }
 
         $this->newLine();

@@ -18,7 +18,7 @@ class RestoreCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:restore
+    protected $signature = 'modsx:restore
                             {name? : Module name; omit to pick from a list}
                             {version? : Version to restore; omit for the newest}
                             {--force : Skip the confirmation prompt}';
@@ -89,7 +89,7 @@ class RestoreCommand extends Command
         }
 
         if ($present !== []) {
-            $exitCode = $this->call('modules:backup', [
+            $exitCode = $this->call('modsx:backup', [
                 'name' => (string) $name,
                 '--quiet-banner' => true,
             ]);

@@ -14,7 +14,7 @@ class PruneCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modules:prune
+    protected $signature = 'modsx:prune
                             {name? : Module name; omit for every module with backups}
                             {--keep= : How many of the newest versions to keep}
                             {--dry-run : Show what would be removed and stop}
