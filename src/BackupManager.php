@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Modsx\Exceptions\ModsxException;
 use Symfony\Component\Finder\Finder;
 use Throwable;
+use ZipArchive;
 
 /**
  * Everything that writes to disk.
@@ -26,11 +27,12 @@ class BackupManager
     /**
      * Copy a module into a new version.
      *
+     * @param  ?string  $comment  Optional free-text note, recorded in the manifest as-is.
      * @return array{version: string, paths: list<string>, target: string}
      *
      * @throws ModsxException
      */
-    public function backup(ModuleName|string $name): array
+    public function backup(ModuleName|string $name, ?string $comment = null): array
     {
         $name = ModuleName::make($name);
         $paths = $this->locator->paths($name);
@@ -74,6 +76,7 @@ class BackupManager
                 'php_version' => PHP_VERSION,
                 'laravel_version' => app()->version(),
                 'modsx_version' => ModsxServiceProvider::version(),
+                'comment' => $comment,
             ]);
 
             if (! File::moveDirectory($staging, $target)) {
@@ -192,6 +195,153 @@ class BackupManager
     }
 
     /**
+     * Pack a backup version into a portable .zip, next to the version
+     * directory it was built from.
+     *
+     * The zip is a derived, regenerable artifact, not a new version - unlike
+     * a version directory, re-running this always overwrites whatever zip
+     * was there before.
+     *
+     * @return array{version: string, path: string, size_bytes: int}
+     *
+     * @throws ModsxException
+     */
+    public function export(ModuleName|string $name, ?string $version = null): array
+    {
+        if (! extension_loaded('zip')) {
+            throw ModsxException::zipExtensionMissing();
+        }
+
+        $name = ModuleName::make($name);
+        $version ??= $this->backups->latest($name);
+
+        if ($version === null) {
+            throw ModsxException::noBackups($name->studly);
+        }
+
+        if (! $this->backups->has($name, $version)) {
+            throw ModsxException::versionNotFound($name->studly, $version);
+        }
+
+        $source = $this->backups->versionPath($name, $version);
+        $target = $source.'.zip';
+        $staging = $target.'.tmp-'.bin2hex(random_bytes(6));
+
+        $zip = new ZipArchive;
+
+        if ($zip->open($staging, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw ModsxException::zipWriteFailed($staging);
+        }
+
+        try {
+            try {
+                foreach (File::allFiles($source) as $file) {
+                    $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($source) + 1));
+
+                    if (! $zip->addFile($file->getPathname(), $relative)) {
+                        throw ModsxException::zipWriteFailed($staging);
+                    }
+                }
+            } finally {
+                // Closed before any cleanup below, so a failed write doesn't
+                // leave the archive handle holding the file open - relevant
+                // on Windows, where a locked file can't be deleted.
+                $zip->close();
+            }
+
+            if (! File::move($staging, $target)) {
+                throw ModsxException::copyFailed($staging, $target);
+            }
+        } catch (Throwable $exception) {
+            File::delete($staging);
+
+            throw $exception;
+        }
+
+        return [
+            'version' => $version,
+            'path' => $target,
+            'size_bytes' => (int) File::size($target),
+        ];
+    }
+
+    /**
+     * Unpack a .zip produced by export() back into the backup tree, at the
+     * module and version its own manifest names.
+     *
+     * @return array{module: string, version: string, target: string}
+     *
+     * @throws ModsxException
+     */
+    public function import(string $zipPath): array
+    {
+        if (! extension_loaded('zip')) {
+            throw ModsxException::zipExtensionMissing();
+        }
+
+        if (! File::isFile($zipPath)) {
+            throw ModsxException::invalidExportFile($zipPath);
+        }
+
+        $zip = new ZipArchive;
+
+        if ($zip->open($zipPath) !== true) {
+            throw ModsxException::invalidExportFile($zipPath);
+        }
+
+        $raw = $zip->getFromName(BackupRepository::MANIFEST);
+        $manifest = is_string($raw) ? json_decode($raw, true) : null;
+
+        if (
+            ! is_array($manifest)
+            || ! is_string($manifest['module'] ?? null)
+            || ! is_string($manifest['version'] ?? null)
+        ) {
+            $zip->close();
+
+            throw ModsxException::invalidExportFile($zipPath);
+        }
+
+        $name = ModuleName::make($manifest['module']);
+        $version = $manifest['version'];
+        $target = $this->backups->versionPath($name, $version);
+
+        if (File::exists($target)) {
+            $zip->close();
+
+            throw ModsxException::versionAlreadyExists($name->studly, $version);
+        }
+
+        $staging = $this->stagingPath($this->backups->pathFor($name));
+
+        try {
+            try {
+                File::ensureDirectoryExists($staging);
+
+                if (! $zip->extractTo($staging)) {
+                    throw ModsxException::copyFailed($zipPath, $staging);
+                }
+            } finally {
+                $zip->close();
+            }
+
+            if (! File::moveDirectory($staging, $target)) {
+                throw ModsxException::copyFailed($staging, $target);
+            }
+        } catch (Throwable $exception) {
+            File::deleteDirectory($staging);
+
+            throw $exception;
+        }
+
+        return [
+            'module' => $name->studly,
+            'version' => $version,
+            'target' => $target,
+        ];
+    }
+
+    /**
      * Remove all but the newest $keep versions of a module.
      *
      * @return list<string> versions removed, or that would be removed
@@ -214,6 +364,10 @@ class BackupManager
         if (! $dryRun) {
             foreach ($removable as $version) {
                 File::deleteDirectory($this->backups->versionPath($name, $version));
+
+                // A version's exported zip (if one was ever made) is a
+                // derived artifact of that version - it goes with it.
+                File::delete($this->backups->versionPath($name, $version).'.zip');
             }
         }
 

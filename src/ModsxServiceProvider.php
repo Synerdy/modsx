@@ -11,6 +11,8 @@ use Modsx\Console\BackupListCommand;
 use Modsx\Console\DeleteCommand;
 use Modsx\Console\DiffCommand;
 use Modsx\Console\DoctorCommand;
+use Modsx\Console\ExportCommand;
+use Modsx\Console\ImportCommand;
 use Modsx\Console\InfoCommand;
 use Modsx\Console\ListCommand;
 use Modsx\Console\PathCommand;
@@ -68,6 +70,8 @@ class ModsxServiceProvider extends ServiceProvider
             DeleteCommand::class,
             DiffCommand::class,
             DoctorCommand::class,
+            ExportCommand::class,
+            ImportCommand::class,
             InfoCommand::class,
             ListCommand::class,
             PathCommand::class,

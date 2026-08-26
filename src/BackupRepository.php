@@ -163,7 +163,7 @@ class BackupRepository
     /**
      * Human-facing description of one version, for listings.
      *
-     * @return array{version: string, created_at: ?string, paths: int}
+     * @return array{version: string, created_at: ?string, paths: int, comment: ?string}
      */
     public function describe(ModuleName|string $name, string $version): array
     {
@@ -182,6 +182,7 @@ class BackupRepository
             'version' => $version,
             'created_at' => $createdAt,
             'paths' => $paths,
+            'comment' => is_string($manifest['comment'] ?? null) ? $manifest['comment'] : null,
         ];
     }
 }

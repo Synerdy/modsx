@@ -84,4 +84,25 @@ class ModsxException extends RuntimeException
     {
         return new self(sprintf('Failed to copy [%s] to [%s].', $from, $to));
     }
+
+    public static function zipExtensionMissing(): self
+    {
+        return new self(
+            'The PHP zip extension is required for modsx:export and modsx:import '.
+            'but is not installed. Enable ext-zip and try again.'
+        );
+    }
+
+    public static function invalidExportFile(string $path): self
+    {
+        return new self(sprintf(
+            'The file [%s] is not a valid Modsx export: its modsx.json manifest is missing or unreadable.',
+            $path
+        ));
+    }
+
+    public static function zipWriteFailed(string $path): self
+    {
+        return new self(sprintf('Failed to write the zip archive [%s].', $path));
+    }
 }

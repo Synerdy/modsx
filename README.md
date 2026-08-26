@@ -151,6 +151,8 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:path {name?}` | Directories belonging to a module |
 | `modsx:backup {name?}` | Copy a module to a new numbered version |
 | `modsx:backuplist {name?}` | Available backup versions |
+| `modsx:export {name?} {version?}` | Pack a backup version into a portable .zip |
+| `modsx:import {path}` | Unpack a .zip exported by `modsx:export` |
 | `modsx:delete {name?}` | Back up, then remove the module |
 | `modsx:restore {name?} {version?}` | Back up the current state, then restore a version |
 | `modsx:diff {name?} {version?}` | Compare current state against a backup version |
@@ -189,6 +191,7 @@ Copies every directory belonging to the module into a new sequential version.
 
 ```bash
 php artisan modsx:backup Blog
+php artisan modsx:backup Blog -m "before switching to repository pattern"
 ```
 
 ```
@@ -204,7 +207,9 @@ modsx-backups/
 
 Version numbers come from the highest existing number, never from whatever the filesystem lists last, and the command refuses to write to a path that already exists. Versions are never overwritten and never reused.
 
-Each version carries a `modsx.json` manifest recording the module name, creation time, the exact source paths, and the PHP, Laravel and package versions in use. Restore reads it, so it puts directories back where they came from rather than inferring their location.
+`-m`/`--comment` attaches an optional free-text note to the version — entirely opt-in, there is no prompt for it. It shows up in `modsx:backuplist` and `modsx:info`.
+
+Each version carries a `modsx.json` manifest recording the module name, creation time, the exact source paths, the optional comment, and the PHP, Laravel and package versions in use. Restore reads it, so it puts directories back where they came from rather than inferring their location.
 
 The whole copy is assembled in a staging directory and moved into place at the end, so an interrupted backup leaves no half-written version behind.
 
@@ -219,10 +224,42 @@ php artisan modsx:backuplist --json
 
 ```
  Blog
- Version   Created                     Directories
- 0001      2026-08-20T09:14:02+02:00   2
- 0002      2026-08-21T17:40:55+02:00   2
+ Version   Created                     Directories   Comment
+ 0001      2026-08-20T09:14:02+02:00   2             -
+ 0002      2026-08-21T17:40:55+02:00   2             before switching to repository pattern
 ```
+
+### `modsx:export`
+
+Packs one backup version into a portable `.zip`, written next to the version directory it came from.
+
+```bash
+php artisan modsx:export Blog          # newest version
+php artisan modsx:export Blog 0003     # a specific version
+php artisan modsx:export               # interactive
+```
+
+```
+modsx-backups/
+└── Blog/
+    ├── 0001/
+    ├── 0002/
+    └── 0002.zip     ← created by modsx:export
+```
+
+The zip is a derived, on-demand artifact, not a new version. Versions themselves stay unpacked directories, deliberately: open one in a file explorer or `cd` into it, and you see exactly what belongs to the module, instantly — no extracting, no tooling. `modsx:export` doesn't change that default; it adds a single-file form for the one thing unpacked directories are worse at — moving a version somewhere else. Re-running `modsx:export` on the same version overwrites its zip; there is no "already exists" guard here the way there is for a version itself. Pruning a version removes its zip along with it.
+
+Where the zip ends up is not configurable — moving it anywhere else afterwards is a plain `cp`/`mv`, not something Modsx needs to know about.
+
+### `modsx:import`
+
+Unpacks a `.zip` created by `modsx:export` back into the backup tree, at the module and version its own `modsx.json` names — this is how a module travels between projects as a single file instead of a directory tree.
+
+```bash
+php artisan modsx:import path/to/Blog-0002.zip
+```
+
+Refuses to import over a version that already exists, for the same reason `modsx:backup` refuses to overwrite one: a version, once written, is never silently replaced. After importing, restore it the normal way: `php artisan modsx:restore Blog 0002`.
 
 ### `modsx:delete`
 
@@ -299,7 +336,7 @@ php artisan modsx:info --json
 Shows:
 
 - **Current state**: whether the module exists in the application, how many directories and files it has, and its total size on disk
-- **Backup history**: number of backed-up versions, total backup size, and a table of each version with its creation date and size
+- **Backup history**: number of backed-up versions, total backup size, and a table of each version with its creation date, size, and comment (if one was given at backup time)
 
 Useful for understanding storage usage and deciding whether to prune old versions.
 
@@ -384,7 +421,7 @@ Nothing. They are ordinary Laravel directories and were never anything else. Onl
 The two solve the same problem in incompatible ways, so running both is a bad idea. They won't clash on disk, though: the default backup directory is `modsx-backups/` precisely to stay clear of that package's `Modules/` source tree.
 
 **Can I move a module to another project?**
-Yes. Copy `modsx-backups/Blog/` into the target project's backup directory and run `php artisan modsx:restore Blog`. Namespaces survive because the directory layout does.
+Yes, two ways. Copy `modsx-backups/Blog/` into the target project's backup directory and run `php artisan modsx:restore Blog`. Or, for a single file instead of a directory tree: `modsx:export` it, copy the `.zip` across, `modsx:import` it there, then restore. Namespaces survive because the directory layout does.
 
 **Why numbered versions instead of timestamps?**
 They're short, they sort correctly, and they're easy to pick at a prompt. The creation time is in the manifest.
@@ -400,8 +437,6 @@ The commands are developer tools. They confirm before destroying anything and re
 ## Roadmap
 
 - [ ] Optional backup of module-related single files
-- [ ] ZIP archives as an alternative to directory copies
-- [ ] `modsx:export` — export a module to a standalone ZIP for distribution
 
 ---
 

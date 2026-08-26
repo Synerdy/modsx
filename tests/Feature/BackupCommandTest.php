@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Modsx\BackupRepository;
 
 beforeEach(function () {
     $this->makeModuleDirectory('app/Http/Controllers/ModsxBlog', 'PostController.php', 'v1');
@@ -32,4 +33,16 @@ it('suppresses the banner when asked, for use from other commands', function () 
     $output = artisanOutput('modsx:backup Blog --quiet-banner');
 
     expect($output)->not->toContain('█');
+});
+
+it('stores a comment given via -m', function () {
+    $this->artisan('modsx:backup Blog -m "before refactor"')->assertExitCode(0);
+
+    expect(app(BackupRepository::class)->manifest('Blog', '0001')['comment'])->toBe('before refactor');
+});
+
+it('leaves the comment null when none is given', function () {
+    $this->artisan('modsx:backup Blog')->assertExitCode(0);
+
+    expect(app(BackupRepository::class)->manifest('Blog', '0001')['comment'])->toBeNull();
 });

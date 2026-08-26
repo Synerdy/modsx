@@ -16,6 +16,7 @@ class BackupCommand extends Command
 
     protected $signature = 'modsx:backup
                             {name? : Module name; omit to pick from a list}
+                            {--m|comment= : Optional note describing this backup}
                             {--quiet-banner : Suppress the banner, for use from other commands}';
 
     protected $description = 'Copy a module into a new numbered backup version';
@@ -33,7 +34,7 @@ class BackupCommand extends Command
         }
 
         try {
-            $result = $manager->backup((string) $name);
+            $result = $manager->backup((string) $name, $this->option('comment'));
         } catch (ModsxException $exception) {
             $this->components->error($exception->getMessage());
 

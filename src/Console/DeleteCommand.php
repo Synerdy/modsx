@@ -16,6 +16,7 @@ class DeleteCommand extends Command
 
     protected $signature = 'modsx:delete
                             {name? : Module name; omit to pick from a list}
+                            {--comment= : Optional note for the automatic backup}
                             {--force : Skip the confirmation prompt}
                             {--skip-backup : Delete without backing up first (dangerous)}';
 
@@ -56,10 +57,13 @@ class DeleteCommand extends Command
         }
 
         if (! $this->option('skip-backup')) {
-            $exitCode = $this->call('modsx:backup', [
-                'name' => (string) $name,
-                '--quiet-banner' => true,
-            ]);
+            $options = ['name' => (string) $name, '--quiet-banner' => true];
+
+            if ($this->option('comment') !== null) {
+                $options['--comment'] = $this->option('comment');
+            }
+
+            $exitCode = $this->call('modsx:backup', $options);
 
             if ($exitCode !== self::SUCCESS) {
                 $this->components->error('Backup failed - the module was left untouched.');

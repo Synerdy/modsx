@@ -22,13 +22,15 @@ it('reports the directories, file count and size of a module', function () {
 
 it('reports backup versions with their sizes', function () {
     app(BackupManager::class)->backup('Blog');
-    app(BackupManager::class)->backup('Blog');
+    app(BackupManager::class)->backup('Blog', comment: 'before refactor');
 
     $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
 
     expect($info['backups']['count'])->toBe(2)
         ->and($info['backups']['versions'][0]['version'])->toBe('0001')
+        ->and($info['backups']['versions'][0]['comment'])->toBeNull()
         ->and($info['backups']['versions'][1]['version'])->toBe('0002')
+        ->and($info['backups']['versions'][1]['comment'])->toBe('before refactor')
         ->and($info['backups']['versions'][0]['created_at'])->not->toBeNull()
         ->and($info['backups']['total_size_bytes'])->toBeGreaterThan(0);
 });
@@ -48,7 +50,7 @@ it('emits valid json with no banner in it', function () {
     $raw = artisanOutput('modsx:info Blog --json');
 
     expect(json_decode($raw, true))->toBeArray()
-        ->and($raw)->not->toContain('__');
+        ->and($raw)->not->toContain('█');
 });
 
 it('fails for a module that is neither installed nor backed up', function () {

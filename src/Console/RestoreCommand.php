@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Modsx\Console;
 
 use Illuminate\Console\Command;
-
-use function Laravel\Prompts\select;
-
 use Modsx\BackupManager;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
@@ -21,6 +18,7 @@ class RestoreCommand extends Command
     protected $signature = 'modsx:restore
                             {name? : Module name; omit to pick from a list}
                             {version? : Version to restore; omit for the newest}
+                            {--comment= : Optional note for the automatic backup of the current state}
                             {--force : Skip the confirmation prompt}';
 
     protected $description = 'Restore a module from a backup version';
@@ -50,20 +48,9 @@ class RestoreCommand extends Command
             return self::FAILURE;
         }
 
-        $version = $this->argument('version');
+        $version = $this->pickVersion($this->argument('version'), $versions, (string) $name);
 
-        if ($version === null) {
-            $version = $this->input->isInteractive()
-                ? select(
-                    label: sprintf('Which version of [%s]?', $name),
-                    options: array_combine($versions, $versions),
-                    default: $versions[count($versions) - 1],
-                    scroll: 10,
-                )
-                : $versions[count($versions) - 1];
-        }
-
-        if (! in_array((string) $version, $versions, true)) {
+        if (! in_array($version, $versions, true)) {
             $this->components->error(sprintf('Version [%s] of module [%s] does not exist.', $version, $name));
 
             return self::FAILURE;
@@ -89,10 +76,13 @@ class RestoreCommand extends Command
         }
 
         if ($present !== []) {
-            $exitCode = $this->call('modsx:backup', [
-                'name' => (string) $name,
-                '--quiet-banner' => true,
-            ]);
+            $options = ['name' => (string) $name, '--quiet-banner' => true];
+
+            if ($this->option('comment') !== null) {
+                $options['--comment'] = $this->option('comment');
+            }
+
+            $exitCode = $this->call('modsx:backup', $options);
 
             if ($exitCode !== self::SUCCESS) {
                 $this->components->error('Backup of the current state failed - nothing was restored.');
@@ -102,7 +92,7 @@ class RestoreCommand extends Command
         }
 
         try {
-            $result = $manager->restore((string) $name, (string) $version);
+            $result = $manager->restore((string) $name, $version);
         } catch (ModsxException $exception) {
             $this->components->error($exception->getMessage());
 

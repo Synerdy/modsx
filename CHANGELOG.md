@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-08-27
+
+### Added
+
+- `-m`/`--comment` on `modsx:backup` attaches an optional free-text note to
+  a version, recorded in its `modsx.json` manifest and shown as a column in
+  `modsx:backuplist` and `modsx:info`. Purely opt-in - there is no prompt for
+  it. `modsx:delete` and `modsx:restore` forward the option to the automatic
+  backup they take before acting.
+- `modsx:export {name?} {version?}` packs a backup version into a portable
+  `.zip`, written next to the version directory it came from. The zip is a
+  derived, on-demand artifact, not a new version - versions themselves stay
+  unpacked directories, deliberately, so they can be browsed and diffed
+  without extracting anything. Pruning a version removes its zip along
+  with it.
+- `modsx:import {path}` unpacks a `.zip` created by `modsx:export` back into
+  the backup tree, at the module and version its own manifest names - this
+  is how a module travels between projects as a single file. Refuses to
+  import over a version that already exists, same as a normal backup.
+- `ext-zip` added to `require` in `composer.json`, needed by the two
+  commands above.
+
 ## [0.2.5] - 2026-08-25
 
 ### Changed

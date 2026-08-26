@@ -137,6 +137,7 @@ class InfoCommand extends Command
                 'size' => $this->formatBytes($bytes),
                 'laravel_version' => $manifest['laravel_version'] ?? null,
                 'php_version' => $manifest['php_version'] ?? null,
+                'comment' => is_string($manifest['comment'] ?? null) ? $manifest['comment'] : null,
             ];
         }
 
@@ -234,13 +235,14 @@ class InfoCommand extends Command
         ));
 
         $this->table(
-            ['Version', 'Created', 'Files', 'Size', 'Laravel'],
+            ['Version', 'Created', 'Files', 'Size', 'Laravel', 'Comment'],
             array_map(static fn (array $row): array => [
                 $row['version'],
                 $row['created_at'] ?? '-',
                 (string) $row['files'],
                 $row['size'],
                 $row['laravel_version'] ?? '-',
+                $row['comment'] ?? '-',
             ], $backups['versions']),
         );
     }

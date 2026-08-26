@@ -80,7 +80,7 @@ it('emits valid json with no banner in it', function () {
     $raw = artisanOutput('modsx:diff Blog 0001 --json');
 
     expect(json_decode($raw, true))->toBeArray()
-        ->and($raw)->not->toContain('__');
+        ->and($raw)->not->toContain('█');
 });
 
 it('fails when the module has no backups', function () {

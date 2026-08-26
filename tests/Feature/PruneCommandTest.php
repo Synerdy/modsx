@@ -65,3 +65,11 @@ it('fails as json when the named module has no backups', function () {
 
     expect($output)->toHaveKey('error');
 });
+
+it('removes a pruned version\'s exported zip along with it', function () {
+    File::put($this->root.'/modsx-backups/Blog/0001.zip', 'zip contents');
+
+    $this->artisan('modsx:prune Blog --keep=2 --force')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/modsx-backups/Blog/0001.zip'))->toBeFalse();
+});

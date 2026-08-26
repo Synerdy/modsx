@@ -92,6 +92,35 @@ trait InteractsWithModules
     }
 
     /**
+     * Resolve which backup version to act on: the given value if there is
+     * one, otherwise an interactive pick defaulting to the newest, otherwise
+     * the newest outright when running non-interactively or when $forceDefault
+     * is set (used for --json, where prompting would break scripted output
+     * even in an interactive terminal).
+     *
+     * @param  list<string>  $versions  non-empty, ordered oldest to newest
+     */
+    protected function pickVersion(?string $given, array $versions, string $name, bool $forceDefault = false): string
+    {
+        if ($given !== null) {
+            return $given;
+        }
+
+        $newest = $versions[count($versions) - 1];
+
+        if ($forceDefault || ! $this->input->isInteractive()) {
+            return $newest;
+        }
+
+        return select(
+            label: sprintf('Which version of [%s]?', $name),
+            options: array_combine($versions, $versions),
+            default: $newest,
+            scroll: 10,
+        );
+    }
+
+    /**
      * Confirm a destructive action, unless --force was passed.
      */
     protected function confirmDestructive(string $question): bool

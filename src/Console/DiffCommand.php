@@ -6,9 +6,6 @@ namespace Modsx\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-
-use function Laravel\Prompts\select;
-
 use Modsx\BackupManager;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
@@ -65,9 +62,9 @@ class DiffCommand extends Command
             return self::FAILURE;
         }
 
-        $version = $this->argument('version') ?? $this->askVersion((string) $name, $versions, $json);
+        $version = $this->pickVersion($this->argument('version'), $versions, (string) $name, forceDefault: $json);
 
-        if (! in_array((string) $version, $versions, true)) {
+        if (! in_array($version, $versions, true)) {
             $this->components->error(sprintf('Version [%s] of module [%s] does not exist.', $version, $name));
 
             return self::FAILURE;
@@ -75,7 +72,7 @@ class DiffCommand extends Command
 
         try {
             $appPaths = $locator->paths((string) $name);
-            $backupPaths = $manager->pathsInBackup((string) $name, (string) $version);
+            $backupPaths = $manager->pathsInBackup((string) $name, $version);
         } catch (ModsxException $exception) {
             $this->components->error($exception->getMessage());
 
@@ -84,11 +81,11 @@ class DiffCommand extends Command
 
         $diff = $this->compare(
             $this->fileMap(base_path(), $appPaths),
-            $this->fileMap($backups->versionPath((string) $name, (string) $version), $backupPaths),
+            $this->fileMap($backups->versionPath((string) $name, $version), $backupPaths),
         );
 
         $diff['module'] = (string) $name;
-        $diff['version'] = (string) $version;
+        $diff['version'] = $version;
         $diff['identical'] = $diff['added'] === [] && $diff['removed'] === [] && $diff['modified'] === [];
 
         if ($json) {
@@ -100,25 +97,6 @@ class DiffCommand extends Command
         $this->render($diff);
 
         return self::SUCCESS;
-    }
-
-    /**
-     * @param  list<string>  $versions
-     */
-    private function askVersion(string $name, array $versions, bool $json): string
-    {
-        $newest = $versions[count($versions) - 1];
-
-        if ($json || ! $this->input->isInteractive()) {
-            return $newest;
-        }
-
-        return (string) select(
-            label: sprintf('Compare [%s] with which version?', $name),
-            options: array_combine($versions, $versions),
-            default: $newest,
-            scroll: 10,
-        );
     }
 
     /**

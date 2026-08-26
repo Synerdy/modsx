@@ -151,6 +151,8 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:path {name?}` | Katalogi należące do modułu |
 | `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
 | `modsx:backuplist {name?}` | Dostępne wersje w backupie |
+| `modsx:export {name?} {version?}` | Pakuje wersję backupu do przenośnego .zip |
+| `modsx:import {path}` | Rozpakowuje .zip stworzony przez `modsx:export` |
 | `modsx:delete {name?}` | Robi backup, po czym usuwa moduł |
 | `modsx:restore {name?} {version?}` | Backupuje stan bieżący, po czym przywraca wersję |
 | `modsx:diff {name?} {version?}` | Porównanie stanu bieżącego z wersją w backupie |
@@ -189,6 +191,7 @@ Kopiuje każdy katalog należący do modułu do nowej, kolejnej wersji.
 
 ```bash
 php artisan modsx:backup Blog
+php artisan modsx:backup Blog -m "przed przejściem na repository pattern"
 ```
 
 ```
@@ -204,7 +207,9 @@ modsx-backups/
 
 Numer wersji bierze się z najwyższego istniejącego numeru, a nie z tego, co system plików wypisze jako ostatnie, a komenda odmawia zapisu do ścieżki, która już istnieje. Wersje nigdy nie są nadpisywane ani używane ponownie.
 
-Każda wersja ma manifest `modsx.json` z nazwą modułu, czasem utworzenia, dokładną listą ścieżek źródłowych oraz wersjami PHP, Laravela i pakietu. Przywracanie go czyta, dzięki czemu odkłada katalogi tam, skąd zostały wzięte, zamiast zgadywać ich położenie.
+`-m`/`--comment` dopina do wersji opcjonalną, dowolną notatkę tekstową — całkowicie opt-in, nie ma o to promptu. Widać ją w `modsx:backuplist` i `modsx:info`.
+
+Każda wersja ma manifest `modsx.json` z nazwą modułu, czasem utworzenia, dokładną listą ścieżek źródłowych, opcjonalnym komentarzem oraz wersjami PHP, Laravela i pakietu. Przywracanie go czyta, dzięki czemu odkłada katalogi tam, skąd zostały wzięte, zamiast zgadywać ich położenie.
 
 Całość kopiowana jest najpierw do katalogu tymczasowego i dopiero na końcu przenoszona na miejsce, więc przerwany backup nie zostawia po sobie wersji zapisanej w połowie.
 
@@ -219,10 +224,42 @@ php artisan modsx:backuplist --json
 
 ```
  Blog
- Version   Created                     Directories
- 0001      2026-08-20T09:14:02+02:00   2
- 0002      2026-08-21T17:40:55+02:00   2
+ Version   Created                     Directories   Comment
+ 0001      2026-08-20T09:14:02+02:00   2             -
+ 0002      2026-08-21T17:40:55+02:00   2             przed przejściem na repository pattern
 ```
+
+### `modsx:export`
+
+Pakuje jedną wersję backupu do przenośnego `.zip`, zapisanego obok katalogu wersji, z którego powstał.
+
+```bash
+php artisan modsx:export Blog          # najnowsza wersja
+php artisan modsx:export Blog 0003     # konkretna wersja
+php artisan modsx:export               # interaktywnie
+```
+
+```
+modsx-backups/
+└── Blog/
+    ├── 0001/
+    ├── 0002/
+    └── 0002.zip     ← utworzony przez modsx:export
+```
+
+Zip to pochodny, tworzony na żądanie artefakt, a nie nowa wersja. Same wersje pozostają rozpakowanymi katalogami, celowo: otwórz jedną w eksploratorze plików albo wejdź do niej przez `cd`, a zobaczysz dokładnie, co należy do modułu, natychmiast — bez rozpakowywania, bez narzędzi. `modsx:export` tego domyślnego zachowania nie zmienia; dokłada jednoplikową formę do tej jednej rzeczy, w której rozpakowane katalogi wypadają gorzej — przeniesienia wersji gdzie indziej. Ponowne uruchomienie `modsx:export` na tej samej wersji nadpisuje jej zip — nie ma tu zabezpieczenia "już istnieje" takiego jak przy samej wersji. Usunięcie wersji przez `modsx:prune` usuwa też jej zip.
+
+Miejsce, gdzie ląduje zip, nie jest konfigurowalne — przeniesienie go gdziekolwiek indziej to zwykłe `cp`/`mv`, nie coś, co modsx musi wiedzieć.
+
+### `modsx:import`
+
+Rozpakowuje `.zip` stworzony przez `modsx:export` z powrotem do drzewa backupów, pod moduł i wersję, które nazywa jego własny `modsx.json` — tak właśnie moduł podróżuje między projektami jako jeden plik zamiast drzewa katalogów.
+
+```bash
+php artisan modsx:import sciezka/do/Blog-0002.zip
+```
+
+Odmawia importu na wersję, która już istnieje — z tego samego powodu, dla którego `modsx:backup` odmawia nadpisania istniejącej: raz zapisana wersja nigdy nie jest po cichu zastępowana. Po imporcie przywracasz ją normalnie: `php artisan modsx:restore Blog 0002`.
 
 ### `modsx:delete`
 
@@ -299,7 +336,7 @@ php artisan modsx:info --json
 Pokazuje:
 
 - **Stan bieżący**: czy moduł istnieje w aplikacji, ile ma katalogów i plików, jaki zajmuje rozmiar na dysku
-- **Historia backupów**: liczbę wersji, łączny rozmiar backupów, tabelę każdej wersji z datą utworzenia i rozmiarem
+- **Historia backupów**: liczbę wersji, łączny rozmiar backupów, tabelę każdej wersji z datą utworzenia, rozmiarem i komentarzem (jeśli został podany przy backupie)
 
 Przydatne do zrozumienia zużycia miejsca na dysku i podjęcia decyzji, czy czyścić stare wersje.
 
@@ -384,7 +421,7 @@ Nic. To zwykłe katalogi Laravela i nigdy nie były niczym innym. Bez opieki zos
 Oba rozwiązują ten sam problem w niekompatybilny sposób, więc używanie obu naraz to zły pomysł. Na dysku się jednak nie pobiją: domyślny katalog backupu to `modsx-backups/` właśnie po to, żeby ominąć drzewo źródeł `Modules/` tamtego pakietu.
 
 **Czy mogę przenieść moduł do innego projektu?**
-Tak. Skopiuj `modsx-backups/Blog/` do katalogu backupów w projekcie docelowym i uruchom `php artisan modsx:restore Blog`. Przestrzenie nazw przeżywają, bo przeżywa układ katalogów.
+Tak, na dwa sposoby. Skopiuj `modsx-backups/Blog/` do katalogu backupów w projekcie docelowym i uruchom `php artisan modsx:restore Blog`. Albo, żeby przenieść jeden plik zamiast drzewa katalogów: zrób `modsx:export`, skopiuj `.zip`, zrób tam `modsx:import`, potem przywróć. Przestrzenie nazw przeżywają, bo przeżywa układ katalogów.
 
 **Dlaczego numerowane wersje, a nie znaczniki czasu?**
 Są krótkie, poprawnie się sortują i łatwo je wybrać w promptcie. Czas utworzenia jest w manifeście.
@@ -400,8 +437,6 @@ To narzędzia deweloperskie. Pytają przed zniszczeniem czegokolwiek i odmawiaj�
 ## Plany
 
 - [ ] Opcjonalny backup pojedynczych plików modułu
-- [ ] Archiwa ZIP jako alternatywa dla kopiowania katalogów
-- [ ] `modsx:export` — eksport modułu do samodzielnego ZIP-a do dystrybucji
 
 ---
 

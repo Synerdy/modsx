@@ -49,7 +49,16 @@ it('copies every directory of a module and writes a manifest', function () {
         // Regression: this was a hardcoded constant that went stale at every
         // release from v0.2.0 onward. It must come from the same place the
         // command banner does, not be duplicated.
-        ->and($manifest['modsx_version'])->toBe(ModsxServiceProvider::version());
+        ->and($manifest['modsx_version'])->toBe(ModsxServiceProvider::version())
+        ->and($manifest['comment'])->toBeNull();
+});
+
+it('records an optional comment in the manifest', function () {
+    app(BackupManager::class)->backup('Blog', comment: 'before refactor');
+
+    $manifest = app(BackupRepository::class)->manifest('Blog', '0001');
+
+    expect($manifest['comment'])->toBe('before refactor');
 });
 
 it('leaves no staging directory behind', function () {
@@ -149,6 +158,20 @@ it('keeps the newest versions when pruning and never the oldest', function () {
         ->and(app(BackupRepository::class)->versions('Blog'))->toBe(['0004', '0005']);
 });
 
+it('removes a pruned version\'s exported zip along with it', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $manager->export('Blog', '0001');
+
+    $this->makeBackupVersion('Blog', '0002');
+
+    expect(File::exists($this->root.'/modsx-backups/Blog/0001.zip'))->toBeTrue();
+
+    $manager->prune('Blog', keep: 1);
+
+    expect(File::exists($this->root.'/modsx-backups/Blog/0001.zip'))->toBeFalse();
+});
+
 it('changes nothing on a dry run', function () {
     foreach (['0001', '0002', '0003'] as $version) {
         $this->makeBackupVersion('Blog', $version);
@@ -165,4 +188,118 @@ it('always keeps at least one version', function () {
 
     expect(app(BackupManager::class)->prune('Blog', keep: 0))->toBe([])
         ->and(app(BackupRepository::class)->versions('Blog'))->toBe(['0001']);
+});
+
+it('exports a version to a zip next to it, containing the manifest and every backed-up path', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog', comment: 'before refactor');
+
+    $result = $manager->export('Blog');
+    $root = str_replace('\\', '/', $this->root);
+
+    expect($result['version'])->toBe('0001')
+        ->and($result['path'])->toBe($root.'/modsx-backups/Blog/0001.zip')
+        ->and(File::exists($result['path']))->toBeTrue()
+        ->and($result['size_bytes'])->toBeGreaterThan(0);
+
+    $zip = new ZipArchive;
+    $zip->open($result['path']);
+
+    expect($zip->getFromName('modsx.json'))->not->toBeFalse()
+        ->and($zip->locateName('app/Http/Controllers/ModsxBlog/PostController.php'))->not->toBeFalse()
+        ->and($zip->locateName('resources/views/modsx-blog/index.blade.php'))->not->toBeFalse();
+
+    $zip->close();
+});
+
+it('exports the newest version by default', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $manager->backup('Blog');
+
+    expect($manager->export('Blog')['version'])->toBe('0002');
+});
+
+it('fails to export a module with no backups', function () {
+    app(BackupManager::class)->export('DoesNotExist');
+})->throws(ModsxException::class);
+
+it('fails to export a version that does not exist', function () {
+    app(BackupManager::class)->backup('Blog');
+
+    app(BackupManager::class)->export('Blog', '9999');
+})->throws(ModsxException::class);
+
+it('leaves no staging file behind after export', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $manager->export('Blog');
+
+    $leftovers = array_filter(
+        File::files($this->root.'/modsx-backups/Blog'),
+        static fn ($path): bool => str_contains((string) $path, '.tmp-')
+    );
+
+    expect($leftovers)->toBeEmpty();
+});
+
+it('imports an exported zip back into the backup tree', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog', comment: 'before refactor');
+    $export = $manager->export('Blog');
+
+    File::deleteDirectory($this->root.'/modsx-backups/Blog/0001');
+
+    $result = $manager->import($export['path']);
+
+    expect($result)->toBe([
+        'module' => 'Blog',
+        'version' => '0001',
+        'target' => str_replace('\\', '/', $this->root).'/modsx-backups/Blog/0001',
+    ]);
+
+    $manifest = app(BackupRepository::class)->manifest('Blog', '0001');
+
+    expect($manifest['comment'])->toBe('before refactor')
+        ->and(File::isFile($this->root.'/modsx-backups/Blog/0001/app/Http/Controllers/ModsxBlog/PostController.php'))->toBeTrue()
+        ->and(File::isFile($this->root.'/modsx-backups/Blog/0001/resources/views/modsx-blog/index.blade.php'))->toBeTrue();
+});
+
+it('refuses to import over an existing version', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $export = $manager->export('Blog');
+
+    $manager->import($export['path']);
+})->throws(ModsxException::class);
+
+it('fails to import a file that is not a valid export', function () {
+    File::put($this->root.'/not-a-zip.txt', 'nope');
+
+    app(BackupManager::class)->import($this->root.'/not-a-zip.txt');
+})->throws(ModsxException::class);
+
+it('fails to import a zip missing modsx.json', function () {
+    $zip = new ZipArchive;
+    $zip->open($this->root.'/empty.zip', ZipArchive::CREATE);
+    $zip->addFromString('placeholder.txt', 'x');
+    $zip->close();
+
+    app(BackupManager::class)->import($this->root.'/empty.zip');
+})->throws(ModsxException::class);
+
+it('leaves no staging directory behind after import', function () {
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $export = $manager->export('Blog');
+    File::deleteDirectory($this->root.'/modsx-backups/Blog/0001');
+
+    $manager->import($export['path']);
+
+    $leftovers = array_filter(
+        File::directories($this->root.'/modsx-backups/Blog'),
+        static fn (string $path): bool => str_contains(basename($path), '.modsx-tmp-')
+    );
+
+    expect($leftovers)->toBeEmpty();
 });
