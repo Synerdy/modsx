@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-08-25
+
+### Changed
+
+- Command banner logo switched from the typewriter-style figlet rendering to
+  a block-character (`█▄▀`) wordmark.
+
 ## [0.2.4] - 2026-08-25
 
 ### Fixed

@@ -31,5 +31,5 @@ it('fails when the module is not in the application', function () {
 it('suppresses the banner when asked, for use from other commands', function () {
     $output = artisanOutput('modsx:backup Blog --quiet-banner');
 
-    expect($output)->not->toContain('__');
+    expect($output)->not->toContain('█');
 });
