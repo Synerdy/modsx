@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-08-27
+
+### Added
+
+- Documentation site on GitHub Pages, generated from `README.md`/`README.pl.md`
+  with a sidebar table of contents for jumping between sections: English at
+  the site root, Polish under `/pl/`. Built by `composer docs`
+  (`docs/build.php`, using `league/commonmark` as a `require-dev`-only
+  dependency) and committed as static HTML - GitHub Pages serves the files
+  as-is, with no build step of its own.
+
 ## [0.2.6] - 2026-08-27
 
 ### Added

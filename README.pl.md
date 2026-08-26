@@ -6,6 +6,8 @@
 
 Podziel aplikację Laravela na moduły przy pomocy samej konwencji nazewnictwa katalogów — a potem rób ich backupy, wersjonuj je i przywracaj z linii poleceń.
 
+📖 **[Pełna dokumentacja](https://synerdy.github.io/modsx/pl/)** — ten sam README z bocznym menu nawigacyjnym.
+
 **Ten dokument w innym języku:** [English](README.md)
 
 ---

@@ -23,6 +23,7 @@
     "require-dev": {
         "larastan/larastan": "^3.10",
         "laravel/pint": "^1.18",
+        "league/commonmark": "^2.8",
         "orchestra/testbench": "^10.0 || ^11.0",
         "pestphp/pest": "^3.7"
     },
@@ -53,7 +54,8 @@
         "test": "pest",
         "lint": "pint",
         "lint:test": "pint --test",
-        "analyse": "phpstan analyse"
+        "analyse": "phpstan analyse",
+        "docs": "php docs/build.php"
     },
     "minimum-stability": "stable",
     "prefer-stable": true

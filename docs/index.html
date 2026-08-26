@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modsx — convention-based modules for Laravel</title>
+<meta name="description" content="Organise a Laravel application into modules using nothing but a directory-naming convention.">
+<style>:root {
+    --bg: #ffffff;
+    --bg-alt: #f6f8fa;
+    --text: #1b1f24;
+    --text-muted: #57606a;
+    --border: #d0d7de;
+    --link: #0969da;
+    --code-bg: #f6f8fa;
+    --sidebar-width: 280px;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0d1117;
+        --bg-alt: #161b22;
+        --text: #e6edf3;
+        --text-muted: #8d96a0;
+        --border: #30363d;
+        --link: #4493f8;
+        --code-bg: #161b22;
+    }
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+a { color: var(--link); }
+.layout {
+    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.sidebar {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+}
+.sidebar-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+.brand { font-weight: 700; font-size: 1.1rem; }
+.lang-switch { font-size: 0.85rem; text-decoration: none; }
+.toc, .toc ul { list-style: none; margin: 0; padding: 0; }
+.toc > ul { padding: 0; }
+.toc a {
+    display: block;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 0.92rem;
+}
+.toc > li > a { font-weight: 600; }
+.toc-sub a { padding-left: 1.25rem; font-weight: 400; color: var(--text-muted); }
+.toc a:hover, .toc a.active { background: var(--bg-alt); color: var(--link); }
+.github-link {
+    display: block;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.content {
+    flex: 1;
+    min-width: 0;
+    padding: 2rem 3rem 6rem;
+}
+.content h1 { font-size: 2rem; }
+.content h2 { margin-top: 2.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+.content h3 { margin-top: 1.75rem; }
+.content pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+.content code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.15em 0.4em;
+    font-size: 0.9em;
+}
+.content pre code { background: none; padding: 0; }
+.content table {
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+}
+.content th, .content td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+.content blockquote {
+    margin: 1rem 0;
+    padding: 0.25rem 1rem;
+    border-left: 4px solid var(--border);
+    color: var(--text-muted);
+}
+.content img { max-width: 100%; }
+.menu-toggle { display: none; }
+@media (max-width: 900px) {
+    .menu-toggle {
+        display: block;
+        position: fixed;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 20;
+        background: var(--bg-alt);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 1.1rem;
+        padding: 0.25rem 0.6rem;
+    }
+    .sidebar {
+        position: fixed;
+        inset: 0 25% 0 0;
+        z-index: 10;
+        background: var(--bg);
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .content { padding: 4rem 1.25rem 4rem; }
+}</style>
+</head>
+<body>
+<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Toggle navigation">☰</button>
+<div class="layout">
+<aside id="sidebar" class="sidebar">
+<div class="sidebar-head">
+<span class="brand">Modsx</span>
+<a class="lang-switch" href="pl/">Polski</a>
+</div>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
+<a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
+</aside>
+<main class="content">
+<h1>Modsx — convention-based modules for Laravel</h1>
+<p><a href="https://packagist.org/packages/synerdy/modsx"><img src="https://img.shields.io/packagist/v/synerdy/modsx.svg" alt="Latest Version" /></a>
+<a href="https://github.com/Synerdy/modsx/actions"><img src="https://github.com/Synerdy/modsx/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
+<a href="https://github.com/Synerdy/modsx/blob/master/LICENSE"><img src="https://img.shields.io/packagist/l/synerdy/modsx.svg" alt="License" /></a></p>
+<p>Organise a Laravel application into modules using nothing but a directory-naming convention — then back them up, version them and restore them from the command line.</p>
+<p>📖 <strong><a href="https://synerdy.github.io/modsx/">Full documentation</a></strong> — this README with sidebar navigation.</p>
+<p><strong>Read this in another language:</strong> <a href="pl/">Polski</a></p>
+<hr />
+<h2 id="the-idea">The idea</h2>
+<p>Most Laravel module packages ask you to restructure your application: a separate source tree, a service provider per module, custom autoloading, their own routing and view namespaces. That is a lot of machinery to adopt, and a lot to unwind if you change your mind.</p>
+<p>Modsx takes the opposite approach. <strong>A module is just a set of directories that share a name.</strong> You create them yourself, in the places Laravel already puts things:</p>
+<pre><code>resources/views/modsx-blog/
+app/Http/Controllers/ModsxBlog/
+</code></pre>
+<p>That is a module. It works immediately — Laravel resolves those views and controllers exactly as it always has, because nothing about the framework has changed. No provider, no namespace registration, no autoload rules.</p>
+<p>This package doesn't create that structure and plays no part in running it. It only <strong>finds</strong> it and manages it: backup, versioning, restore, removal.</p>
+<p>Three things follow from this:</p>
+<ul>
+<li><strong>You can adopt the convention without installing anything.</strong> Start prefixing directories today; install the package the day you actually want backups.</li>
+<li><strong>You can uninstall it and lose nothing.</strong> Remove the package and your modules keep working — they were never anything but ordinary Laravel directories.</li>
+<li><strong>It composes with the rest of the ecosystem.</strong> Livewire, Filament, Inertia, Folio — anything that reads from <code>app/</code>, <code>resources/</code> or <code>routes/</code> sees ordinary directories, because that is what they are.</li>
+</ul>
+<p>The trade-off is honest: this is not a package manager. It does not resolve dependencies between modules, does not manage Composer requirements, and does not touch your database. See <a href="#limitations">Limitations</a>.</p>
+<hr />
+<h2 id="requirements">Requirements</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PHP</td>
+<td>8.3+</td>
+</tr>
+<tr>
+<td>Laravel</td>
+<td>12.x, 13.x</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="installation">Installation</h2>
+<pre><code class="language-bash">composer require synerdy/modsx
+</code></pre>
+<p>The service provider is auto-discovered. To change anything, publish the config:</p>
+<pre><code class="language-bash">php artisan vendor:publish --tag=modsx-config
+</code></pre>
+<p>Backups are written to <code>modsx-backups/</code> in your project root. You almost certainly want them out of version control:</p>
+<pre><code class="language-gitignore"># .gitignore
+/modsx-backups
+</code></pre>
+<p>Committing them instead is a legitimate choice if you want module versions to travel with the repository — just be aware that a backup is a full directory copy, so the repo will grow with every one.</p>
+<hr />
+<h2 id="naming-convention">Naming convention</h2>
+<p><strong>This is the one section worth reading carefully.</strong> Everything else follows from it.</p>
+<p>A module has a single canonical name in <strong>StudlyCase</strong>:</p>
+<pre><code>Blog        UserProfile        AdminPanel
+</code></pre>
+<p>Two directory forms are derived from that name, and Modsx matches <strong>both</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Form</th>
+<th><code>Blog</code></th>
+<th><code>UserProfile</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Directories under <code>resources/</code>, <code>public/</code>, <code>lang/</code></td>
+<td><code>modsx-</code> + kebab-case</td>
+<td><code>modsx-blog</code></td>
+<td><code>modsx-user-profile</code></td>
+</tr>
+<tr>
+<td>PHP namespace directories under <code>app/</code>, <code>database/</code></td>
+<td><code>Modsx</code> + StudlyCase</td>
+<td><code>ModsxBlog</code></td>
+<td><code>ModsxUserProfile</code></td>
+</tr>
+</tbody>
+</table>
+<p>This is Laravel's own convention, not an invention of this package — the framework maps <code>App\View\Components\UserProfile</code> to <code>&lt;x-user-profile&gt;</code> using exactly the same StudlyCase ↔ kebab-case conversion. If your directories already follow Laravel's naming, they already follow this one.</p>
+<blockquote>
+<p><strong>Both forms must come from the same name.</strong></p>
+<p><code>modsx-userprofile</code> and <code>ModsxUserProfile</code> are <strong>two different modules</strong>: the first is <code>Userprofile</code>, the second is <code>UserProfile</code>. Back up <code>UserProfile</code> and the <code>modsx-userprofile</code> views are silently left behind.</p>
+<p>Write the name in StudlyCase first, then convert: <code>UserProfile</code> → <code>user-profile</code>, never <code>userprofile</code>. If you suspect you've already made this mistake somewhere, <code>php artisan modsx:doctor</code> will find it.</p>
+</blockquote>
+<p>The <code>modsx</code> prefix itself is configurable, so if you prefer <code>mod-</code> or your company's initials, change it once and the same rules apply.</p>
+<h3 id="example-layout">Example layout</h3>
+<pre><code>app/
+├── Http/Controllers/ModsxBlog/
+│   ├── PostController.php
+│   └── CategoryController.php
+├── Livewire/ModsxBlog/
+│   └── PostList.php
+├── Models/ModsxBlog/
+│   └── Post.php
+└── Services/ModsxBlog/
+    └── PostPublisher.php
+
+resources/
+├── views/modsx-blog/
+│   ├── index.blade.php
+│   └── show.blade.php
+├── views/components/modsx-blog/
+│   └── post-card.blade.php
+├── css/modsx-blog/
+│   └── blog.css
+└── js/modsx-blog/
+    └── editor.js
+</code></pre>
+<p>None of these directories is mandatory. A module can be a single view folder.</p>
+<h3 id="livewire">Livewire</h3>
+<p>Livewire 3 and 4 work without special handling, because Livewire discovers components by directory:</p>
+<pre><code>app/Livewire/ModsxBlog/PostList.php               → &lt;livewire:modsx-blog.post-list /&gt;
+resources/views/livewire/modsx-blog/post-list.blade.php
+</code></pre>
+<p>Livewire 4 single-file components live under <code>resources/views/components/</code>, so the same prefix applies:</p>
+<pre><code>resources/views/components/modsx-blog/post-list.blade.php
+</code></pre>
+<p>There is nothing Livewire-specific in this package — it sees ordinary directories, which is precisely why it keeps working across Livewire versions.</p>
+<hr />
+<h2 id="commands">Commands</h2>
+<p>Run any command without arguments and it will prompt you, with a picker for existing names rather than free-text entry.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsx:list</code></td>
+<td>Modules currently present in the application</td>
+</tr>
+<tr>
+<td><code>modsx:path {name?}</code></td>
+<td>Directories belonging to a module</td>
+</tr>
+<tr>
+<td><code>modsx:backup {name?}</code></td>
+<td>Copy a module to a new numbered version</td>
+</tr>
+<tr>
+<td><code>modsx:backuplist {name?}</code></td>
+<td>Available backup versions</td>
+</tr>
+<tr>
+<td><code>modsx:export {name?} {version?}</code></td>
+<td>Pack a backup version into a portable .zip</td>
+</tr>
+<tr>
+<td><code>modsx:import {path}</code></td>
+<td>Unpack a .zip exported by <code>modsx:export</code></td>
+</tr>
+<tr>
+<td><code>modsx:delete {name?}</code></td>
+<td>Back up, then remove the module</td>
+</tr>
+<tr>
+<td><code>modsx:restore {name?} {version?}</code></td>
+<td>Back up the current state, then restore a version</td>
+</tr>
+<tr>
+<td><code>modsx:diff {name?} {version?}</code></td>
+<td>Compare current state against a backup version</td>
+</tr>
+<tr>
+<td><code>modsx:info {name?}</code></td>
+<td>Show size, file count, and backup history</td>
+</tr>
+<tr>
+<td><code>modsx:prune {name?}</code></td>
+<td>Remove old versions, keeping the newest</td>
+</tr>
+<tr>
+<td><code>modsx:doctor</code></td>
+<td>Check for naming problems and orphaned backups</td>
+</tr>
+</tbody>
+</table>
+<h3 id="modsxlist"><code>modsx:list</code></h3>
+<pre><code class="language-bash">php artisan modsx:list
+php artisan modsx:list --json
+</code></pre>
+<pre><code> Module        Directories   Backups   Latest
+ Blog          4             3         0003
+ UserProfile   2             -         -
+</code></pre>
+<p>A module appears here if <strong>any</strong> of its directories exists.</p>
+<h3 id="modsxpath"><code>modsx:path</code></h3>
+<p>Shows exactly which directories Modsx considers part of a module — that is, exactly what a backup would copy. Worth running before your first <code>modsx:delete</code>.</p>
+<pre><code class="language-bash">php artisan modsx:path Blog
+php artisan modsx:path            # every module
+php artisan modsx:path --json
+</code></pre>
+<h3 id="modsxbackup"><code>modsx:backup</code></h3>
+<p>Copies every directory belonging to the module into a new sequential version.</p>
+<pre><code class="language-bash">php artisan modsx:backup Blog
+php artisan modsx:backup Blog -m &quot;before switching to repository pattern&quot;
+</code></pre>
+<pre><code>modsx-backups/
+└── Blog/
+    ├── 0001/
+    │   ├── modsx.json
+    │   ├── app/Http/Controllers/ModsxBlog/
+    │   └── resources/views/modsx-blog/
+    └── 0002/
+        └── ...
+</code></pre>
+<p>Version numbers come from the highest existing number, never from whatever the filesystem lists last, and the command refuses to write to a path that already exists. Versions are never overwritten and never reused.</p>
+<p><code>-m</code>/<code>--comment</code> attaches an optional free-text note to the version — entirely opt-in, there is no prompt for it. It shows up in <code>modsx:backuplist</code> and <code>modsx:info</code>.</p>
+<p>Each version carries a <code>modsx.json</code> manifest recording the module name, creation time, the exact source paths, the optional comment, and the PHP, Laravel and package versions in use. Restore reads it, so it puts directories back where they came from rather than inferring their location.</p>
+<p>The whole copy is assembled in a staging directory and moved into place at the end, so an interrupted backup leaves no half-written version behind.</p>
+<h3 id="modsxbackuplist"><code>modsx:backuplist</code></h3>
+<pre><code class="language-bash">php artisan modsx:backuplist                    # every module
+php artisan modsx:backuplist Blog
+php artisan modsx:backuplist Blog --limit=5     # newest 5
+php artisan modsx:backuplist --json
+</code></pre>
+<pre><code> Blog
+ Version   Created                     Directories   Comment
+ 0001      2026-08-20T09:14:02+02:00   2             -
+ 0002      2026-08-21T17:40:55+02:00   2             before switching to repository pattern
+</code></pre>
+<h3 id="modsxexport"><code>modsx:export</code></h3>
+<p>Packs one backup version into a portable <code>.zip</code>, written next to the version directory it came from.</p>
+<pre><code class="language-bash">php artisan modsx:export Blog          # newest version
+php artisan modsx:export Blog 0003     # a specific version
+php artisan modsx:export               # interactive
+</code></pre>
+<pre><code>modsx-backups/
+└── Blog/
+    ├── 0001/
+    ├── 0002/
+    └── 0002.zip     ← created by modsx:export
+</code></pre>
+<p>The zip is a derived, on-demand artifact, not a new version. Versions themselves stay unpacked directories, deliberately: open one in a file explorer or <code>cd</code> into it, and you see exactly what belongs to the module, instantly — no extracting, no tooling. <code>modsx:export</code> doesn't change that default; it adds a single-file form for the one thing unpacked directories are worse at — moving a version somewhere else. Re-running <code>modsx:export</code> on the same version overwrites its zip; there is no &quot;already exists&quot; guard here the way there is for a version itself. Pruning a version removes its zip along with it.</p>
+<p>Where the zip ends up is not configurable — moving it anywhere else afterwards is a plain <code>cp</code>/<code>mv</code>, not something Modsx needs to know about.</p>
+<h3 id="modsximport"><code>modsx:import</code></h3>
+<p>Unpacks a <code>.zip</code> created by <code>modsx:export</code> back into the backup tree, at the module and version its own <code>modsx.json</code> names — this is how a module travels between projects as a single file instead of a directory tree.</p>
+<pre><code class="language-bash">php artisan modsx:import path/to/Blog-0002.zip
+</code></pre>
+<p>Refuses to import over a version that already exists, for the same reason <code>modsx:backup</code> refuses to overwrite one: a version, once written, is never silently replaced. After importing, restore it the normal way: <code>php artisan modsx:restore Blog 0002</code>.</p>
+<h3 id="modsxdelete"><code>modsx:delete</code></h3>
+<p><strong>Backs up first</strong>, and removes nothing unless the backup succeeded.</p>
+<pre><code class="language-bash">php artisan modsx:delete Blog
+php artisan modsx:delete Blog --force          # skip the prompt, for CI
+php artisan modsx:delete Blog --skip-backup    # if you really mean it
+</code></pre>
+<p>The directories that will be removed are listed before the confirmation prompt, and the version number created by the backup is printed, so you always know what to pass to <code>modsx:restore</code>.</p>
+<h3 id="modsxrestore"><code>modsx:restore</code></h3>
+<pre><code class="language-bash">php artisan modsx:restore Blog          # newest version
+php artisan modsx:restore Blog 0003     # a specific version
+php artisan modsx:restore               # interactive
+</code></pre>
+<p>The sequence is:</p>
+<ol>
+<li>Back up the module's current state, so the restore is itself reversible.</li>
+<li>Remove the current directories.</li>
+<li>Copy the chosen version back into the application.</li>
+</ol>
+<p>Everything is copied out of the backup <strong>before</strong> the application is touched, so a corrupt or incomplete backup is discovered while the current state is still intact.</p>
+<p>If the module isn't currently in the application, steps 1 and 2 are skipped and this becomes an <strong>install from backup</strong> — which is how you move a module between projects: copy <code>modsx-backups/Blog/</code> across and restore it.</p>
+<h3 id="modsxprune"><code>modsx:prune</code></h3>
+<pre><code class="language-bash">php artisan modsx:prune                          # every module, config default
+php artisan modsx:prune Blog --keep=5
+php artisan modsx:prune --keep=3 --dry-run       # show the plan, change nothing
+php artisan modsx:prune --dry-run --json         # machine-readable plan, for CI
+</code></pre>
+<p>Lists exactly which versions would go, then asks. The newest version is never removed, whatever <code>--keep</code> is set to.</p>
+<h3 id="modsxdiff"><code>modsx:diff</code></h3>
+<pre><code class="language-bash">php artisan modsx:diff Blog          # against the newest version
+php artisan modsx:diff Blog 0003     # against a specific version
+php artisan modsx:diff               # interactive
+php artisan modsx:diff Blog --json
+</code></pre>
+<p>Compares the module in your application against a backup version, <strong>file by file</strong>, using a content hash:</p>
+<ul>
+<li><strong>Added</strong> — in the application now, not in that version. A restore would delete these.</li>
+<li><strong>Modified</strong> — in both, but the contents differ. A restore would overwrite these.</li>
+<li><strong>Removed</strong> — in that version, gone from the application. A restore would bring these back.</li>
+<li><strong>Unchanged</strong> — identical on both sides.</li>
+</ul>
+<p>The comparison is on file contents, not directory names, so a module whose files were all rewritten in place is reported as modified rather than unchanged.</p>
+<pre><code class="language-bash">php artisan modsx:diff Blog --summary   # counts only, no file list
+</code></pre>
+<p>Worth running before <code>modsx:restore</code>: it tells you exactly what you are about to lose.</p>
+<h3 id="modsxinfo"><code>modsx:info</code></h3>
+<pre><code class="language-bash">php artisan modsx:info Blog
+php artisan modsx:info --json
+</code></pre>
+<p>Shows:</p>
+<ul>
+<li><strong>Current state</strong>: whether the module exists in the application, how many directories and files it has, and its total size on disk</li>
+<li><strong>Backup history</strong>: number of backed-up versions, total backup size, and a table of each version with its creation date, size, and comment (if one was given at backup time)</li>
+</ul>
+<p>Useful for understanding storage usage and deciding whether to prune old versions.</p>
+<h3 id="modsxdoctor"><code>modsx:doctor</code></h3>
+<pre><code class="language-bash">php artisan modsx:doctor
+php artisan modsx:doctor --json    # exit code 1 if problems were found, for CI
+</code></pre>
+<p>Reports:</p>
+<ul>
+<li><strong>Modules whose names differ only in word boundaries</strong>, such as <code>Userprofile</code> alongside <code>UserProfile</code>. Both are valid names, so nothing else flags this — but it is almost always one module that was meant to be one module, and it will be backed up as two.</li>
+<li>Modules present in only one of the two directory forms (informational).</li>
+<li>Backups with no matching module in the application (informational).</li>
+</ul>
+<hr />
+<h2 id="configuration">Configuration</h2>
+<p><code>config/modsx.php</code>:</p>
+<pre><code class="language-php">return [
+
+    // Directory prefix. 'modsx' matches modsx-blog and ModsxBlog.
+    'prefix' =&gt; env('MODSX_PREFIX', 'modsx'),
+
+    // Where versioned backups are written.
+    'backup_path' =&gt; env('MODSX_BACKUP_PATH', base_path('modsx-backups')),
+
+    // Only these paths are scanned. Keeping the list tight is what keeps
+    // discovery fast: a full scan of the project root would walk storage/,
+    // .git/ and public/build/.
+    'scan_paths' =&gt; [
+        'app', 'config', 'database', 'lang', 'public', 'resources', 'routes', 'tests',
+    ],
+
+    // Directory names never descended into.
+    'exclude' =&gt; [
+        'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea', '.vscode',
+    ],
+
+    // 4 gives 0001, 0002, ...
+    'version_padding' =&gt; 4,
+
+    // Default for modsx:prune.
+    'prune' =&gt; ['keep' =&gt; 5],
+
+];
+</code></pre>
+<p>Two notes:</p>
+<ul>
+<li>If you change <code>prefix</code> after creating modules, rename the existing directories to match. Nothing is found under the old prefix.</li>
+<li>The backup directory is never scanned for modules, wherever you point it — including inside a path that is otherwise scanned.</li>
+</ul>
+<hr />
+<h2 id="limitations">Limitations</h2>
+<p>Deliberate, and worth knowing before you rely on this:</p>
+<ul>
+<li><strong>Directories only.</strong> Single files belonging to a module — <code>routes/modsx-blog.php</code>, <code>config/modsx-blog.php</code>, migration files, <code>lang/en/modsx-blog.php</code> — are <strong>not</strong> backed up, deleted or restored. Keep module code in directories, or handle those files yourself.</li>
+<li><strong>No database.</strong> Restoring an older version does not roll back migrations or touch data. If a version change implies a schema change, that part is on you.</li>
+<li><strong>No dependency resolution.</strong> Modsx doesn't know that <code>Blog</code> needs <code>Users</code>. Restoring one won't restore the other.</li>
+<li><strong>No Composer integration.</strong> Third-party packages a module depends on remain your <code>composer.json</code>'s problem.</li>
+<li><strong>Backups are plain directory copies.</strong> No compression, no deduplication. A large module backed up fifty times occupies fifty copies — hence <code>modsx:prune</code>.</li>
+<li><strong>Restore is not fully atomic.</strong> Each directory is moved into place individually. The window is small and the pre-restore backup is your recovery path, but a machine that dies mid-restore can leave some directories updated and others not.</li>
+</ul>
+<hr />
+<h2 id="faq">FAQ</h2>
+<p><strong>Do I need this package to use the convention?</strong>
+No. That's the point. Prefix your directories and everything works. Install the package when you want backups.</p>
+<p><strong>What happens to my modules if I uninstall it?</strong>
+Nothing. They are ordinary Laravel directories and were never anything else. Only <code>modsx-backups/</code> becomes unmanaged, and that is just files you can keep or delete.</p>
+<p><strong>Does it conflict with <code>nwidart/laravel-modules</code>?</strong>
+The two solve the same problem in incompatible ways, so running both is a bad idea. They won't clash on disk, though: the default backup directory is <code>modsx-backups/</code> precisely to stay clear of that package's <code>Modules/</code> source tree.</p>
+<p><strong>Can I move a module to another project?</strong>
+Yes, two ways. Copy <code>modsx-backups/Blog/</code> into the target project's backup directory and run <code>php artisan modsx:restore Blog</code>. Or, for a single file instead of a directory tree: <code>modsx:export</code> it, copy the <code>.zip</code> across, <code>modsx:import</code> it there, then restore. Namespaces survive because the directory layout does.</p>
+<p><strong>Why numbered versions instead of timestamps?</strong>
+They're short, they sort correctly, and they're easy to pick at a prompt. The creation time is in the manifest.</p>
+<p><strong>Can two modules share a directory?</strong>
+No. A directory belongs to exactly one module — the one its name encodes.</p>
+<p><strong>Is it safe to run in production?</strong>
+The commands are developer tools. They confirm before destroying anything and refuse to run non-interactively without <code>--force</code>, but a deploy pipeline is not where module directories should be moving around.</p>
+<hr />
+<h2 id="roadmap">Roadmap</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Optional backup of module-related single files</li>
+</ul>
+<hr />
+<h2 id="contributing">Contributing</h2>
+<p>Issues and pull requests welcome — see <a href="https://github.com/Synerdy/modsx/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+<pre><code class="language-bash">composer install
+composer test
+composer lint
+</code></pre>
+<h2 id="license">License</h2>
+<p>MIT. See <a href="https://github.com/Synerdy/modsx/blob/master/LICENSE">LICENSE</a>.</p>
+
+</main>
+</div>
+<script>(function () {
+    var toggle = document.querySelector('.menu-toggle');
+    var sidebar = document.getElementById('sidebar');
+
+    toggle.addEventListener('click', function () {
+        var open = sidebar.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    sidebar.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+            sidebar.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+        });
+    });
+
+    var links = Array.prototype.slice.call(sidebar.querySelectorAll('.toc a'));
+    var targets = links
+        .map(function (link) { return document.getElementById(link.getAttribute('href').slice(1)); })
+        .filter(Boolean);
+
+    if (! targets.length || ! ('IntersectionObserver' in window)) {
+        return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (! entry.isIntersecting) {
+                return;
+            }
+
+            links.forEach(function (link) { link.classList.remove('active'); });
+
+            var active = links.find(function (link) {
+                return link.getAttribute('href') === '#' + entry.target.id;
+            });
+
+            if (active) {
+                active.classList.add('active');
+            }
+        });
+    }, { rootMargin: '0px 0px -70% 0px' });
+
+    targets.forEach(function (target) { observer.observe(target); });
+})();</script>
+</body>
+</html>

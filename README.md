@@ -6,6 +6,8 @@
 
 Organise a Laravel application into modules using nothing but a directory-naming convention — then back them up, version them and restore them from the command line.
 
+📖 **[Full documentation](https://synerdy.github.io/modsx/)** — this README with sidebar navigation.
+
 **Read this in another language:** [Polski](README.pl.md)
 
 ---
