@@ -127,6 +127,32 @@ class ModsxException extends RuntimeException
         ));
     }
 
+    public static function unknownGenerator(string $generator): self
+    {
+        return new self(sprintf(
+            'There is no [make:%s] command. Run "php artisan list make" to see what is available.',
+            $generator
+        ));
+    }
+
+    /**
+     * The name given to modsx:make carries no module.
+     *
+     * The mention of the shell is not padding: a backslash written without
+     * quotes is removed by the shell before the process starts, so
+     * "Blog\PostController" arrives here as "BlogPostController" with nothing
+     * left to detect. This message is the only place that trap can be named.
+     */
+    public static function missingModuleSegment(string $name): self
+    {
+        return new self(sprintf(
+            'The name [%s] does not say which module it belongs to. Write it as '.
+            'Module/Name, for example Blog/PostController. If you typed a backslash, '.
+            'your shell may have removed it - "/" works in every shell.',
+            $name
+        ));
+    }
+
     public static function caseCollision(string $requested, string $existing): self
     {
         return new self(sprintf(

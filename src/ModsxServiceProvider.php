@@ -19,6 +19,7 @@ use Modsx\Console\MakeCommand;
 use Modsx\Console\PathCommand;
 use Modsx\Console\PruneCommand;
 use Modsx\Console\RestoreCommand;
+use Modsx\Console\ScaffoldCommand;
 
 class ModsxServiceProvider extends ServiceProvider
 {
@@ -54,6 +55,7 @@ class ModsxServiceProvider extends ServiceProvider
         $this->app->singleton(BackupRepository::class);
         $this->app->singleton(BackupManager::class);
         $this->app->singleton(ModuleDiffer::class);
+        $this->app->singleton(ModuleMaker::class);
         $this->app->singleton(ModuleScaffolder::class);
     }
 
@@ -81,6 +83,7 @@ class ModsxServiceProvider extends ServiceProvider
             PathCommand::class,
             PruneCommand::class,
             RestoreCommand::class,
+            ScaffoldCommand::class,
         ]);
     }
 }

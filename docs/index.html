@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="pl/">Polski</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#what-belongs-to-a-module">What belongs to a module</a></li><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#what-belongs-to-a-module">What belongs to a module</a></li><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -258,7 +258,7 @@ app/Http/Controllers/ModsxBlog/
 <blockquote>
 <p><strong>Every form must come from the same name.</strong></p>
 <p><code>modsx-userprofile</code> and <code>ModsxUserProfile</code> are <strong>two different modules</strong>: the first is <code>Userprofile</code>, the second is <code>UserProfile</code>. Back up <code>UserProfile</code> and the <code>modsx-userprofile</code> views are silently left behind.</p>
-<p>Write the name in StudlyCase first, then convert: <code>UserProfile</code> → <code>user-profile</code>, never <code>userprofile</code>. Or let <code>php artisan modsx:make UserProfile</code> write them for you, which is the only way to be sure they agree. If you suspect you've already made this mistake somewhere, <code>php artisan modsx:doctor</code> will find it.</p>
+<p>Write the name in StudlyCase first, then convert: <code>UserProfile</code> → <code>user-profile</code>, never <code>userprofile</code>. Or let <code>php artisan modsx:scaffold UserProfile</code> and <code>php artisan modsx:make</code> write them for you, which is the only way to be sure they agree. If you suspect you've already made this mistake somewhere, <code>php artisan modsx:doctor</code> will find it.</p>
 </blockquote>
 <p><strong>The prefix belongs to one module, all the way down.</strong> If <code>Blog</code> exists, <code>modsx-blog-admin.php</code> and <code>modsx_blog_posts_table</code> are Blog's — but a second module called <code>BlogPost</code> would then be claiming names that already read as Blog's, which is a naming conflict <code>modsx:doctor</code> reports. One module, one prefix.</p>
 <p>The <code>modsx</code> prefix itself is configurable, so if you prefer <code>mod-</code> or your company's initials, change it once and the same rules apply.</p>
@@ -343,7 +343,11 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </thead>
 <tbody>
 <tr>
-<td><code>modsx:make {name}</code></td>
+<td><code>modsx:make {generator} {Module/Name}</code></td>
+<td>Run one of Laravel's generators with the module filled in</td>
+</tr>
+<tr>
+<td><code>modsx:scaffold {name}</code></td>
 <td>Create the directory skeleton for a new module</td>
 </tr>
 <tr>
@@ -397,9 +401,64 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tbody>
 </table>
 <h3 id="modsxmake"><code>modsx:make</code></h3>
+<p>Runs one of Laravel's own generators with the module written in for you.</p>
+<pre><code class="language-bash">php artisan modsx:make controller Blog/PostController
+php artisan modsx:make view Blog/index
+php artisan modsx:make migration Blog/create_posts_table
+</code></pre>
+<p>This is <code>php artisan make:*</code> with the prefix cut out. The generator is Laravel's, the options are Laravel's, the output is Laravel's — the only thing Modsx does is work out the name:</p>
+<table>
+<thead>
+<tr>
+<th>You type</th>
+<th>It runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsx:make controller Blog/PostController</code></td>
+<td><code>make:controller ModsxBlog/PostController</code></td>
+</tr>
+<tr>
+<td><code>modsx:make view Blog/index</code></td>
+<td><code>make:view modsx-blog/index</code></td>
+</tr>
+<tr>
+<td><code>modsx:make config Blog/settings</code></td>
+<td><code>make:config modsx-blog-settings</code></td>
+</tr>
+<tr>
+<td><code>modsx:make migration Blog/create_posts_table</code></td>
+<td><code>make:migration modsx_blog_create_posts_table --create=posts</code></td>
+</tr>
+</tbody>
+</table>
+<p>Three forms of one name, a different one per generator, is the part of the convention that is easy to get subtly wrong — and getting it wrong makes two modules that read as one. Which form goes where is a table in <code>config/modsx.php</code>:</p>
+<pre><code class="language-php">'generators' =&gt; [
+    '*'         =&gt; '{Studly}/',   // ModsxBlog/PostController
+    'view'      =&gt; '{kebab}/',    // modsx-blog/index
+    'config'    =&gt; '{kebab}-',    // modsx-blog-settings
+    'migration' =&gt; '{snake}_',    // modsx_blog_create_posts_table
+],
+</code></pre>
+<p>Anything not listed gets <code>*</code>, which is right for any PHP class. The generators you can run are whatever your application has registered, not a fixed list, so adding an entry makes one from another package — <code>make:livewire</code>, <code>make:filament-resource</code> — follow the convention too.</p>
+<p><strong>Options for the generator go after <code>--</code></strong>, and are handed on untouched:</p>
+<pre><code class="language-bash">php artisan modsx:make controller Blog/PostController -- --resource --model=Post
+php artisan modsx:make model Blog/Post -- -mfs
+</code></pre>
+<p><strong>Use <code>/</code>, not <code>\</code>.</strong> Both are accepted, but a POSIX shell removes an unquoted backslash before Modsx ever sees it — <code>Blog\PostController</code> arrives as <code>BlogPostController</code>. PowerShell escapes with a backtick, so a backslash does survive there. <code>/</code> is the form that works in every shell.</p>
+<p><code>--dry-run</code> prints the command it would run and stops:</p>
+<pre><code class="language-bash">$ php artisan modsx:make migration Blog/create_posts_table --dry-run
+  Would run:
+  php artisan make:migration modsx_blog_create_posts_table --create=posts
+</code></pre>
+<p>That <code>--create=posts</code> is not decoration. Laravel guesses the table from the migration name with <code>/^create_(\w+)_table$/</code>, which <code>modsx_blog_create_posts_table</code> cannot match with the module in front, so without it every create-migration would come out as an empty stub. Modsx runs the guess against the part you actually wrote and passes the answer on.</p>
+<p>If the module doesn't exist yet you are told so and asked once — defaulting to yes, with the closest existing name in case it was a typo. A non-interactive run warns and carries on: creating a file is not destructive, and this is the one command in the package that never is.</p>
+<p>One thing it can't fix: <code>make:model -m</code> has <em>Laravel</em> name the migration, so it comes out as <code>create_posts_table</code> with no module prefix and does not belong to the module — it will not be backed up with it. Modsx warns when you do that. Generate the migration separately instead.</p>
+<h3 id="modsxscaffold"><code>modsx:scaffold</code></h3>
 <p>Creates the directories for a new module. The convention works perfectly well without this command — you can make the directories by hand and never install anything — but typing both forms yourself is the one way to get it wrong. Here they come from a single name, so they cannot disagree.</p>
-<pre><code class="language-bash">php artisan modsx:make Blog
-php artisan modsx:make user-profile   # any case; it is normalised
+<pre><code class="language-bash">php artisan modsx:scaffold Blog
+php artisan modsx:scaffold user-profile   # any case; it is normalised
 </code></pre>
 <p>Which directories it creates is up to you, in <code>config/modsx.php</code>:</p>
 <pre><code class="language-php">'scaffold' =&gt; [
@@ -585,12 +644,21 @@ php artisan modsx:doctor --json    # exit code 1 if problems were found, for CI
         'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea', '.vscode',
     ],
 
-    // What modsx:make creates. Both placeholders come from the one name you
-    // type, which is what stops the two forms from drifting apart.
+    // What modsx:scaffold creates. Both placeholders come from the one name
+    // you type, which is what stops the two forms from drifting apart.
     'scaffold' =&gt; [
         'app/Http/Controllers/{Studly}',
         'app/Models/{Studly}',
         'resources/views/{kebab}',
+    ],
+
+    // How modsx:make writes the module into the name it hands to Laravel's
+    // own generator. '*' is the rule for anything not listed.
+    'generators' =&gt; [
+        '*' =&gt; '{Studly}/',
+        'view' =&gt; '{kebab}/',
+        'config' =&gt; '{kebab}-',
+        'migration' =&gt; '{snake}_',
     ],
 
     // 4 gives 0001, 0002, ...
@@ -620,9 +688,9 @@ php artisan modsx:doctor --json    # exit code 1 if problems were found, for CI
 <hr />
 <h2 id="faq">FAQ</h2>
 <p><strong>Do I need this package to use the convention?</strong>
-No. That's the point. Prefix your directories and everything works. Install the package when you want backups. <code>modsx:make</code> is a convenience for people who already have it installed, not a requirement — it writes directories you could just as well create by hand.</p>
+No. That's the point. Prefix your directories and everything works. Install the package when you want backups. <code>modsx:scaffold</code> and <code>modsx:make</code> are conveniences for people who already have it installed, not requirements — they write directories and names you could just as well type by hand.</p>
 <p><strong>Why aren't my migrations being archived?</strong>
-Almost certainly the name. The convention is that the name <em>after the timestamp</em> starts with the module prefix: <code>2026_01_01_000000_modsx_blog_create_posts_table.php</code>, not the usual verb-first <code>..._create_modsx_blog_posts_table.php</code>. Run <code>php artisan modsx:doctor</code> — it finds migrations that mention a module but aren't named for it, and tells you what to rename them to.</p>
+Almost certainly the name. The convention is that the name <em>after the timestamp</em> starts with the module prefix: <code>2026_01_01_000000_modsx_blog_create_posts_table.php</code>, not the usual verb-first <code>..._create_modsx_blog_posts_table.php</code>. Run <code>php artisan modsx:doctor</code> — it finds migrations that mention a module but aren't named for it, and tells you what to rename them to. <code>php artisan modsx:make migration Blog/create_posts_table</code> writes the name correctly in the first place.</p>
 <p><strong>What happens to my modules if I uninstall it?</strong>
 Nothing. They are ordinary Laravel directories and were never anything else. Only <code>modsx-backups/</code> becomes unmanaged, and that is just files you can keep or delete.</p>
 <p><strong>Does it conflict with <code>nwidart/laravel-modules</code>?</strong>

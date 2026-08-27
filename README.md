@@ -94,7 +94,7 @@ The first two are Laravel's own convention, not an invention of this package —
 >
 > `modsx-userprofile` and `ModsxUserProfile` are **two different modules**: the first is `Userprofile`, the second is `UserProfile`. Back up `UserProfile` and the `modsx-userprofile` views are silently left behind.
 >
-> Write the name in StudlyCase first, then convert: `UserProfile` → `user-profile`, never `userprofile`. Or let `php artisan modsx:make UserProfile` write them for you, which is the only way to be sure they agree. If you suspect you've already made this mistake somewhere, `php artisan modsx:doctor` will find it.
+> Write the name in StudlyCase first, then convert: `UserProfile` → `user-profile`, never `userprofile`. Or let `php artisan modsx:scaffold UserProfile` and `php artisan modsx:make` write them for you, which is the only way to be sure they agree. If you suspect you've already made this mistake somewhere, `php artisan modsx:doctor` will find it.
 
 **The prefix belongs to one module, all the way down.** If `Blog` exists, `modsx-blog-admin.php` and `modsx_blog_posts_table` are Blog's — but a second module called `BlogPost` would then be claiming names that already read as Blog's, which is a naming conflict `modsx:doctor` reports. One module, one prefix.
 
@@ -167,7 +167,8 @@ Run any command without arguments and it will prompt you, with a picker for exis
 
 | Command | Purpose |
 |---|---|
-| `modsx:make {name}` | Create the directory skeleton for a new module |
+| `modsx:make {generator} {Module/Name}` | Run one of Laravel's generators with the module filled in |
+| `modsx:scaffold {name}` | Create the directory skeleton for a new module |
 | `modsx:list` | Modules currently present in the application |
 | `modsx:path {name?}` | Everything belonging to a module |
 | `modsx:backup {name?}` | Copy a module to a new numbered version |
@@ -183,11 +184,66 @@ Run any command without arguments and it will prompt you, with a picker for exis
 
 ### `modsx:make`
 
+Runs one of Laravel's own generators with the module written in for you.
+
+```bash
+php artisan modsx:make controller Blog/PostController
+php artisan modsx:make view Blog/index
+php artisan modsx:make migration Blog/create_posts_table
+```
+
+This is `php artisan make:*` with the prefix cut out. The generator is Laravel's, the options are Laravel's, the output is Laravel's — the only thing Modsx does is work out the name:
+
+| You type | It runs |
+|---|---|
+| `modsx:make controller Blog/PostController` | `make:controller ModsxBlog/PostController` |
+| `modsx:make view Blog/index` | `make:view modsx-blog/index` |
+| `modsx:make config Blog/settings` | `make:config modsx-blog-settings` |
+| `modsx:make migration Blog/create_posts_table` | `make:migration modsx_blog_create_posts_table --create=posts` |
+
+Three forms of one name, a different one per generator, is the part of the convention that is easy to get subtly wrong — and getting it wrong makes two modules that read as one. Which form goes where is a table in `config/modsx.php`:
+
+```php
+'generators' => [
+    '*'         => '{Studly}/',   // ModsxBlog/PostController
+    'view'      => '{kebab}/',    // modsx-blog/index
+    'config'    => '{kebab}-',    // modsx-blog-settings
+    'migration' => '{snake}_',    // modsx_blog_create_posts_table
+],
+```
+
+Anything not listed gets `*`, which is right for any PHP class. The generators you can run are whatever your application has registered, not a fixed list, so adding an entry makes one from another package — `make:livewire`, `make:filament-resource` — follow the convention too.
+
+**Options for the generator go after `--`**, and are handed on untouched:
+
+```bash
+php artisan modsx:make controller Blog/PostController -- --resource --model=Post
+php artisan modsx:make model Blog/Post -- -mfs
+```
+
+**Use `/`, not `\`.** Both are accepted, but a POSIX shell removes an unquoted backslash before Modsx ever sees it — `Blog\PostController` arrives as `BlogPostController`. PowerShell escapes with a backtick, so a backslash does survive there. `/` is the form that works in every shell.
+
+`--dry-run` prints the command it would run and stops:
+
+```bash
+$ php artisan modsx:make migration Blog/create_posts_table --dry-run
+  Would run:
+  php artisan make:migration modsx_blog_create_posts_table --create=posts
+```
+
+That `--create=posts` is not decoration. Laravel guesses the table from the migration name with `/^create_(\w+)_table$/`, which `modsx_blog_create_posts_table` cannot match with the module in front, so without it every create-migration would come out as an empty stub. Modsx runs the guess against the part you actually wrote and passes the answer on.
+
+If the module doesn't exist yet you are told so and asked once — defaulting to yes, with the closest existing name in case it was a typo. A non-interactive run warns and carries on: creating a file is not destructive, and this is the one command in the package that never is.
+
+One thing it can't fix: `make:model -m` has *Laravel* name the migration, so it comes out as `create_posts_table` with no module prefix and does not belong to the module — it will not be backed up with it. Modsx warns when you do that. Generate the migration separately instead.
+
+### `modsx:scaffold`
+
 Creates the directories for a new module. The convention works perfectly well without this command — you can make the directories by hand and never install anything — but typing both forms yourself is the one way to get it wrong. Here they come from a single name, so they cannot disagree.
 
 ```bash
-php artisan modsx:make Blog
-php artisan modsx:make user-profile   # any case; it is normalised
+php artisan modsx:scaffold Blog
+php artisan modsx:scaffold user-profile   # any case; it is normalised
 ```
 
 Which directories it creates is up to you, in `config/modsx.php`:
@@ -457,12 +513,21 @@ return [
         'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea', '.vscode',
     ],
 
-    // What modsx:make creates. Both placeholders come from the one name you
-    // type, which is what stops the two forms from drifting apart.
+    // What modsx:scaffold creates. Both placeholders come from the one name
+    // you type, which is what stops the two forms from drifting apart.
     'scaffold' => [
         'app/Http/Controllers/{Studly}',
         'app/Models/{Studly}',
         'resources/views/{kebab}',
+    ],
+
+    // How modsx:make writes the module into the name it hands to Laravel's
+    // own generator. '*' is the rule for anything not listed.
+    'generators' => [
+        '*' => '{Studly}/',
+        'view' => '{kebab}/',
+        'config' => '{kebab}-',
+        'migration' => '{snake}_',
     ],
 
     // 4 gives 0001, 0002, ...
@@ -497,10 +562,10 @@ Deliberate, and worth knowing before you rely on this:
 ## FAQ
 
 **Do I need this package to use the convention?**
-No. That's the point. Prefix your directories and everything works. Install the package when you want backups. `modsx:make` is a convenience for people who already have it installed, not a requirement — it writes directories you could just as well create by hand.
+No. That's the point. Prefix your directories and everything works. Install the package when you want backups. `modsx:scaffold` and `modsx:make` are conveniences for people who already have it installed, not requirements — they write directories and names you could just as well type by hand.
 
 **Why aren't my migrations being archived?**
-Almost certainly the name. The convention is that the name *after the timestamp* starts with the module prefix: `2026_01_01_000000_modsx_blog_create_posts_table.php`, not the usual verb-first `..._create_modsx_blog_posts_table.php`. Run `php artisan modsx:doctor` — it finds migrations that mention a module but aren't named for it, and tells you what to rename them to.
+Almost certainly the name. The convention is that the name *after the timestamp* starts with the module prefix: `2026_01_01_000000_modsx_blog_create_posts_table.php`, not the usual verb-first `..._create_modsx_blog_posts_table.php`. Run `php artisan modsx:doctor` — it finds migrations that mention a module but aren't named for it, and tells you what to rename them to. `php artisan modsx:make migration Blog/create_posts_table` writes the name correctly in the first place.
 
 **What happens to my modules if I uninstall it?**
 Nothing. They are ordinary Laravel directories and were never anything else. Only `modsx-backups/` becomes unmanaged, and that is just files you can keep or delete.

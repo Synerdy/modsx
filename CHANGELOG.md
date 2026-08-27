@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-27
+
+### Changed
+
+- **`modsx:make` now means something else.** It was the command that created a
+  module's directory skeleton; that command is now **`modsx:scaffold`**, and
+  `modsx:make` is a wrapper around Laravel's own generators (below). In Laravel
+  `make:` means "generate a thing", so `modsx:make Blog` read as "generate
+  Blog" to anyone who knows artisan, which is not what it did. Running the old
+  syntax gives a message naming the new command rather than a parse error. The
+  config key (`modsx.scaffold`) and the class behind it are unchanged - they
+  were already named for what they do; it was the command that did not match.
+
+### Added
+
+- **`modsx:make {generator} {Module/Name}`** runs one of Laravel's generators
+  with the module written into the name, in the form that generator expects:
+
+  ```
+  modsx:make controller Blog/PostController  ->  make:controller ModsxBlog/PostController
+  modsx:make view       Blog/index           ->  make:view       modsx-blog/index
+  modsx:make migration  Blog/create_posts_table
+                        ->  make:migration modsx_blog_create_posts_table --create=posts
+  ```
+
+  Three forms of one name, a different one per generator, is the part of the
+  convention that is easy to get subtly wrong - and getting it wrong makes two
+  modules that read as one, which is the mistake `modsx:doctor` exists to find
+  after the fact. Which form goes where is a table in the config
+  (`modsx.generators`), so a generator from another package (`make:livewire`,
+  `make:filament-resource`) can follow the convention too. The generators on
+  offer are whatever the application has registered, not a fixed list.
+
+  Options for the generator are written after `--` and passed on untouched.
+  `--dry-run` prints the command instead of running it. Exit code, output and
+  behaviour are the wrapped generator's.
+- **`--create` / `--table` are worked out for migrations.** Laravel guesses the
+  table from the migration name with `/^create_(\w+)_table$/`, which
+  `modsx_blog_create_posts_table` cannot match with the module in front - so a
+  create-migration named by the convention silently came out as an empty stub
+  instead of a `Schema::create`. (Change migrations happened to survive, their
+  pattern being anchored at the end.) The guess now runs against the part the
+  user actually wrote, and an explicit `--create`/`--table` still wins.
+- `modsx:make` warns when `make:model -m` is used: Laravel names that migration
+  itself, so it carries no module prefix, does not belong to the module and
+  will not be backed up with it.
+- New config key `modsx.generators`, mapping a generator to the form of the
+  module name it takes (`{Studly}` / `{kebab}` / `{snake}`), with `*` as the
+  default. Unlisted generators get `*`, which is right for any PHP class.
+
 ## [0.3.0] - 2026-08-27
 
 ### Added
