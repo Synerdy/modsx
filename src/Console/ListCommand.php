@@ -22,7 +22,16 @@ class ListCommand extends Command
         $modules = $locator->all();
 
         if ($this->option('json')) {
-            $this->line((string) json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            $payload = [];
+
+            foreach ($modules as $name => $paths) {
+                $payload[$name] = [
+                    'directories' => $paths,
+                    'files' => $locator->files((string) $name),
+                ];
+            }
+
+            $this->line((string) json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
             return self::SUCCESS;
         }
@@ -43,16 +52,18 @@ class ListCommand extends Command
 
         foreach ($modules as $name => $paths) {
             $versions = $backups->versions($name);
+            $files = $locator->files((string) $name);
 
             $rows[] = [
                 $name,
                 (string) count($paths),
+                $files === [] ? '-' : (string) count($files),
                 $versions === [] ? '-' : (string) count($versions),
                 $versions === [] ? '-' : (string) $backups->latest($name),
             ];
         }
 
-        $this->table(['Module', 'Directories', 'Backups', 'Latest'], $rows);
+        $this->table(['Module', 'Directories', 'Files', 'Backups', 'Latest'], $rows);
 
         return self::SUCCESS;
     }

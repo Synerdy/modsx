@@ -24,6 +24,19 @@ return [
         'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea',
     ],
 
+    // Directories `modsx:make` creates for a new module. Both placeholders are
+    // derived from the one name you type, which is what stops the two forms
+    // from drifting apart - the mistake modsx:doctor exists to catch.
+    //
+    //   {Studly} -> ModsxBlog     {kebab} -> modsx-blog
+    //
+    // Nothing here is required: trim it to the directories you actually use.
+    'scaffold' => [
+        'app/Http/Controllers/{Studly}',
+        'app/Models/{Studly}',
+        'resources/views/{kebab}',
+    ],
+
     // Zero-padded width of version numbers (0001, 0002, ...).
     'version_padding' => 4,
 

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Modsx\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use Modsx\BackupManager;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\Exceptions\ModsxException;
+use Modsx\ModuleDiffer;
 use Modsx\ModuleLocator;
 
 /**
@@ -33,7 +33,7 @@ class DiffCommand extends Command
 
     protected $description = 'Compare the current state of a module against a backup version';
 
-    public function handle(ModuleLocator $locator, BackupRepository $backups, BackupManager $manager): int
+    public function handle(ModuleLocator $locator, BackupRepository $backups, BackupManager $manager, ModuleDiffer $differ): int
     {
         $json = (bool) $this->option('json');
 
@@ -72,16 +72,18 @@ class DiffCommand extends Command
 
         try {
             $appPaths = $locator->paths((string) $name);
+            $appFiles = $locator->files((string) $name);
             $backupPaths = $manager->pathsInBackup((string) $name, $version);
+            $backupFiles = $manager->filesInBackup((string) $name, $version);
         } catch (ModsxException $exception) {
             $this->components->error($exception->getMessage());
 
             return self::FAILURE;
         }
 
-        $diff = $this->compare(
-            $this->fileMap(base_path(), $appPaths),
-            $this->fileMap($backups->versionPath((string) $name, $version), $backupPaths),
+        $diff = $differ->compare(
+            $differ->fingerprint(base_path(), $appPaths, $appFiles),
+            $differ->fingerprint($backups->versionPath((string) $name, $version), $backupPaths, $backupFiles),
         );
 
         $diff['module'] = (string) $name;
@@ -97,77 +99,6 @@ class DiffCommand extends Command
         $this->render($diff);
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Map every file under the given module paths to a content hash.
-     *
-     * Keys are paths relative to $root, so the two sides of the comparison are
-     * directly comparable: a backup stores each directory under the same
-     * relative path it has in the application.
-     *
-     * @param  list<string>  $paths
-     * @return array<string, string>
-     */
-    private function fileMap(string $root, array $paths): array
-    {
-        $root = rtrim(str_replace('\\', '/', $root), '/');
-        $map = [];
-
-        foreach ($paths as $relative) {
-            $directory = $root.'/'.$relative;
-
-            if (! File::isDirectory($directory)) {
-                continue;
-            }
-
-            foreach (File::allFiles($directory) as $file) {
-                $absolute = str_replace('\\', '/', $file->getPathname());
-                $key = substr($absolute, strlen($root) + 1);
-
-                $map[$key] = (string) md5_file($file->getPathname());
-            }
-        }
-
-        ksort($map);
-
-        return $map;
-    }
-
-    /**
-     * @param  array<string, string>  $current
-     * @param  array<string, string>  $backup
-     * @return array{added: list<string>, removed: list<string>, modified: list<string>, unchanged: int}
-     */
-    private function compare(array $current, array $backup): array
-    {
-        $added = [];
-        $removed = [];
-        $modified = [];
-        $unchanged = 0;
-
-        foreach ($current as $path => $hash) {
-            if (! array_key_exists($path, $backup)) {
-                $added[] = $path;
-            } elseif ($backup[$path] !== $hash) {
-                $modified[] = $path;
-            } else {
-                $unchanged++;
-            }
-        }
-
-        foreach ($backup as $path => $hash) {
-            if (! array_key_exists($path, $current)) {
-                $removed[] = $path;
-            }
-        }
-
-        return [
-            'added' => $added,
-            'removed' => $removed,
-            'modified' => $modified,
-            'unchanged' => $unchanged,
-        ];
     }
 
     /**

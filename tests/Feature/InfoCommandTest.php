@@ -14,10 +14,22 @@ it('reports the directories, file count and size of a module', function () {
 
     expect($info['module'])->toBe('Blog')
         ->and($info['application']['present'])->toBeTrue()
-        ->and($info['application']['files'])->toBe(2)
+        ->and($info['application']['file_count'])->toBe(2)
         ->and($info['application']['size_bytes'])->toBe(5)
         ->and($info['application']['directories'])->toHaveCount(2)
+        ->and($info['application']['files'])->toBe([])
         ->and($info['backups']['count'])->toBe(0);
+});
+
+it('counts a module own files towards its size', function () {
+    $this->makeFile('routes/modsx-blog.php', 'xyz');
+
+    $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
+
+    expect($info['application']['files'])->toHaveCount(1)
+        ->and($info['application']['files'][0]['path'])->toBe('routes/modsx-blog.php')
+        ->and($info['application']['file_count'])->toBe(3)
+        ->and($info['application']['size_bytes'])->toBe(8);
 });
 
 it('reports backup versions with their sizes', function () {
@@ -42,7 +54,7 @@ it('works for a module that exists only in backups', function () {
     $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
 
     expect($info['application']['present'])->toBeFalse()
-        ->and($info['application']['files'])->toBe(0)
+        ->and($info['application']['file_count'])->toBe(0)
         ->and($info['backups']['count'])->toBe(1);
 });
 

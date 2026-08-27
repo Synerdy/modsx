@@ -55,6 +55,19 @@ abstract class TestCase extends Orchestra
     }
 
     /**
+     * Create a single file somewhere in the project, creating its directory.
+     */
+    protected function makeFile(string $relative, string $contents = 'x'): string
+    {
+        $path = $this->root.'/'.trim($relative, '/');
+
+        File::ensureDirectoryExists(dirname($path));
+        File::put($path, $contents);
+
+        return $path;
+    }
+
+    /**
      * Create an empty backup version directory, as if one had been made.
      */
     protected function makeBackupVersion(string $module, string $version): string

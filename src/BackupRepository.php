@@ -33,6 +33,36 @@ class BackupRepository
         return $this->root().'/'.ModuleName::make($name)->studly;
     }
 
+    /**
+     * The name a module's backup directory already has on disk, when it differs
+     * from the requested one only by letter case.
+     *
+     * On a case-insensitive filesystem (Windows, macOS by default) "UserProfile"
+     * and "Userprofile" resolve to one directory, so two genuinely different
+     * modules would silently share a single backup tree: version numbers
+     * interleave, and a restore hands back the other module's content. Writers
+     * call this first and refuse rather than merge.
+     */
+    public function collidingName(ModuleName|string $name): ?string
+    {
+        $studly = ModuleName::make($name)->studly;
+        $root = $this->root();
+
+        if (! File::isDirectory($root)) {
+            return null;
+        }
+
+        foreach (File::directories($root) as $directory) {
+            $basename = basename($directory);
+
+            if ($basename !== $studly && strcasecmp($basename, $studly) === 0) {
+                return $basename;
+            }
+        }
+
+        return null;
+    }
+
     public function versionPath(ModuleName|string $name, string $version): string
     {
         return $this->pathFor($name).'/'.$version;

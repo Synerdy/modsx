@@ -9,14 +9,20 @@ use Modsx\Exceptions\ModsxException;
 use Stringable;
 
 /**
- * The canonical name of a module, plus its two directory forms.
+ * The canonical name of a module, plus the forms derived from it.
  *
- * A module has exactly one name, written in StudlyCase. Both directory forms
- * are derived from it, using the same conversion Laravel itself uses to turn
+ * A module has exactly one name, written in StudlyCase. Every other form is
+ * derived from it, using the same conversion Laravel itself uses to turn
  * App\View\Components\UserProfile into <x-user-profile>:
  *
  *   UserProfile  ->  ModsxUserProfile   (PHP namespace directories)
- *   UserProfile  ->  modsx-user-profile (view, css, js, lang, public directories)
+ *   UserProfile  ->  modsx-user-profile (view, css, js, lang, public directories
+ *                                        and the module's own files)
+ *   UserProfile  ->  modsx_user_profile (migration filenames, which are snake_case)
+ *
+ * Deriving all of them from one name is the whole point: it is what makes
+ * "modsx-userprofile next to ModsxUserProfile" a mistake rather than a
+ * supported layout.
  *
  * Constructing a name through this class is also the single point where user
  * input is validated, which is what keeps names out of filesystem paths where
@@ -27,6 +33,7 @@ final class ModuleName implements Stringable
     private function __construct(
         public readonly string $studly,
         public readonly string $kebab,
+        public readonly string $snake,
     ) {}
 
     /**
@@ -52,7 +59,7 @@ final class ModuleName implements Stringable
             throw ModsxException::invalidModuleName($value);
         }
 
-        return new self($studly, Str::kebab($studly));
+        return new self($studly, Str::kebab($studly), Str::snake($studly));
     }
 
     /**

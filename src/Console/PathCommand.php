@@ -17,23 +17,33 @@ class PathCommand extends Command
                             {name? : Module name; omit for every module}
                             {--json : Output machine-readable JSON}';
 
-    protected $description = 'Show the directories that make up a module';
+    protected $description = 'Show the directories and files that make up a module';
 
     public function handle(ModuleLocator $locator): int
     {
         $name = $this->argument('name');
 
         try {
-            $modules = $name === null
+            $directories = $name === null
                 ? $locator->all()
                 : [(string) $name => $locator->paths((string) $name)];
+
+            $directories = array_filter($directories, static fn (array $paths): bool => $paths !== []);
+
+            $modules = [];
+
+            foreach ($directories as $module => $paths) {
+                $modules[$module] = [
+                    'directories' => $paths,
+                    'files' => $locator->files((string) $module),
+                    'migrations' => $locator->migrations((string) $module),
+                ];
+            }
         } catch (ModsxException $exception) {
             $this->components->error($exception->getMessage());
 
             return self::FAILURE;
         }
-
-        $modules = array_filter($modules, static fn (array $paths): bool => $paths !== []);
 
         if ($this->option('json')) {
             $this->line((string) json_encode($modules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -51,9 +61,11 @@ class PathCommand extends Command
             return self::FAILURE;
         }
 
-        foreach ($modules as $module => $paths) {
+        foreach ($modules as $module => $parts) {
             $this->components->info($module);
-            $this->listPaths($paths, 'directory');
+            $this->listPaths($parts['directories'], 'directory');
+            $this->listPaths($parts['files'], 'file');
+            $this->listPaths($parts['migrations'], 'migration - archived, never restored');
             $this->newLine();
         }
 

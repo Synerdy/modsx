@@ -15,6 +15,7 @@ use Modsx\Console\ExportCommand;
 use Modsx\Console\ImportCommand;
 use Modsx\Console\InfoCommand;
 use Modsx\Console\ListCommand;
+use Modsx\Console\MakeCommand;
 use Modsx\Console\PathCommand;
 use Modsx\Console\PruneCommand;
 use Modsx\Console\RestoreCommand;
@@ -52,6 +53,8 @@ class ModsxServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleLocator::class);
         $this->app->singleton(BackupRepository::class);
         $this->app->singleton(BackupManager::class);
+        $this->app->singleton(ModuleDiffer::class);
+        $this->app->singleton(ModuleScaffolder::class);
     }
 
     public function boot(): void
@@ -74,6 +77,7 @@ class ModsxServiceProvider extends ServiceProvider
             ImportCommand::class,
             InfoCommand::class,
             ListCommand::class,
+            MakeCommand::class,
             PathCommand::class,
             PruneCommand::class,
             RestoreCommand::class,

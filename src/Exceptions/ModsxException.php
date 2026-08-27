@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modsx\Exceptions;
 
 use RuntimeException;
+use Throwable;
 
 class ModsxException extends RuntimeException
 {
@@ -85,6 +86,18 @@ class ModsxException extends RuntimeException
         return new self(sprintf('Failed to copy [%s] to [%s].', $from, $to));
     }
 
+    public static function restoreInterrupted(string $version, string $backupDirectory, Throwable $previous): self
+    {
+        return new self(sprintf(
+            'Restore of version [%s] was interrupted: %s. The application was put '.
+            'back the way it was before the restore started. Every version, '.
+            'including the one taken just now, is still in [%s].',
+            $version,
+            $previous->getMessage(),
+            $backupDirectory
+        ), previous: $previous);
+    }
+
     public static function zipExtensionMissing(): self
     {
         return new self(
@@ -104,5 +117,26 @@ class ModsxException extends RuntimeException
     public static function zipWriteFailed(string $path): self
     {
         return new self(sprintf('Failed to write the zip archive [%s].', $path));
+    }
+
+    public static function invalidScaffoldPath(string $template): self
+    {
+        return new self(sprintf(
+            'Invalid modsx.scaffold entry [%s]: entries may not contain "..".',
+            $template
+        ));
+    }
+
+    public static function caseCollision(string $requested, string $existing): self
+    {
+        return new self(sprintf(
+            'Refusing to back up module [%s]: the backup directory already holds [%s], '.
+            'which differs only in letter case. On Windows and macOS those are the same '.
+            'directory, so both modules would share one backup tree and a restore could '.
+            'hand back the wrong module. Rename one of them so the two names differ by '.
+            'more than case.',
+            $requested,
+            $existing
+        ));
     }
 }

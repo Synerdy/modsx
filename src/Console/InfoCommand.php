@@ -44,6 +44,7 @@ class InfoCommand extends Command
 
         try {
             $paths = $locator->paths((string) $name);
+            $files = $locator->files((string) $name);
             $versions = $backups->versions((string) $name);
         } catch (ModsxException $exception) {
             $this->components->error($exception->getMessage());
@@ -62,7 +63,7 @@ class InfoCommand extends Command
 
         $info = [
             'module' => (string) $name,
-            'application' => $this->applicationInfo($paths),
+            'application' => $this->applicationInfo($paths, $files),
             'backups' => $this->backupInfo($backups, (string) $name, $versions),
         ];
 
@@ -79,19 +80,20 @@ class InfoCommand extends Command
 
     /**
      * @param  list<string>  $paths
+     * @param  list<string>  $moduleFiles
      * @return array<string, mixed>
      */
-    private function applicationInfo(array $paths): array
+    private function applicationInfo(array $paths, array $moduleFiles): array
     {
         $bytes = 0;
-        $files = 0;
+        $fileCount = 0;
         $directories = [];
 
         foreach ($paths as $relative) {
             [$pathBytes, $pathFiles] = $this->measure(base_path($relative));
 
             $bytes += $pathBytes;
-            $files += $pathFiles;
+            $fileCount += $pathFiles;
 
             $directories[] = [
                 'path' => $relative,
@@ -101,10 +103,26 @@ class InfoCommand extends Command
             ];
         }
 
+        $files = [];
+
+        foreach ($moduleFiles as $relative) {
+            $size = (int) (File::isFile(base_path($relative)) ? File::size(base_path($relative)) : 0);
+
+            $bytes += $size;
+            $fileCount++;
+
+            $files[] = [
+                'path' => $relative,
+                'size_bytes' => $size,
+                'size' => $this->formatBytes($size),
+            ];
+        }
+
         return [
             'present' => $paths !== [],
             'directories' => $directories,
             'files' => $files,
+            'file_count' => $fileCount,
             'size_bytes' => $bytes,
             'size' => $this->formatBytes($bytes),
         ];
@@ -138,6 +156,7 @@ class InfoCommand extends Command
                 'laravel_version' => $manifest['laravel_version'] ?? null,
                 'php_version' => $manifest['php_version'] ?? null,
                 'comment' => is_string($manifest['comment'] ?? null) ? $manifest['comment'] : null,
+                'archived' => is_array($manifest['archived'] ?? null) ? count($manifest['archived']) : 0,
             ];
         }
 
@@ -203,7 +222,7 @@ class InfoCommand extends Command
         if ($application['present']) {
             $this->components->twoColumnDetail('Status', '<fg=green>present in the application</>');
             $this->components->twoColumnDetail('Directories', (string) count($application['directories']));
-            $this->components->twoColumnDetail('Files', (string) $application['files']);
+            $this->components->twoColumnDetail('Files', (string) $application['file_count']);
             $this->components->twoColumnDetail('Size', $application['size']);
 
             $this->newLine();
@@ -212,6 +231,13 @@ class InfoCommand extends Command
                 $this->components->twoColumnDetail(
                     $directory['path'],
                     sprintf('<fg=gray>%d file(s), %s</>', $directory['files'], $directory['size'])
+                );
+            }
+
+            foreach ($application['files'] as $file) {
+                $this->components->twoColumnDetail(
+                    $file['path'],
+                    sprintf('<fg=gray>%s</>', $file['size'])
                 );
             }
         } else {
@@ -235,13 +261,14 @@ class InfoCommand extends Command
         ));
 
         $this->table(
-            ['Version', 'Created', 'Files', 'Size', 'Laravel', 'Comment'],
+            ['Version', 'Created', 'Files', 'Size', 'Laravel', 'Archived', 'Comment'],
             array_map(static fn (array $row): array => [
                 $row['version'],
                 $row['created_at'] ?? '-',
                 (string) $row['files'],
                 $row['size'],
                 $row['laravel_version'] ?? '-',
+                $row['archived'] === 0 ? '-' : (string) $row['archived'],
                 $row['comment'] ?? '-',
             ], $backups['versions']),
         );

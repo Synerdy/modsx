@@ -7,13 +7,22 @@ beforeEach(function () {
     $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
 });
 
-it('shows the directories that make up a named module', function () {
+it('shows everything that makes up a named module', function () {
+    $this->makeFile('routes/modsx-blog.php');
+    $this->makeFile('database/migrations/2026_01_01_000000_modsx_blog_posts_table.php');
+
     $output = json_decode(artisanOutput('modsx:path Blog --json'), true);
 
+    // This command is documented as showing exactly what a backup would copy,
+    // so leaving files or migrations out of it would make it lie.
     expect($output)->toBe([
         'Blog' => [
-            'app/Http/Controllers/ModsxBlog',
-            'resources/views/modsx-blog',
+            'directories' => [
+                'app/Http/Controllers/ModsxBlog',
+                'resources/views/modsx-blog',
+            ],
+            'files' => ['routes/modsx-blog.php'],
+            'migrations' => ['database/migrations/2026_01_01_000000_modsx_blog_posts_table.php'],
         ],
     ]);
 });

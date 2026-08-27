@@ -5,17 +5,18 @@ declare(strict_types=1);
 use Modsx\Exceptions\ModsxException;
 use Modsx\ModuleName;
 
-it('derives both directory forms from one canonical name', function (string $input, string $studly, string $kebab) {
+it('derives every form from one canonical name', function (string $input, string $studly, string $kebab, string $snake) {
     $name = ModuleName::make($input);
 
     expect($name->studly)->toBe($studly)
-        ->and($name->kebab)->toBe($kebab);
+        ->and($name->kebab)->toBe($kebab)
+        ->and($name->snake)->toBe($snake);
 })->with([
-    ['Blog', 'Blog', 'blog'],
-    ['blog', 'Blog', 'blog'],
-    ['UserProfile', 'UserProfile', 'user-profile'],
-    ['user-profile', 'UserProfile', 'user-profile'],
-    ['user_profile', 'UserProfile', 'user-profile'],
+    ['Blog', 'Blog', 'blog', 'blog'],
+    ['blog', 'Blog', 'blog', 'blog'],
+    ['UserProfile', 'UserProfile', 'user-profile', 'user_profile'],
+    ['user-profile', 'UserProfile', 'user-profile', 'user_profile'],
+    ['user_profile', 'UserProfile', 'user-profile', 'user_profile'],
 ]);
 
 it('treats names differing only in word boundaries as different modules', function () {

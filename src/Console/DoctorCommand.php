@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modsx\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\ModuleLocator;
@@ -24,13 +25,28 @@ class DoctorCommand extends Command
         $ambiguous = $this->ambiguousNames($locator);
         $singleForm = $this->singleFormModules($locator);
         $orphaned = $this->orphanedBackups($locator, $backups);
+        $prefixCollisions = $locator->prefixCollisions();
+        $caseCollisions = $this->caseCollisions($locator, $backups);
+        $misnamedMigrations = $locator->misnamedMigrations();
+        $brokenBackups = $this->brokenBackups($locator, $backups);
+        $foreignPrefix = $this->foreignPrefixBackups($locator, $backups);
+        $strayDirectories = $this->strayBackupDirectories($backups);
 
-        $problems = count($ambiguous);
+        $problems = count($ambiguous)
+            + count($prefixCollisions)
+            + count($caseCollisions)
+            + count($brokenBackups);
 
         if ($json) {
             $this->line((string) json_encode([
                 'problems' => $problems,
                 'ambiguous_names' => $ambiguous,
+                'prefix_collisions' => $prefixCollisions,
+                'case_collisions' => $caseCollisions,
+                'broken_backups' => $brokenBackups,
+                'misnamed_migrations' => $misnamedMigrations,
+                'foreign_prefix_backups' => $foreignPrefix,
+                'stray_backup_directories' => $strayDirectories,
                 'single_form_modules' => $singleForm,
                 'orphaned_backups' => $orphaned,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -41,6 +57,12 @@ class DoctorCommand extends Command
         $this->banner();
 
         $this->renderAmbiguousNames($locator, $ambiguous);
+        $this->renderPrefixCollisions($prefixCollisions);
+        $this->renderCaseCollisions($caseCollisions);
+        $this->renderBrokenBackups($brokenBackups);
+        $this->renderMisnamedMigrations($misnamedMigrations);
+        $this->renderForeignPrefixBackups($locator, $foreignPrefix);
+        $this->renderStrayDirectories($strayDirectories);
         $this->renderSingleFormModules($locator, $singleForm);
         $this->renderOrphanedBackups($orphaned);
 
@@ -92,6 +114,10 @@ class DoctorCommand extends Command
                 implode('] and [', $names)
             ));
 
+            // Careful with the wording: on a case-insensitive filesystem they
+            // are not backed up as two at all - they share one tree. Saying
+            // "backed up as two" here would be false on Windows and macOS.
+
             foreach ($group['paths'] as $name => $paths) {
                 foreach ($paths as $path) {
                     $this->components->twoColumnDetail($path, '<fg=gray>'.$name.'</>');
@@ -107,6 +133,213 @@ class DoctorCommand extends Command
                     $names[0],
                 ),
             ]);
+        }
+    }
+
+    /**
+     * @param  list<array{owner: string, nested: string}>  $collisions
+     */
+    private function renderPrefixCollisions(array $collisions): void
+    {
+        foreach ($collisions as $collision) {
+            $this->components->error(sprintf(
+                'Module [%s] sits inside the prefix owned by [%s], so their migrations are ambiguous.',
+                $collision['nested'],
+                $collision['owner'],
+            ));
+
+            $this->components->bulletList([
+                sprintf(
+                    'A migration named after [%s] also reads as belonging to [%s]. Rename one of them.',
+                    $collision['nested'],
+                    $collision['owner'],
+                ),
+            ]);
+        }
+    }
+
+    /**
+     * Backup trees whose names differ only in letter case. On Windows and
+     * macOS those are one directory, so the two modules share a version
+     * sequence and a restore can hand back the wrong module's content.
+     *
+     * @return list<array{module: string, existing: string}>
+     */
+    private function caseCollisions(ModuleLocator $locator, BackupRepository $backups): array
+    {
+        $rows = [];
+
+        foreach (array_unique(array_merge($locator->names(), $backups->modules())) as $module) {
+            $existing = $backups->collidingName($module);
+
+            if ($existing !== null) {
+                $rows[] = ['module' => $module, 'existing' => $existing];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{module: string, existing: string}>  $collisions
+     */
+    private function renderCaseCollisions(array $collisions): void
+    {
+        foreach ($collisions as $collision) {
+            $this->components->error(sprintf(
+                'Backups for [%s] and [%s] differ only in letter case.',
+                $collision['module'],
+                $collision['existing'],
+            ));
+
+            $this->components->bulletList([
+                'On Windows and macOS these are one directory: version numbers interleave '.
+                'and a restore can return the other module. Rename one of them.',
+            ]);
+        }
+    }
+
+    /**
+     * Versions whose manifest is missing or unreadable. Restore falls back to
+     * scanning for module directories without one, but the exact source paths,
+     * the file list and the comment are gone.
+     *
+     * @return list<array{module: string, version: string}>
+     */
+    private function brokenBackups(ModuleLocator $locator, BackupRepository $backups): array
+    {
+        $rows = [];
+
+        foreach ($backups->modules() as $module) {
+            foreach ($backups->versions($module) as $version) {
+                if ($backups->manifest($module, $version) === null) {
+                    $rows[] = ['module' => $module, 'version' => $version];
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{module: string, version: string}>  $broken
+     */
+    private function renderBrokenBackups(array $broken): void
+    {
+        foreach ($broken as $row) {
+            $this->components->error(sprintf(
+                'Backup [%s] of module [%s] has no readable %s.',
+                $row['version'],
+                $row['module'],
+                BackupRepository::MANIFEST,
+            ));
+        }
+    }
+
+    /**
+     * Informational: versions taken while a different prefix was configured.
+     * They still restore, using the paths their manifest recorded.
+     *
+     * @return list<array{module: string, version: string, prefix: string}>
+     */
+    private function foreignPrefixBackups(ModuleLocator $locator, BackupRepository $backups): array
+    {
+        $current = $locator->prefix();
+        $rows = [];
+
+        foreach ($backups->modules() as $module) {
+            foreach ($backups->versions($module) as $version) {
+                $manifest = $backups->manifest($module, $version);
+                $prefix = $manifest['prefix'] ?? null;
+
+                if (is_string($prefix) && $prefix !== $current) {
+                    $rows[] = ['module' => $module, 'version' => $version, 'prefix' => $prefix];
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{module: string, version: string, prefix: string}>  $rows
+     */
+    private function renderForeignPrefixBackups(ModuleLocator $locator, array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->components->info(sprintf(
+            'Backups taken under a different prefix (now "%s"). They still restore:',
+            $locator->prefix(),
+        ));
+
+        foreach ($rows as $row) {
+            $this->components->twoColumnDetail(
+                sprintf('%s %s', $row['module'], $row['version']),
+                sprintf('<fg=gray>taken as "%s"</>', $row['prefix']),
+            );
+        }
+    }
+
+    /**
+     * Informational: directories in a module's backup tree that are not
+     * versions. versions() skips anything non-numeric, so these are otherwise
+     * invisible - including a version directory renamed by hand.
+     *
+     * @return list<array{module: string, directory: string}>
+     */
+    private function strayBackupDirectories(BackupRepository $backups): array
+    {
+        $rows = [];
+
+        foreach ($backups->modules() as $module) {
+            foreach (File::directories($backups->pathFor($module)) as $directory) {
+                $basename = basename($directory);
+
+                if (preg_match('/^\d+$/', $basename) !== 1) {
+                    $rows[] = ['module' => $module, 'directory' => $basename];
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{module: string, directory: string}>  $rows
+     */
+    private function renderStrayDirectories(array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->components->info('Directories in the backup tree that are not versions:');
+
+        foreach ($rows as $row) {
+            $this->components->twoColumnDetail(
+                sprintf('%s/%s', $row['module'], $row['directory']),
+                '<fg=gray>ignored when listing versions</>',
+            );
+        }
+    }
+
+    /**
+     * @param  list<array{module: string, path: string, suggestion: string}>  $rows
+     */
+    private function renderMisnamedMigrations(array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->components->info('Migrations that name a module but are not archived with it:');
+
+        foreach ($rows as $row) {
+            $this->components->twoColumnDetail($row['path'], '<fg=gray>'.$row['module'].'</>');
+            $this->components->bulletList([sprintf('Rename to %s', $row['suggestion'])]);
         }
     }
 

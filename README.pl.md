@@ -79,22 +79,36 @@ Moduł ma jedną kanoniczną nazwę zapisaną w **StudlyCase**:
 Blog        UserProfile        AdminPanel
 ```
 
-Z tej nazwy wyprowadzane są dwie formy katalogów — Modsx dopasowuje **obie**:
+Z tej nazwy wyprowadzane są wszystkie pozostałe formy — Modsx dopasowuje **każdą**:
 
 | Gdzie | Forma | `Blog` | `UserProfile` |
 |---|---|---|---|
 | Katalogi w `resources/`, `public/`, `lang/` | `modsx-` + kebab-case | `modsx-blog` | `modsx-user-profile` |
 | Katalogi przestrzeni nazw w `app/`, `database/` | `Modsx` + StudlyCase | `ModsxBlog` | `ModsxUserProfile` |
+| Pojedyncze pliki — `routes/`, `config/`, `lang/` | `modsx-` + kebab-case | `modsx-blog.php` | `modsx-user-profile.php` |
+| Nazwy migracji, po timestampie | `modsx_` + snake_case | `modsx_blog_…` | `modsx_user_profile_…` |
 
-To konwencja samego Laravela, a nie wymysł tego pakietu — framework mapuje `App\View\Components\UserProfile` na `<x-user-profile>` dokładnie tą samą konwersją StudlyCase ↔ kebab-case. Jeśli Twoje katalogi już trzymają się nazewnictwa Laravela, to tym samym trzymają się i tego.
+Dwie pierwsze to konwencja samego Laravela, a nie wymysł tego pakietu — framework mapuje `App\View\Components\UserProfile` na `<x-user-profile>` dokładnie tą samą konwersją StudlyCase ↔ kebab-case. Jeśli Twoje katalogi już trzymają się nazewnictwa Laravela, to tym samym trzymają się i tego.
 
-> **Obie formy muszą pochodzić od tej samej nazwy.**
+> **Każda forma musi pochodzić od tej samej nazwy.**
 >
 > `modsx-userprofile` i `ModsxUserProfile` to **dwa różne moduły**: pierwszy to `Userprofile`, drugi `UserProfile`. Zrobisz backup `UserProfile` i widoki z `modsx-userprofile` zostaną po cichu pominięte.
 >
-> Najpierw zapisz nazwę w StudlyCase, potem konwertuj: `UserProfile` → `user-profile`, nigdy `userprofile`. Jeśli podejrzewasz, że gdzieś już Ci się to przydarzyło, `php artisan modsx:doctor` to znajdzie.
+> Najpierw zapisz nazwę w StudlyCase, potem konwertuj: `UserProfile` → `user-profile`, nigdy `userprofile`. Albo pozwól, żeby `php artisan modsx:make UserProfile` zapisał je za Ciebie — to jedyny sposób, żeby mieć pewność, że się zgadzają. Jeśli podejrzewasz, że gdzieś już Ci się to przydarzyło, `php artisan modsx:doctor` to znajdzie.
+
+**Prefiks należy do jednego modułu, w całości.** Jeśli istnieje `Blog`, to `modsx-blog-admin.php` i `modsx_blog_posts_table` są jego — ale drugi moduł nazwany `BlogPost` rościłby sobie wtedy prawo do nazw, które już czytają się jako należące do `Blog`. To konflikt nazewniczy, który zgłasza `modsx:doctor`. Jeden moduł, jeden prefiks.
 
 Sam prefiks `modsx` jest konfigurowalny, więc jeśli wolisz `mod-` albo inicjały firmy, zmieniasz go raz i obowiązują te same reguły.
+
+### Co należy do modułu
+
+| | Backupowane | Przywracane | Usuwane przez `modsx:delete` |
+|---|---|---|---|
+| Katalogi (`ModsxBlog/`, `modsx-blog/`) | tak | tak | tak |
+| Pliki (`routes/modsx-blog.php`, …) | tak | tak | tak |
+| Migracje | **tylko archiwum** | **nie** | **nie** |
+
+Migracje to celowy wyjątek. Modsx nigdy nie dotyka bazy danych, więc przywrócenie starego pliku migracji przy schemacie, który poszedł do przodu, zostawiłoby repozytorium i bazę w niezgodzie — bez żadnego sygnału. Usunięcie takiego pliku, gdy jego tabele wciąż istnieją, byłoby jeszcze gorsze. Dlatego są kopiowane do każdego backupu dla wglądu — zawsze możesz odczytać, jak schemat wyglądał wcześniej — a poza tym zostawiane dokładnie tam, gdzie są.
 
 ### Przykładowy układ
 
@@ -120,9 +134,13 @@ resources/
 │   └── blog.css
 └── js/modsx-blog/
     └── editor.js
+
+routes/modsx-blog.php
+config/modsx-blog.php
+database/migrations/2026_01_01_000000_modsx_blog_posts_table.php
 ```
 
-Żaden z tych katalogów nie jest obowiązkowy. Modułem może być pojedynczy katalog widoków.
+Nic z tego nie jest obowiązkowe. Modułem może być pojedynczy katalog widoków.
 
 ### Livewire
 
@@ -149,8 +167,9 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 
 | Komenda | Do czego |
 |---|---|
+| `modsx:make {name}` | Tworzy szkielet katalogów nowego modułu |
 | `modsx:list` | Moduły obecne w aplikacji |
-| `modsx:path {name?}` | Katalogi należące do modułu |
+| `modsx:path {name?}` | Wszystko, co należy do modułu |
 | `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
 | `modsx:backuplist {name?}` | Dostępne wersje w backupie |
 | `modsx:export {name?} {version?}` | Pakuje wersję backupu do przenośnego .zip |
@@ -162,6 +181,31 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:prune {name?}` | Usuwa stare wersje, zostawiając najnowsze |
 | `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
 
+### `modsx:make`
+
+Tworzy katalogi nowego modułu. Konwencja działa świetnie i bez tej komendy — możesz zrobić katalogi ręcznie i niczego nie instalować — ale wpisywanie obu form samodzielnie to jedyny sposób, żeby się pomylić. Tutaj obie pochodzą z jednej nazwy, więc nie mogą się rozjechać.
+
+```bash
+php artisan modsx:make Blog
+php artisan modsx:make user-profile   # dowolna wielkość liter, jest normalizowana
+```
+
+Które katalogi powstaną, zależy od Ciebie — `config/modsx.php`:
+
+```php
+'scaffold' => [
+    'app/Http/Controllers/{Studly}',
+    'app/Models/{Studly}',
+    'resources/views/{kebab}',
+],
+```
+
+`{Studly}` staje się `ModsxBlog`, `{kebab}` staje się `modsx-blog`. Oba z tej jednej nazwy, którą wpisałeś.
+
+Tworzy katalogi i nic poza tym — żadnych stubów kontrolerów, żadnego boilerplate'u. Generowanie kodu uczyniłoby z tego generator, czyli dokładnie to, czym Modsx nie jest. Niczego też nie nadpisuje: istniejące katalogi są raportowane i zostawiane w spokoju, więc komendę można bezpiecznie uruchomić ponownie.
+
+Pamiętaj, że git nie śledzi pustych katalogów, więc szkielet, którego nie wypełnisz, po cichu zniknie przy następnym commicie. Tak ma być: katalogi, których faktycznie używasz, będą miały w sobie pliki.
+
 ### `modsx:list`
 
 ```bash
@@ -170,22 +214,24 @@ php artisan modsx:list --json
 ```
 
 ```
- Module        Directories   Backups   Latest
- Blog          4             3         0003
- UserProfile   2             -         -
+ Module        Directories   Files   Backups   Latest
+ Blog          4             2       3         0003
+ UserProfile   2             -       -         -
 ```
 
 Moduł pojawia się na liście, jeśli istnieje **którykolwiek** z jego katalogów.
 
 ### `modsx:path`
 
-Pokazuje, które dokładnie katalogi Modsx uznaje za część modułu — czyli dokładnie to, co skopiuje backup. Warto uruchomić przed pierwszym `modsx:delete`.
+Pokazuje dokładnie, co Modsx uznaje za część modułu — czyli dokładnie to, co skopiuje backup. Warto uruchomić przed pierwszym `modsx:delete`.
 
 ```bash
 php artisan modsx:path Blog
 php artisan modsx:path            # wszystkie moduły
 php artisan modsx:path --json
 ```
+
+Katalogi, pliki i migracje są wypisywane osobno, przy czym migracje są oznaczone jako archiwalne — żeby było jasne, że przywracanie ich nie odtworzy.
 
 ### `modsx:backup`
 
@@ -194,6 +240,9 @@ Kopiuje każdy katalog należący do modułu do nowej, kolejnej wersji.
 ```bash
 php artisan modsx:backup Blog
 php artisan modsx:backup Blog -m "przed przejściem na repository pattern"
+php artisan modsx:backup --all                  # wszystkie moduły naraz
+php artisan modsx:backup Blog --skip-unchanged  # nic nie rób, jeśli nic się nie zmieniło
+php artisan modsx:backup Blog --json
 ```
 
 ```
@@ -201,19 +250,27 @@ modsx-backups/
 └── Blog/
     ├── 0001/
     │   ├── modsx.json
-    │   ├── app/Http/Controllers/ModsxBlog/
-    │   └── resources/views/modsx-blog/
+    │   ├── app/Http/Controllers/ModsxBlog/     ← przywracane
+    │   ├── routes/modsx-blog.php               ← przywracane
+    │   └── _archive/
+    │       └── database/migrations/...         ← tylko do wglądu
     └── 0002/
         └── ...
 ```
 
 Numer wersji bierze się z najwyższego istniejącego numeru, a nie z tego, co system plików wypisze jako ostatnie, a komenda odmawia zapisu do ścieżki, która już istnieje. Wersje nigdy nie są nadpisywane ani używane ponownie.
 
+Zarchiwizowane migracje leżą w `_archive/`, z dala od reszty. To nie jest etykieta — przywracanie czyta listę ścieżek i plików z manifestu i nigdzie indziej nie zagląda, więc nie ma tu flagi, którą dałoby się źle ustawić.
+
 `-m`/`--comment` dopina do wersji opcjonalną, dowolną notatkę tekstową — całkowicie opt-in, nie ma o to promptu. Widać ją w `modsx:backuplist` i `modsx:info`.
 
-Każda wersja ma manifest `modsx.json` z nazwą modułu, czasem utworzenia, dokładną listą ścieżek źródłowych, opcjonalnym komentarzem oraz wersjami PHP, Laravela i pakietu. Przywracanie go czyta, dzięki czemu odkłada katalogi tam, skąd zostały wzięte, zamiast zgadywać ich położenie.
+`--skip-unchanged` porównuje moduł z jego najnowszą wersją plik po pliku i nie robi nic, jeśli są identyczne — dzięki temu backup przy każdym wdrożeniu nie zapycha dysku identycznymi kopiami. Zmieniona migracja nie liczy się tu jako zmiana, bo nie jest częścią tego, co przywracanie odtwarza.
+
+Każda wersja ma manifest `modsx.json` z nazwą modułu, czasem utworzenia, dokładną listą ścieżek i plików źródłowych, zarchiwizowanymi migracjami, opcjonalnym komentarzem oraz wersjami PHP, Laravela i pakietu. Przywracanie go czyta, dzięki czemu odkłada rzeczy tam, skąd zostały wzięte, zamiast zgadywać ich położenie.
 
 Całość kopiowana jest najpierw do katalogu tymczasowego i dopiero na końcu przenoszona na miejsce, więc przerwany backup nie zostawia po sobie wersji zapisanej w połowie.
+
+Backup dwóch modułów, których nazwy różnią się wyłącznie wielkością liter, jest odrzucany. Na Windows i macOS `UserProfile` i `Userprofile` to ten sam katalog, więc dzieliłyby jedną sekwencję wersji, a przywracanie mogłoby zwrócić nie ten moduł. Odmowa obowiązuje na każdej platformie: zachowanie zależne od systemu plików jest gorsze niż konsekwentne „nie".
 
 ### `modsx:backuplist`
 
@@ -271,9 +328,12 @@ Odmawia importu na wersję, która już istnieje — z tego samego powodu, dla k
 php artisan modsx:delete Blog
 php artisan modsx:delete Blog --force          # bez pytania, do CI
 php artisan modsx:delete Blog --skip-backup    # jeśli naprawdę tego chcesz
+php artisan modsx:delete Blog --force --json
 ```
 
-Katalogi do usunięcia są wypisywane przed pytaniem o potwierdzenie, a numer utworzonej wersji jest drukowany — więc zawsze wiesz, co podać do `modsx:restore`.
+Wszystko, co zostanie usunięte, jest wypisywane przed pytaniem o potwierdzenie, a numer utworzonej wersji jest drukowany — więc zawsze wiesz, co podać do `modsx:restore`.
+
+Migracje też są wypisywane — jako **zostawione**. Zostają w aplikacji, bo ich tabele wciąż są w bazie, a usunięcie pliku, który je dokumentuje, zostawiłoby schemat bez żadnego wyjaśnienia. `modsx:doctor` przypomni Ci później, że należą do modułu, którego już nie ma.
 
 ### `modsx:restore`
 
@@ -281,17 +341,23 @@ Katalogi do usunięcia są wypisywane przed pytaniem o potwierdzenie, a numer ut
 php artisan modsx:restore Blog          # najnowsza wersja
 php artisan modsx:restore Blog 0003     # konkretna wersja
 php artisan modsx:restore               # interaktywnie
+php artisan modsx:restore Blog --json
 ```
 
 Kolejność działań:
 
 1. Backup bieżącego stanu modułu, żeby samo przywracanie też dało się cofnąć.
-2. Usunięcie bieżących katalogów.
-3. Skopiowanie wybranej wersji z powrotem do aplikacji.
+2. Skopiowanie wybranej wersji z backupu do katalogu tymczasowego.
+3. Odsunięcie całego bieżącego stanu na bok, jednym przebiegiem.
+4. Przeniesienie przywracanego stanu na miejsce.
 
-Wszystko jest wyciągane z backupu **zanim** cokolwiek zostanie ruszone w aplikacji, więc uszkodzony lub niekompletny backup ujawnia się, gdy bieżący stan jest jeszcze nienaruszony.
+Wszystko jest wyciągane z backupu **zanim** cokolwiek zostanie ruszone w aplikacji, więc uszkodzony lub niekompletny backup ujawnia się, gdy bieżący stan jest jeszcze nienaruszony. A ponieważ krok 3 odsuwa stary stan w całości, zamiast kasować ścieżkę po ścieżce, awaria w kroku 4 jest cofana: dostajesz z powrotem dokładnie to, co miałeś, a nie mieszankę starego z nowym.
 
-Jeśli modułu nie ma aktualnie w aplikacji, kroki 1 i 2 są pomijane i staje się to **instalacją z backupu** — i tak właśnie przenosi się moduł między projektami: kopiujesz `modsx-backups/Blog/` i przywracasz.
+Wszystko, czego dana wersja nie zawierała, po przywróceniu znika — zostało odsunięte i nie wróciło. Tak właśnie musi działać „przywróć dokładnie ten stan", a `modsx:diff` powie Ci z wyprzedzeniem, czego to dotyczy.
+
+Zarchiwizowane migracje nigdy nie są przywracane. Na tym etapie w ogóle nie są czytane.
+
+Jeśli modułu nie ma aktualnie w aplikacji, kroki 1 i 3 są pomijane i staje się to **instalacją z backupu** — i tak właśnie przenosi się moduł między projektami: kopiujesz `modsx-backups/Blog/` i przywracasz.
 
 ### `modsx:prune`
 
@@ -337,8 +403,8 @@ php artisan modsx:info --json
 
 Pokazuje:
 
-- **Stan bieżący**: czy moduł istnieje w aplikacji, ile ma katalogów i plików, jaki zajmuje rozmiar na dysku
-- **Historia backupów**: liczbę wersji, łączny rozmiar backupów, tabelę każdej wersji z datą utworzenia, rozmiarem i komentarzem (jeśli został podany przy backupie)
+- **Stan bieżący**: czy moduł istnieje w aplikacji, jego katalogi i pliki, jaki zajmuje rozmiar na dysku
+- **Historia backupów**: liczbę wersji, łączny rozmiar backupów, tabelę każdej wersji z datą utworzenia, rozmiarem, liczbą zarchiwizowanych migracji i komentarzem (jeśli został podany przy backupie)
 
 Przydatne do zrozumienia zużycia miejsca na dysku i podjęcia decyzji, czy czyścić stare wersje.
 
@@ -349,11 +415,20 @@ php artisan modsx:doctor
 php artisan modsx:doctor --json    # kod wyjścia 1, gdy znaleziono problemy — do CI
 ```
 
-Zgłasza:
+Problemy (kod wyjścia 1):
 
-- **Moduły, których nazwy różnią się wyłącznie granicami słów**, np. `Userprofile` obok `UserProfile`. Obie nazwy są poprawne, więc nic innego tego nie wyłapie — a to prawie zawsze jeden moduł, który miał być jednym modułem, i zostanie zbackupowany jako dwa.
-- Moduły istniejące tylko w jednej z dwóch form katalogów (informacyjnie).
-- Backupy bez odpowiadającego im modułu w aplikacji (informacyjnie).
+- **Nazwy modułów różniące się wyłącznie granicami słów**, np. `Userprofile` obok `UserProfile`. Obie nazwy są poprawne, więc nic innego tego nie wyłapie — a to prawie zawsze jeden moduł, który miał być jednym.
+- **Drzewa backupów różniące się wyłącznie wielkością liter.** Na Windows i macOS to jeden katalog, więc dwa moduły dzielą sekwencję wersji, a przywracanie może zwrócić nie ten.
+- **Jeden moduł mieszczący się w prefiksie drugiego**, np. `BlogPost` obok `Blog`. Migracja nazwana od któregokolwiek z nich czyta się wtedy jako należąca do obu, a nic tu nie zgaduje.
+- **Wersje backupu bez czytelnego `modsx.json`.**
+
+Informacyjnie (kod wyjścia 0):
+
+- **Migracje, które nazywają moduł, ale nie są z nim archiwizowane** — klasyczne `create_modsx_blog_posts_table` — wraz z nazwą, której potrzebują zamiast tego. Bez tego konwencja po prostu po cichu nic by nie robiła, a Ty nigdy byś się nie dowiedział dlaczego.
+- Backupy zrobione, gdy skonfigurowany był inny prefiks.
+- Katalogi w drzewie backupów, które nie są wersjami i przez to są pomijane przy listowaniu.
+- Moduły istniejące tylko w jednej z dwóch form katalogów.
+- Backupy bez odpowiadającego im modułu w aplikacji.
 
 ---
 
@@ -382,6 +457,14 @@ return [
         'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea', '.vscode',
     ],
 
+    // Co tworzy modsx:make. Oba placeholdery pochodzą z jednej nazwy, którą
+    // wpisujesz — i to właśnie zapobiega rozjechaniu się obu form.
+    'scaffold' => [
+        'app/Http/Controllers/{Studly}',
+        'app/Models/{Studly}',
+        'resources/views/{kebab}',
+    ],
+
     // 4 daje 0001, 0002, ...
     'version_padding' => 4,
 
@@ -402,19 +485,22 @@ Dwie uwagi:
 
 Świadome, ale warto je znać, zanim na tym polegniesz:
 
-- **Tylko katalogi.** Pojedyncze pliki należące do modułu — `routes/modsx-blog.php`, `config/modsx-blog.php`, pliki migracji, `lang/pl/modsx-blog.php` — **nie** są backupowane, usuwane ani przywracane. Trzymaj kod modułu w katalogach albo zajmij się tymi plikami sam.
-- **Bez bazy danych.** Przywrócenie starszej wersji nie cofa migracji ani nie rusza danych. Jeśli zmiana wersji oznacza zmianę schematu, to już Twoja część roboty.
+- **Bez bazy danych, a więc i bez przywracania migracji.** Przywrócenie starszej wersji nie cofa migracji ani nie rusza danych. *Pliki* migracji są archiwizowane w każdym backupie, żeby dało się odczytać, jak schemat wyglądał wcześniej, ale nigdy nie są przywracane ani usuwane — odłożenie starego pliku przy schemacie, który poszedł do przodu, zostawiłoby repozytorium i bazę w niezgodzie, bez żadnego sygnału. To decyzja, a nie luka do wypełnienia w przyszłości.
+- **Jeden moduł ma swój prefiks na wyłączność.** `Blog` i `BlogPost` nie mogą współistnieć, bo `modsx_blog_post_*` czyta się jako należące do obu. `modsx:doctor` zgłasza konflikt, zamiast zgadywać.
 - **Bez rozwiązywania zależności.** Modsx nie wie, że `Blog` potrzebuje `Users`. Przywrócenie jednego nie przywróci drugiego.
 - **Bez integracji z Composerem.** Zewnętrzne pakiety, od których zależy moduł, pozostają problemem Twojego `composer.json`.
-- **Backupy to zwykłe kopie katalogów.** Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd `modsx:prune`.
-- **Przywracanie nie jest w pełni atomowe.** Każdy katalog przenoszony jest osobno. Okno jest małe, a backup sprzed przywracania jest drogą ratunkową, ale maszyna, która padnie w połowie, zostawi część katalogów zaktualizowanych, a część nie.
+- **Backupy to zwykłe kopie katalogów.** Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd `modsx:prune` i `--skip-unchanged`.
+- **Przywracanie jest odwracalne, ale nie atomowe.** Bieżący stan jest odsuwany w całości, zanim wejdzie przywracany, więc awaria w połowie jest automatycznie cofana. Maszyna, która padnie dokładnie w złym momencie, wciąż może zostawić moduł w kawałkach — ale wszystko, co miał, leży w jednym miejscu, a backup sprzed przywracania nadal tam jest.
 
 ---
 
 ## FAQ
 
 **Czy pakiet jest potrzebny, żeby używać konwencji?**
-Nie. O to właśnie chodzi. Prefiksujesz katalogi i wszystko działa. Pakiet instalujesz wtedy, gdy chcesz backupy.
+Nie. O to właśnie chodzi. Prefiksujesz katalogi i wszystko działa. Pakiet instalujesz wtedy, gdy chcesz backupy. `modsx:make` to udogodnienie dla tych, którzy już go mają, a nie wymóg — tworzy katalogi, które równie dobrze możesz zrobić ręcznie.
+
+**Dlaczego moje migracje nie są archiwizowane?**
+Prawie na pewno przez nazwę. Konwencja mówi, że nazwa *po timestampie* zaczyna się od prefiksu modułu: `2026_01_01_000000_modsx_blog_create_posts_table.php`, a nie typowe „czasownik z przodu" `..._create_modsx_blog_posts_table.php`. Uruchom `php artisan modsx:doctor` — znajduje migracje, które wspominają moduł, ale nie są od niego nazwane, i podpowiada, na co je przemianować.
 
 **Co się stanie z modułami, jeśli go odinstaluję?**
 Nic. To zwykłe katalogi Laravela i nigdy nie były niczym innym. Bez opieki zostaje tylko `modsx-backups/` — a to zwykłe pliki, które możesz zachować albo usunąć.
@@ -438,7 +524,8 @@ To narzędzia deweloperskie. Pytają przed zniszczeniem czegokolwiek i odmawiaj�
 
 ## Plany
 
-- [ ] Opcjonalny backup pojedynczych plików modułu
+Nic w kolejce. Przywracanie migracji jest świadomie nieobecne, a nie
+odłożone na później — patrz [Ograniczenia](#ograniczenia).
 
 ---
 

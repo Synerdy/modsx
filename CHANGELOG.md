@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-27
+
+### Added
+
+- `modsx:make {name}` creates a new module's directory skeleton. Which
+  directories it makes is configurable (`modsx.scaffold`, with `{Studly}` and
+  `{kebab}` placeholders). It creates directories only - no stubs, no code -
+  and skips ones that already exist. Its real value is that both directory
+  forms come from a single name, which is the one mistake `modsx:doctor`
+  exists to catch after the fact.
+- **Single files belonging to a module** - `routes/modsx-blog.php`,
+  `config/modsx-blog.php`, `lang/en/modsx-blog.php` - are now backed up,
+  restored and deleted with it. They match the same rule as directories: the
+  name starts with the module prefix and ends on a word boundary, so
+  `modsx-blog-admin.php` is Blog's and `modsx-blogging.php` is not. Recorded
+  under a new `files` key in the manifest.
+- **Migrations are archived into every backup** under `_archive/`, and are
+  never restored and never deleted. The convention is that the filename after
+  the timestamp starts with the module's snake form
+  (`2026_01_01_000000_modsx_blog_create_posts_table.php`). Recorded under a new
+  `archived` manifest key that `restore()` does not read, so nothing can put
+  them back by accident. Rationale: this package does not touch the database,
+  so returning an old migration file to a schema that has moved on would leave
+  the repository and the database disagreeing with nothing to say so.
+- `modsx:backup --all` backs up every module in one run.
+- `modsx:backup --skip-unchanged` does nothing when the module is identical to
+  its newest version, so a backup on every deploy stops filling the disk with
+  identical copies. A changed migration does not count, since it is not part of
+  what a restore puts back.
+- `--json` on `modsx:backup`, `modsx:delete` and `modsx:restore`. They were the
+  only commands without it, and the only ones that change anything.
+- `modsx:doctor` gained five checks: backup trees differing only in letter
+  case, one module sitting inside another's prefix, backup versions with an
+  unreadable manifest, migrations that name a module but are not named *for* it
+  (with the rename needed), backups taken under a different prefix, and
+  directories in the backup tree that are not versions.
+
+### Fixed
+
+- **Two modules whose names differ only in letter case silently shared one
+  backup tree.** `UserProfile` and `Userprofile` are separate modules, but on
+  Windows and macOS they resolve to the same directory: version numbers
+  interleaved, `modsx:restore UserProfile 0002` could return the other module's
+  content, and `modsx:prune` could delete its versions. Backing up or importing
+  into a colliding tree is now refused - on every platform, because behaviour
+  that depends on the filesystem is worse in a backup tool than a consistent
+  no. Existing collisions are reported by `modsx:doctor`.
+- A restore that failed partway through could leave the module half replaced.
+  The current state is now moved aside whole before the restored state goes in,
+  and put back if anything fails, so a failure leaves exactly what was there
+  before. Filesystem errors during a restore also arrive as a readable message
+  instead of an unhandled `ErrorException`.
+- `modsx:path` did not show a module's files, while documenting itself as
+  showing "exactly what a backup would copy".
+
+### Changed
+
+- **`modsx:list --json` shape.** Was `name => [directories]`; now
+  `name => {directories: [], files: []}`.
+- **`modsx:path --json` shape.** Was `name => [directories]`; now
+  `name => {directories: [], files: [], migrations: []}`.
+- **`modsx:info --json`**: `application.files` was a file count and is now the
+  list of the module's own files; the count moved to `application.file_count`.
+  Each backup version gained an `archived` count.
+- `BackupManager::delete()` returns `{paths, files, migrations}` instead of a
+  flat list of paths.
+- `modsx:list` and `modsx:info` gained columns for files and archived
+  migrations; `modsx:delete` now warns which migrations it is leaving behind.
+- File-by-file comparison moved out of `DiffCommand` into a `ModuleDiffer`
+  class, shared with `--skip-unchanged`.
+
 ## [0.2.7] - 2026-08-27
 
 ### Added

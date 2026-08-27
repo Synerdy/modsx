@@ -19,26 +19,64 @@ use ZipArchive;
  */
 class BackupManager
 {
+    /**
+     * Where archived-only content lives inside a version directory.
+     *
+     * Kept apart from the restorable paths on purpose: restore() reads the
+     * manifest's "paths" and "files" and nothing else, so what sits in here
+     * cannot be put back by accident. The leading underscore also keeps it
+     * clear of the prefix patterns pathsInBackup() falls back to scanning for.
+     */
+    public const ARCHIVE_DIRECTORY = '_archive';
+
     public function __construct(
         private readonly ModuleLocator $locator,
         private readonly BackupRepository $backups,
+        private readonly ModuleDiffer $differ,
     ) {}
 
     /**
      * Copy a module into a new version.
      *
      * @param  ?string  $comment  Optional free-text note, recorded in the manifest as-is.
-     * @return array{version: string, paths: list<string>, target: string}
+     * @param  bool  $skipUnchanged  Return the newest version untouched when the module is identical to it.
+     * @return array{version: string, paths: list<string>, files: list<string>, archived: list<string>, target: string, skipped: bool}
      *
      * @throws ModsxException
      */
-    public function backup(ModuleName|string $name, ?string $comment = null): array
+    public function backup(ModuleName|string $name, ?string $comment = null, bool $skipUnchanged = false): array
     {
         $name = ModuleName::make($name);
         $paths = $this->locator->paths($name);
 
         if ($paths === []) {
             throw ModsxException::moduleNotFound($name->studly);
+        }
+
+        $files = $this->locator->files($name);
+        $archived = $this->locator->migrations($name);
+
+        if ($skipUnchanged) {
+            $unchanged = $this->matchesNewestVersion($name, $paths, $files);
+
+            if ($unchanged !== null) {
+                return [
+                    'version' => $unchanged,
+                    'paths' => $paths,
+                    'files' => $files,
+                    'archived' => $archived,
+                    'target' => $this->backups->versionPath($name, $unchanged),
+                    'skipped' => true,
+                ];
+            }
+        }
+
+        // Before reading any version numbers: on a case-insensitive filesystem
+        // they would come from the colliding module's tree, not this one's.
+        $collision = $this->backups->collidingName($name);
+
+        if ($collision !== null) {
+            throw ModsxException::caseCollision($name->studly, $collision);
         }
 
         $version = $this->backups->nextVersion($name);
@@ -67,12 +105,23 @@ class BackupManager
                 }
             }
 
+            $this->copyFilesInto($files, base_path(), $staging);
+
+            // Migrations go somewhere restore() never looks. They are kept so
+            // an old schema can be read back, not so it can be put back: this
+            // package does not touch the database, and returning an old
+            // migration file to a database that has moved on would leave the
+            // two disagreeing with nothing to say so.
+            $this->copyFilesInto($archived, base_path(), $staging.'/'.self::ARCHIVE_DIRECTORY);
+
             $this->backups->writeManifest($staging, [
                 'module' => $name->studly,
                 'version' => $version,
                 'created_at' => date(DATE_ATOM),
                 'prefix' => $this->locator->prefix(),
                 'paths' => $paths,
+                'files' => $files,
+                'archived' => $archived,
                 'php_version' => PHP_VERSION,
                 'laravel_version' => app()->version(),
                 'modsx_version' => ModsxServiceProvider::version(),
@@ -91,16 +140,54 @@ class BackupManager
         return [
             'version' => $version,
             'paths' => $paths,
+            'files' => $files,
+            'archived' => $archived,
             'target' => $target,
+            'skipped' => false,
         ];
     }
 
     /**
-     * Remove a module's directories from the application.
+     * The newest version's number when the module is byte-for-byte identical
+     * to it, or null when there is nothing to compare against or it differs.
+     *
+     * Archived migrations are left out on purpose: they are not part of the
+     * state a restore would put back, so a change to one is not a reason to
+     * take another copy of everything else.
+     *
+     * @param  list<string>  $paths
+     * @param  list<string>  $files
+     */
+    private function matchesNewestVersion(ModuleName $name, array $paths, array $files): ?string
+    {
+        $newest = $this->backups->latest($name);
+
+        if ($newest === null) {
+            return null;
+        }
+
+        $identical = $this->differ->identical(
+            $this->differ->fingerprint(base_path(), $paths, $files),
+            $this->differ->fingerprint(
+                $this->backups->versionPath($name, $newest),
+                $this->pathsInBackup($name, $newest),
+                $this->filesInBackup($name, $newest),
+            ),
+        );
+
+        return $identical ? $newest : null;
+    }
+
+    /**
+     * Remove a module's directories and files from the application.
      *
      * Takes no backup of its own - callers decide whether that has happened.
      *
-     * @return list<string> paths removed
+     * Migrations are deliberately left where they are and reported back
+     * instead: their tables are still in the database, and removing the file
+     * that documents them would leave the schema with nothing explaining it.
+     *
+     * @return array{paths: list<string>, files: list<string>, migrations: list<string>}
      *
      * @throws ModsxException
      */
@@ -113,17 +200,32 @@ class BackupManager
             throw ModsxException::moduleNotFound($name->studly);
         }
 
+        $files = $this->locator->files($name);
+        $migrations = $this->locator->migrations($name);
+
         foreach ($paths as $relative) {
             File::deleteDirectory(base_path($relative));
         }
 
-        return $paths;
+        foreach ($files as $relative) {
+            File::delete(base_path($relative));
+        }
+
+        return [
+            'paths' => $paths,
+            'files' => $files,
+            'migrations' => $migrations,
+        ];
     }
 
     /**
      * Restore a version into the application, replacing what is there now.
      *
-     * @return array{version: string, paths: list<string>}
+     * Reads only the restorable half of the backup - the manifest's paths and
+     * files. Archived migrations live under a key this method never touches
+     * and a directory it never walks, so there is no flag to get wrong.
+     *
+     * @return array{version: string, paths: list<string>, files: list<string>}
      *
      * @throws ModsxException
      */
@@ -143,8 +245,9 @@ class BackupManager
 
         $source = $this->backups->versionPath($name, $version);
         $paths = $this->pathsInBackup($name, $version);
+        $files = $this->filesInBackup($name, $version);
 
-        if ($paths === []) {
+        if ($paths === [] && $files === []) {
             throw ModsxException::emptyBackup($name->studly, $version);
         }
 
@@ -153,11 +256,12 @@ class BackupManager
         // volume often enough that staging there would break restores on
         // exactly the setups least able to debug them.
         $staging = $this->stagingPath(base_path());
+        $previous = $this->stagingPath(base_path());
 
         try {
-            // Copy everything out of the backup before touching the application,
-            // so a broken or incomplete backup is discovered while the current
-            // state is still intact.
+            // 1. Copy everything out of the backup before touching the
+            //    application, so a broken or incomplete backup is discovered
+            //    while the current state is still intact.
             foreach ($paths as $relative) {
                 $from = $source.'/'.$relative;
 
@@ -174,24 +278,130 @@ class BackupManager
                 }
             }
 
-            foreach ($paths as $relative) {
-                $live = base_path($relative);
+            foreach ($files as $relative) {
+                $from = $source.'/'.$relative;
 
-                File::deleteDirectory($live);
-                File::ensureDirectoryExists(dirname($live));
-
-                if (! File::moveDirectory($staging.'/'.$relative, $live)) {
-                    throw ModsxException::restoreFailed($relative, $version, $this->backups->pathFor($name));
+                if (! File::isFile($from)) {
+                    throw ModsxException::missingInBackup($relative, $version);
                 }
+
+                $to = $staging.'/'.$relative;
+
+                File::ensureDirectoryExists(dirname($to));
+
+                if (! File::copy($from, $to)) {
+                    throw ModsxException::copyFailed($from, $to);
+                }
+            }
+
+            $displaced = [];
+
+            try {
+                // 2. Move the entire current state aside in one pass, rather
+                //    than deleting each path just before replacing it. The old
+                //    state ends up whole, in one place, so a failure in step 3
+                //    can be undone instead of leaving the module half restored.
+                //    This also removes whatever the version did not contain:
+                //    anything moved aside and not put back is gone, which is
+                //    what "restore this exact state" has to mean.
+                foreach ($this->locator->paths($name) as $relative) {
+                    $this->displace($relative, $previous, directory: true);
+                    $displaced[$relative] = true;
+                }
+
+                foreach ($this->locator->files($name) as $relative) {
+                    $this->displace($relative, $previous, directory: false);
+                    $displaced[$relative] = false;
+                }
+
+                // 3. Put the restored state in place.
+                foreach ($paths as $relative) {
+                    $live = base_path($relative);
+
+                    File::ensureDirectoryExists(dirname($live));
+
+                    if (! File::moveDirectory($staging.'/'.$relative, $live)) {
+                        throw ModsxException::restoreFailed($relative, $version, $this->backups->pathFor($name));
+                    }
+                }
+
+                foreach ($files as $relative) {
+                    $live = base_path($relative);
+
+                    File::ensureDirectoryExists(dirname($live));
+
+                    if (! File::move($staging.'/'.$relative, $live)) {
+                        throw ModsxException::restoreFailed($relative, $version, $this->backups->pathFor($name));
+                    }
+                }
+            } catch (Throwable $exception) {
+                $this->putBack($displaced, $previous);
+
+                // Filesystem trouble surfaces as a raw PHP warning turned into
+                // an ErrorException by Laravel; on its own that reaches the
+                // user as a stack trace. Commands catch ModsxException, so wrap
+                // it and say plainly that nothing was lost.
+                throw $exception instanceof ModsxException
+                    ? $exception
+                    : ModsxException::restoreInterrupted($version, $this->backups->pathFor($name), $exception);
             }
         } finally {
             File::deleteDirectory($staging);
+            File::deleteDirectory($previous);
         }
 
         return [
             'version' => $version,
             'paths' => $paths,
+            'files' => $files,
         ];
+    }
+
+    /**
+     * Move one live path out of the application and into the holding area.
+     *
+     * @throws ModsxException
+     */
+    private function displace(string $relative, string $holding, bool $directory): void
+    {
+        $live = base_path($relative);
+        $aside = $holding.'/'.$relative;
+
+        File::ensureDirectoryExists(dirname($aside));
+
+        $moved = $directory
+            ? File::moveDirectory($live, $aside)
+            : File::move($live, $aside);
+
+        if (! $moved) {
+            throw ModsxException::copyFailed($live, $aside);
+        }
+    }
+
+    /**
+     * Undo displace() for everything already moved aside, after a restore
+     * failed partway through putting the new state in place.
+     *
+     * @param  array<string, bool>  $displaced  relative path => is a directory
+     */
+    private function putBack(array $displaced, string $holding): void
+    {
+        foreach ($displaced as $relative => $directory) {
+            $live = base_path($relative);
+            $aside = $holding.'/'.$relative;
+
+            if ($directory) {
+                File::deleteDirectory($live);
+                File::ensureDirectoryExists(dirname($live));
+                File::moveDirectory($aside, $live);
+
+                continue;
+            }
+
+            File::delete($live);
+            File::ensureDirectoryExists(dirname($live));
+            File::move($aside, $live);
+        }
     }
 
     /**
@@ -304,6 +514,15 @@ class BackupManager
 
         $name = ModuleName::make($manifest['module']);
         $version = $manifest['version'];
+
+        $collision = $this->backups->collidingName($name);
+
+        if ($collision !== null) {
+            $zip->close();
+
+            throw ModsxException::caseCollision($name->studly, $collision);
+        }
+
         $target = $this->backups->versionPath($name, $version);
 
         if (File::exists($target)) {
@@ -416,6 +635,63 @@ class BackupManager
         }
 
         return $paths;
+    }
+
+    /**
+     * Files a backup version contains alongside its directories.
+     *
+     * Manifest only, with no fallback scan: a backup written before files were
+     * supported simply has none, and guessing which loose files in an old
+     * version directory were once module files is not something a restore
+     * should do.
+     *
+     * @return list<string>
+     */
+    public function filesInBackup(ModuleName|string $name, string $version): array
+    {
+        $manifest = $this->backups->manifest($name, $version);
+
+        if (! is_array($manifest['files'] ?? null)) {
+            return [];
+        }
+
+        return array_values(array_filter($manifest['files'], 'is_string'));
+    }
+
+    /**
+     * Migrations kept in a version for reference. Reporting only - nothing in
+     * this class restores or deletes them.
+     *
+     * @return list<string>
+     */
+    public function archivedInBackup(ModuleName|string $name, string $version): array
+    {
+        $manifest = $this->backups->manifest($name, $version);
+
+        if (! is_array($manifest['archived'] ?? null)) {
+            return [];
+        }
+
+        return array_values(array_filter($manifest['archived'], 'is_string'));
+    }
+
+    /**
+     * @param  list<string>  $files  paths relative to $from
+     *
+     * @throws ModsxException
+     */
+    private function copyFilesInto(array $files, string $from, string $to): void
+    {
+        foreach ($files as $relative) {
+            $source = rtrim(str_replace('\\', '/', $from), '/').'/'.$relative;
+            $target = $to.'/'.$relative;
+
+            File::ensureDirectoryExists(dirname($target));
+
+            if (! File::copy($source, $target)) {
+                throw ModsxException::copyFailed($source, $target);
+            }
+        }
     }
 
     private function stagingPath(string $parent): string

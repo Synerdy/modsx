@@ -27,12 +27,17 @@ it('lists the modules present in the application', function () {
 });
 
 it('emits the same data as json', function () {
+    $this->makeFile('routes/modsx-blog.php');
+
     $output = json_decode(artisanOutput('modsx:list --json'), true);
 
     expect($output)->toBe([
         'Blog' => [
-            'app/Http/Controllers/ModsxBlog',
-            'resources/views/modsx-blog',
+            'directories' => [
+                'app/Http/Controllers/ModsxBlog',
+                'resources/views/modsx-blog',
+            ],
+            'files' => ['routes/modsx-blog.php'],
         ],
     ]);
 });

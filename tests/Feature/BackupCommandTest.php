@@ -46,3 +46,54 @@ it('leaves the comment null when none is given', function () {
 
     expect(app(BackupRepository::class)->manifest('Blog', '0001')['comment'])->toBeNull();
 });
+
+it('reports the created version as json', function () {
+    $output = json_decode(artisanOutput('modsx:backup Blog --json'), true);
+
+    expect($output['Blog']['version'])->toBe('0001')
+        ->and($output['Blog']['skipped'])->toBeFalse();
+});
+
+it('backs up every module with --all', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+
+    $output = json_decode(artisanOutput('modsx:backup --all --json'), true);
+
+    expect(array_keys($output))->toBe(['Blog', 'Shop'])
+        ->and(File::isDirectory($this->root.'/modsx-backups/Blog/0001'))->toBeTrue()
+        ->and(File::isDirectory($this->root.'/modsx-backups/Shop/0001'))->toBeTrue();
+});
+
+it('takes no second copy when nothing changed', function () {
+    $this->artisan('modsx:backup Blog')->assertExitCode(0);
+
+    $output = json_decode(artisanOutput('modsx:backup Blog --skip-unchanged --json'), true);
+
+    expect($output['Blog']['skipped'])->toBeTrue()
+        ->and($output['Blog']['version'])->toBe('0001')
+        ->and(app(BackupRepository::class)->versions('Blog'))->toBe(['0001']);
+});
+
+it('still copies when something did change', function () {
+    $this->artisan('modsx:backup Blog')->assertExitCode(0);
+
+    File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
+
+    $output = json_decode(artisanOutput('modsx:backup Blog --skip-unchanged --json'), true);
+
+    expect($output['Blog']['skipped'])->toBeFalse()
+        ->and($output['Blog']['version'])->toBe('0002');
+});
+
+it('does not count an archived migration as a change', function () {
+    // Migrations are not part of the state a restore puts back, so a change to
+    // one is no reason to take another copy of everything else.
+    $this->makeFile('database/migrations/2026_01_01_000000_modsx_blog_posts_table.php', 'schema');
+    $this->artisan('modsx:backup Blog')->assertExitCode(0);
+
+    File::put($this->root.'/database/migrations/2026_01_01_000000_modsx_blog_posts_table.php', 'schema v2');
+
+    $output = json_decode(artisanOutput('modsx:backup Blog --skip-unchanged --json'), true);
+
+    expect($output['Blog']['skipped'])->toBeTrue();
+});
