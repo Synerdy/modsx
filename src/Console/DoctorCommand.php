@@ -14,7 +14,9 @@ class DoctorCommand extends Command
 {
     use InteractsWithModules;
 
-    protected $signature = 'modsx:doctor {--json : Output machine-readable JSON}';
+    protected $signature = 'modsx:doctor
+                            {--json : Output machine-readable JSON}
+                            {--fix : Remove empty module directories}';
 
     protected $description = 'Check module directories and backups for problems';
 
@@ -31,6 +33,11 @@ class DoctorCommand extends Command
         $brokenBackups = $this->brokenBackups($locator, $backups);
         $foreignPrefix = $this->foreignPrefixBackups($locator, $backups);
         $strayDirectories = $this->strayBackupDirectories($backups);
+        $emptyDirectories = $this->emptyDirectories($locator);
+
+        if ($this->option('fix')) {
+            $emptyDirectories = $this->removeEmptyDirectories($emptyDirectories);
+        }
 
         $problems = count($ambiguous)
             + count($prefixCollisions)
@@ -47,6 +54,7 @@ class DoctorCommand extends Command
                 'misnamed_migrations' => $misnamedMigrations,
                 'foreign_prefix_backups' => $foreignPrefix,
                 'stray_backup_directories' => $strayDirectories,
+                'empty_directories' => $emptyDirectories,
                 'single_form_modules' => $singleForm,
                 'orphaned_backups' => $orphaned,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -63,6 +71,7 @@ class DoctorCommand extends Command
         $this->renderMisnamedMigrations($misnamedMigrations);
         $this->renderForeignPrefixBackups($locator, $foreignPrefix);
         $this->renderStrayDirectories($strayDirectories);
+        $this->renderEmptyDirectories($emptyDirectories, (bool) $this->option('fix'));
         $this->renderSingleFormModules($locator, $singleForm);
         $this->renderOrphanedBackups($orphaned);
 
@@ -323,6 +332,70 @@ class DoctorCommand extends Command
                 sprintf('%s/%s', $row['module'], $row['directory']),
                 '<fg=gray>ignored when listing versions</>',
             );
+        }
+    }
+
+    /**
+     * A directory modsx:scaffold created (or the user did) that ended up with
+     * nothing in it. Checked including hidden files, so a deliberate
+     * .gitkeep counts as content and is left alone - File::allFiles() ignores
+     * dotfiles by default, which would otherwise report .gitkeep's own
+     * directory as empty and remove it along with the marker.
+     *
+     * Informational, not a problem: an empty directory is tidiness, not a
+     * defect, and does not affect the exit code.
+     *
+     * @return list<array{module: string, path: string, removed: bool}>
+     */
+    private function emptyDirectories(ModuleLocator $locator): array
+    {
+        $rows = [];
+
+        foreach ($locator->all() as $module => $paths) {
+            foreach ($paths as $path) {
+                if (File::allFiles(base_path($path), true) === []) {
+                    $rows[] = ['module' => $module, 'path' => $path, 'removed' => false];
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{module: string, path: string, removed: bool}>  $rows
+     * @return list<array{module: string, path: string, removed: bool}>
+     */
+    private function removeEmptyDirectories(array $rows): array
+    {
+        return array_map(function (array $row): array {
+            File::deleteDirectory(base_path($row['path']));
+
+            $row['removed'] = true;
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * @param  list<array{module: string, path: string, removed: bool}>  $rows
+     */
+    private function renderEmptyDirectories(array $rows, bool $fixed): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->components->info($fixed
+            ? sprintf('Removed %d empty module directory(s):', count($rows))
+            : 'Empty module directories (nothing was ever put in them, or the last file was removed):');
+
+        foreach ($rows as $row) {
+            $this->components->twoColumnDetail($row['path'], '<fg=gray>'.$row['module'].'</>');
+        }
+
+        if (! $fixed) {
+            $this->components->bulletList(['Run with --fix to remove them.']);
         }
     }
 

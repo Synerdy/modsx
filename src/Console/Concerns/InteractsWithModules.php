@@ -25,7 +25,7 @@ trait InteractsWithModules
 
     protected function banner(): void
     {
-        $this->line('<fg=gray>'.$this->logo().'</>');
+        $this->line('<fg=yellow>'.$this->logo().'</>');
     }
 
     /**

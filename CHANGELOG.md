@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-29
+
+### Added
+
+- **`modsx:doctor --fix`** finds and removes a module's empty directories —
+  left behind by `modsx:scaffold` when a module never got, say, any views, or
+  by deleting the last file in one by hand. Without `--fix` they are only
+  reported, under the new `empty_directories` key. This is informational, not
+  a problem: it does not affect the exit code, so existing `modsx:doctor
+  --json` use in CI is unaffected.
+- The check looks for files including hidden ones
+  (`File::allFiles($path, hidden: true)`), so a directory kept alive on
+  purpose with a `.gitkeep` is never touched. `File::allFiles()` ignores
+  dotfiles by default, which would otherwise have reported such a directory
+  as empty and deleted the marker along with it.
+
 ## [0.4.0] - 2026-08-27
 
 ### Changed

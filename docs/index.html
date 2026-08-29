@@ -469,7 +469,7 @@ php artisan modsx:scaffold user-profile   # any case; it is normalised
 </code></pre>
 <p><code>{Studly}</code> becomes <code>ModsxBlog</code>, <code>{kebab}</code> becomes <code>modsx-blog</code>. Both come from the one name you typed.</p>
 <p>It creates directories and nothing else — no controller stubs, no boilerplate. Generating code would make this a code generator, which is exactly what Modsx is not. It never overwrites anything either: directories that already exist are reported and left alone, so it is safe to re-run.</p>
-<p>Note that git does not track empty directories, so a skeleton you never fill in quietly disappears at your next commit. That is the intended behaviour: the directories you actually use will have files in them.</p>
+<p>Note that git does not track empty directories, so a skeleton you never fill in quietly disappears at your next commit. That is the intended behaviour: the directories you actually use will have files in them. Until then it still sits on disk, though — <code>php artisan modsx:doctor --fix</code> finds and removes any of a module's directories left empty, so you don't have to hunt for them by hand.</p>
 <h3 id="modsxlist"><code>modsx:list</code></h3>
 <pre><code class="language-bash">php artisan modsx:list
 php artisan modsx:list --json
@@ -605,6 +605,7 @@ php artisan modsx:info --json
 <h3 id="modsxdoctor"><code>modsx:doctor</code></h3>
 <pre><code class="language-bash">php artisan modsx:doctor
 php artisan modsx:doctor --json    # exit code 1 if problems were found, for CI
+php artisan modsx:doctor --fix     # remove empty module directories
 </code></pre>
 <p>Problems (exit code 1):</p>
 <ul>
@@ -620,6 +621,7 @@ php artisan modsx:doctor --json    # exit code 1 if problems were found, for CI
 <li>Directories in the backup tree that aren't versions, and are therefore skipped when listing.</li>
 <li>Modules present in only one of the two directory forms.</li>
 <li>Backups with no matching module in the application.</li>
+<li><strong>Empty module directories</strong> — left by <code>modsx:scaffold</code>, or by deleting the last file in one by hand. <code>--fix</code> removes them. The check looks for files including hidden ones, so a directory kept alive on purpose with a <code>.gitkeep</code> is never touched — only a directory with nothing in it at all, at any depth, is reported.</li>
 </ul>
 <hr />
 <h2 id="configuration">Configuration</h2>

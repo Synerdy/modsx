@@ -147,3 +147,65 @@ it('reports directories in the backup tree that are not versions', function () {
         ['module' => 'Blog', 'directory' => 'old-0002'],
     ]);
 });
+
+it('reports an empty module directory informationally, without failing', function () {
+    // Left behind by modsx:scaffold when a module never got any views.
+    File::ensureDirectoryExists($this->root.'/resources/views/modsx-blog');
+    $this->makeModuleDirectory('app/Models/ModsxBlog', 'Post.php', 'v1');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['problems'])->toBe(0)
+        ->and($output['empty_directories'])->toBe([
+            ['module' => 'Blog', 'path' => 'resources/views/modsx-blog', 'removed' => false],
+        ]);
+});
+
+it('does not flag a directory kept alive by a deliberate .gitkeep', function () {
+    // File::allFiles() ignores dotfiles by default - the check must ask for
+    // hidden files explicitly, or it would remove the very file someone
+    // placed there to keep the directory from disappearing.
+    File::ensureDirectoryExists($this->root.'/resources/views/modsx-blog');
+    File::put($this->root.'/resources/views/modsx-blog/.gitkeep', '');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['empty_directories'])->toBe([]);
+});
+
+it('does not flag a directory that has files', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['empty_directories'])->toBe([]);
+});
+
+it('leaves empty directories alone without --fix', function () {
+    File::ensureDirectoryExists($this->root.'/resources/views/modsx-blog');
+
+    $this->artisan('modsx:doctor')->assertExitCode(0);
+
+    expect(File::isDirectory($this->root.'/resources/views/modsx-blog'))->toBeTrue();
+});
+
+it('removes empty module directories with --fix', function () {
+    File::ensureDirectoryExists($this->root.'/resources/views/modsx-blog');
+    $this->makeModuleDirectory('app/Models/ModsxBlog', 'Post.php', 'v1');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json --fix'), true);
+
+    expect($output['empty_directories'])->toBe([
+        ['module' => 'Blog', 'path' => 'resources/views/modsx-blog', 'removed' => true],
+    ])
+        ->and(File::isDirectory($this->root.'/resources/views/modsx-blog'))->toBeFalse()
+        ->and(File::isDirectory($this->root.'/app/Models/ModsxBlog'))->toBeTrue();
+});
+
+it('does nothing with --fix when nothing is empty', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+
+    $this->artisan('modsx:doctor --fix')->assertExitCode(0);
+
+    expect(File::isDirectory($this->root.'/resources/views/modsx-blog'))->toBeTrue();
+});

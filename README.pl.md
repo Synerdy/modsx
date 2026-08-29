@@ -260,7 +260,7 @@ Które katalogi powstaną, zależy od Ciebie — `config/modsx.php`:
 
 Tworzy katalogi i nic poza tym — żadnych stubów kontrolerów, żadnego boilerplate'u. Generowanie kodu uczyniłoby z tego generator, czyli dokładnie to, czym Modsx nie jest. Niczego też nie nadpisuje: istniejące katalogi są raportowane i zostawiane w spokoju, więc komendę można bezpiecznie uruchomić ponownie.
 
-Pamiętaj, że git nie śledzi pustych katalogów, więc szkielet, którego nie wypełnisz, po cichu zniknie przy następnym commicie. Tak ma być: katalogi, których faktycznie używasz, będą miały w sobie pliki.
+Pamiętaj, że git nie śledzi pustych katalogów, więc szkielet, którego nie wypełnisz, po cichu zniknie przy następnym commicie. Tak ma być: katalogi, których faktycznie używasz, będą miały w sobie pliki. Do tego czasu wciąż leży na dysku — `php artisan modsx:doctor --fix` znajduje i usuwa puste katalogi modułu, więc nie trzeba ich szukać ręcznie.
 
 ### `modsx:list`
 
@@ -469,6 +469,7 @@ Przydatne do zrozumienia zużycia miejsca na dysku i podjęcia decyzji, czy czy�
 ```bash
 php artisan modsx:doctor
 php artisan modsx:doctor --json    # kod wyjścia 1, gdy znaleziono problemy — do CI
+php artisan modsx:doctor --fix     # usuwa puste katalogi modułu
 ```
 
 Problemy (kod wyjścia 1):
@@ -485,6 +486,7 @@ Informacyjnie (kod wyjścia 0):
 - Katalogi w drzewie backupów, które nie są wersjami i przez to są pomijane przy listowaniu.
 - Moduły istniejące tylko w jednej z dwóch form katalogów.
 - Backupy bez odpowiadającego im modułu w aplikacji.
+- **Puste katalogi modułu** — pozostawione przez `modsx:scaffold` albo przez ręczne usunięcie ostatniego pliku. `--fix` je usuwa. Sprawdzanie uwzględnia też pliki ukryte, więc katalog trzymany celowo dzięki `.gitkeep` nigdy nie jest ruszany — zgłaszany jest tylko katalog, w którym naprawdę nic nie ma, na żadnej głębokości.
 
 ---
 

@@ -260,7 +260,7 @@ Which directories it creates is up to you, in `config/modsx.php`:
 
 It creates directories and nothing else — no controller stubs, no boilerplate. Generating code would make this a code generator, which is exactly what Modsx is not. It never overwrites anything either: directories that already exist are reported and left alone, so it is safe to re-run.
 
-Note that git does not track empty directories, so a skeleton you never fill in quietly disappears at your next commit. That is the intended behaviour: the directories you actually use will have files in them.
+Note that git does not track empty directories, so a skeleton you never fill in quietly disappears at your next commit. That is the intended behaviour: the directories you actually use will have files in them. Until then it still sits on disk, though — `php artisan modsx:doctor --fix` finds and removes any of a module's directories left empty, so you don't have to hunt for them by hand.
 
 ### `modsx:list`
 
@@ -469,6 +469,7 @@ Useful for understanding storage usage and deciding whether to prune old version
 ```bash
 php artisan modsx:doctor
 php artisan modsx:doctor --json    # exit code 1 if problems were found, for CI
+php artisan modsx:doctor --fix     # remove empty module directories
 ```
 
 Problems (exit code 1):
@@ -485,6 +486,7 @@ Informational (exit code 0):
 - Directories in the backup tree that aren't versions, and are therefore skipped when listing.
 - Modules present in only one of the two directory forms.
 - Backups with no matching module in the application.
+- **Empty module directories** — left by `modsx:scaffold`, or by deleting the last file in one by hand. `--fix` removes them. The check looks for files including hidden ones, so a directory kept alive on purpose with a `.gitkeep` is never touched — only a directory with nothing in it at all, at any depth, is reported.
 
 ---
 
