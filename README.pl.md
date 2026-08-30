@@ -49,8 +49,12 @@ Kompromis jest uczciwy: to nie jest menedżer pakietów. Nie rozwiązuje zależn
 ## Instalacja
 
 ```bash
-composer require synerdy/modsx
+composer require --dev synerdy/modsx
 ```
+
+`--dev`, bo Modsx to narzędzie: poza komendą artisana nie robi zupełnie nic — service provider wychodzi natychmiast, jeśli aplikacja nie działa w konsoli, a żaden fragment Twojej aplikacji nigdy nie sięga do tego pakietu. Konwencja działa również przy odinstalowanym Modsx; o to w niej właśnie chodzi.
+
+Instaluj do `require`, jeśli uruchamiasz `modsx:*` tam, gdzie zależności deweloperskich nie ma — skrypt wdrożeniowy backupujący moduł przed zmianą albo CI odpalające `modsx:doctor` po `composer install --no-dev`.
 
 Service provider jest wykrywany automatycznie. Żeby cokolwiek zmienić, opublikuj konfigurację:
 
@@ -88,7 +92,9 @@ Z tej nazwy wyprowadzane są wszystkie pozostałe formy — Modsx dopasowuje **k
 | Pojedyncze pliki — `routes/`, `config/`, `lang/` | `modsx-` + kebab-case | `modsx-blog.php` | `modsx-user-profile.php` |
 | Nazwy migracji, po timestampie | `modsx_` + snake_case | `modsx_blog_…` | `modsx_user_profile_…` |
 
-Dwie pierwsze to konwencja samego Laravela, a nie wymysł tego pakietu — framework mapuje `App\View\Components\UserProfile` na `<x-user-profile>` dokładnie tą samą konwersją StudlyCase ↔ kebab-case. Jeśli Twoje katalogi już trzymają się nazewnictwa Laravela, to tym samym trzymają się i tego.
+Dwie pierwsze to konwencja samego Laravela, a nie wymysł tego pakietu — framework mapuje `App\View\Components\UserProfile` na `<x-user-profile>` dokładnie tą samą konwersją StudlyCase ↔ kebab-case. Z prefiksem jest identycznie: `App\View\Components\ModsxUserProfile\PostCard` to `<x-modsx-user-profile.post-card>`. Jeśli Twoje katalogi już trzymają się nazewnictwa Laravela, to tym samym trzymają się i tego.
+
+Podział na dwie formy nie jest kosmetyczny. Katalogi w `app/` i `database/` to segmenty przestrzeni nazw PSR-4, a identyfikator PHP nie może zawierać myślnika — `App\Support\modsx-blog` to nazwa, której PHP nigdy nie załaduje. Wszędzie indziej nazwa jest po prostu ścieżką, więc obowiązuje kebab-case.
 
 > **Każda forma musi pochodzić od tej samej nazwy.**
 >
@@ -118,16 +124,15 @@ Sam prefiks `modsx` jest konfigurowalny, więc jeśli wolisz `mod-` albo inicja�
 | `config/modsx-blog.php` | Blog | dokładnie ta nazwa |
 | `routes/modsx-blog.php` | Blog | dowolna skanowana ścieżka |
 | `lang/en/modsx-blog.php`, `lang/pl/modsx-blog.php` | Blog | każdy język |
-| `public/modsx-blog.css`, `resources/js/modsx-blog.js` | Blog | dowolne rozszerzenie |
-| `resources/views/modsx-blog.blade.php` | Blog | cięcie na **pierwszej** kropce, więc `.blade.php` działa |
+| `public/modsx-blog.css`, `public/modsx-blog.min.js` | Blog | dowolne rozszerzenie, cięcie na **pierwszej** kropce |
 | `config/modsx-blog-post.php` | **BlogPost** | nie Blog — tak samo jak katalog |
 | `config/modsx-blog-admin.php` | **BlogAdmin** | nazywa moduł; niczyj, jeśli takiego nie ma |
 | `config/blog-modsx.php` | żaden | prefiks nie z przodu |
-| `app/Support/ModsxBlog.php` | żaden | pojedyncze pliki tylko w formie kebab |
+| `app/Support/ModsxBlog.php` | żaden | klasy mieszkają w katalogu modułu — `app/Support/ModsxBlog/ChangeFormat.php` |
 
 Nazwy modułów są unikalne, więc do jednego pliku pasuje najwyżej jeden moduł — dwa nie mogą go sobie przypisać naraz.
 
-Potrzebujesz kilku plików w jednym miejscu? Użyj katalogu. `config/modsx-blog/settings.php` Laravel czyta jako `config('modsx-blog.settings')`, a cały katalog należy do Bloga.
+Forma pojedynczego pliku jest dla miejsc, w których Laravel oczekuje jednego pliku na dany temat — `routes/`, `config/`, `lang/`. Wszędzie indziej moduł jest katalogiem: widoki w `resources/views/modsx-blog/`, źródła assetów w `resources/css/modsx-blog/` i `resources/js/modsx-blog/`, klasy w `app/Support/ModsxBlog/`. Tak właśnie tworzy je `modsx:scaffold` i to jest forma, po którą sięgać w razie wątpliwości — katalog dopasowuje się po dokładnej nazwie i pomieści dowolnie dużo. Zadziała nawet `config/modsx-blog/settings.php`, które Laravel czyta jako `config('modsx-blog.settings')`.
 
 **Migracje — moduł z przodu, potem zwykła nazwa Laravela:**
 
@@ -268,6 +273,20 @@ Trzy formy jednej nazwy, inna przy każdym generatorze, to ta część konwencji
 
 Wszystko, czego nie ma na liście, dostaje `*` — co jest poprawne dla każdej klasy PHP. Dostępne generatory to te zarejestrowane w Twojej aplikacji, a nie sztywna lista, więc dopisanie wpisu sprawia, że konwencję zaczyna respektować też generator z innego pakietu (`make:livewire`, `make:filament-resource`).
 
+**Forma dotyczy całej nazwy, nie tylko modułu.** Wpisujesz, jak Ci wygodnie, a generator dostaje nazwę w formie ze swojego wpisu, przerobioną człon po członie:
+
+```bash
+php artisan modsx:make view Blog/PostList          # -> modsx-blog/post-list
+php artisan modsx:make view Blog/Admin/PostList    # -> modsx-blog/admin/post-list
+php artisan modsx:make config Blog/MailSettings    # -> modsx-blog-mail-settings
+php artisan modsx:make migration Blog/CreatePostsTable
+                                                   # -> modsx_blog_create_posts_table
+php artisan modsx:make controller Blog/PostController
+                                                   # -> ModsxBlog/PostController, bez zmian
+```
+
+Wpis `{Studly}` zostawia resztę nazwy w spokoju, bo nazwa klasy jest już zapisana tak, jak generator jej oczekuje.
+
 **Opcje dla generatora idą po `--`** i są przekazywane bez zmian:
 
 ```bash
@@ -311,6 +330,26 @@ Które katalogi powstaną, zależy od Ciebie — `config/modsx.php`:
 ```
 
 `{Studly}` staje się `ModsxBlog`, `{kebab}` staje się `modsx-blog`. Oba z tej jednej nazwy, którą wpisałeś.
+
+Opublikowany config niesie dłuższą listę, zakomentowaną — Livewire, serwisy, form requesty, fabryki, seedery, testy, `resources/css/`, `resources/js/`, komponenty — więc odkomentowujesz to, co Twoje moduły faktycznie mają. Domyślna lista jest krótka celowo: katalog, którego nikt nie wypełni, jest niewidoczny dla gita i zgłasza go `modsx:doctor`, więc hojna wartość domyślna robiłaby tylko robotę dla `--fix`.
+
+Widoki mają ten sam kształt co wszystko inne — **najpierw katalog frameworka, moduł w środku**, dokładnie jak `resources/css/modsx-blog/`:
+
+```
+resources/views/
+├── components/
+│   ├── layouts/app.blade.php     aplikacji
+│   └── modsx-blog/card.blade.php Bloga   -> <x-modsx-blog.card>
+├── layouts/
+│   ├── app.blade.php             aplikacji
+│   └── modsx-blog/               Bloga
+├── partials/modsx-blog/          Bloga
+└── modsx-blog/                   własne strony Bloga
+```
+
+Jedno i drugie żyje obok siebie: `layouts/app.blade.php` ze starter kitu nie nosi prefiksu, więc żaden moduł go nie zagarnie, a `layouts/modsx-blog/` jest Bloga i wędruje razem z nim. Moduły są znajdowane na dowolnej głębokości, więc zagnieżdżenie o poziom nic nie kosztuje.
+
+Zwróć uwagę na kolejność. `layouts/modsx-blog/` — nie `modsx-blog/layouts/`. W całej tej konwencji moduł idzie *do wnętrza* katalogu frameworka i widoki nie są wyjątkiem; odwrócenie tego akurat tutaj sprawiłoby, że `<x-modsx-blog.card>` przestaje się rozwiązywać.
 
 Tworzy katalogi i nic poza tym — żadnych stubów kontrolerów, żadnego boilerplate'u. Generowanie kodu uczyniłoby z tego generator, czyli dokładnie to, czym Modsx nie jest. Niczego też nie nadpisuje: istniejące katalogi są raportowane i zostawiane w spokoju, więc komendę można bezpiecznie uruchomić ponownie.
 
@@ -608,7 +647,7 @@ Dwie uwagi:
 Świadome, ale warto je znać, zanim na tym polegniesz:
 
 - **Bez bazy danych, a więc i bez przywracania migracji.** Przywrócenie starszej wersji nie cofa migracji ani nie rusza danych. *Pliki* migracji są archiwizowane w każdym backupie, żeby dało się odczytać, jak schemat wyglądał wcześniej, ale nigdy nie są przywracane ani usuwane — odłożenie starego pliku przy schemacie, który poszedł do przodu, zostawiłoby repozytorium i bazę w niezgodzie, bez żadnego sygnału. To decyzja, a nie luka do wypełnienia w przyszłości.
-- **Jeden moduł ma swój prefiks na wyłączność.** `Blog` i `BlogPost` nie mogą współistnieć, bo `modsx_blog_post_*` czyta się jako należące do obu. `modsx:doctor` zgłasza konflikt, zamiast zgadywać.
+- **Migracja pasująca do dwóch modułów trafia do dłuższej nazwy.** `Blog` i `BlogPost` współistnieją bez problemu — pliki nazywają po jednym module — ale `modsx_blog_post_create_comments_table` pasuje do obu i wygrywa dłuższa nazwa. Dla migracji BlogPosta to poprawne; jeśli Blog kiedyś potrzebuje migracji, której nazwa zaczyna się jak nazwa BlogPosta, musi ją nazwać inaczej. To jedyna reguła, której nie odczytasz z samej nazwy pliku.
 - **Bez rozwiązywania zależności.** Modsx nie wie, że `Blog` potrzebuje `Users`. Przywrócenie jednego nie przywróci drugiego.
 - **Bez integracji z Composerem.** Zewnętrzne pakiety, od których zależy moduł, pozostają problemem Twojego `composer.json`.
 - **Backupy to zwykłe kopie katalogów.** Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd `modsx:prune` i `--skip-unchanged`.

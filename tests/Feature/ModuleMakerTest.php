@@ -49,8 +49,37 @@ it('falls back to the studly directory for a generator it has never heard of', f
 it('follows the configured map rather than a fixed layout', function () {
     config()->set('modsx.generators', ['*' => '{kebab}/']);
 
+    // The pattern settles the whole name, not just the module in front of it.
     expect(app(ModuleMaker::class)->resolve('controller', 'Blog/PostController')['name'])
-        ->toBe('modsx-blog/PostController');
+        ->toBe('modsx-blog/post-controller');
+});
+
+it('writes the rest of the name in the same form as the module', function () {
+    // Half a name converted and half left alone is what nobody wants:
+    // "modsx-blog-MailSettings" is neither a key you would type nor one
+    // Laravel would generate.
+    $maker = app(ModuleMaker::class);
+
+    expect($maker->resolve('view', 'Blog/PostList')['name'])->toBe('modsx-blog/post-list')
+        ->and($maker->resolve('config', 'Blog/MailSettings')['name'])->toBe('modsx-blog-mail-settings');
+});
+
+it('converts a nested name segment by segment', function () {
+    // Str::kebab('Admin/PostList') is 'admin/-post-list': the separator reads
+    // as a word boundary, so each segment has to be converted on its own.
+    expect(app(ModuleMaker::class)->resolve('view', 'Blog/Admin/PostList')['name'])
+        ->toBe('modsx-blog/admin/post-list');
+});
+
+it('leaves a dotted view name intact', function () {
+    expect(app(ModuleMaker::class)->resolve('view', 'Blog/admin.index')['name'])
+        ->toBe('modsx-blog/admin.index');
+});
+
+it('leaves a class name alone', function () {
+    // The Studly form is what the generator wants already.
+    expect(app(ModuleMaker::class)->resolve('controller', 'Blog/Admin/PostController')['name'])
+        ->toBe('ModsxBlog/Admin/PostController');
 });
 
 it('uses the configured prefix', function () {

@@ -43,21 +43,50 @@ class ModuleMaker
     public function resolve(string $generator, string $rawName, array $extra = []): array
     {
         $generator = trim($generator);
+        $pattern = $this->pattern($generator);
 
         [$module, $tail] = $this->split($rawName);
 
-        if ($generator === 'migration') {
-            $tail = Str::snake(trim($tail));
-        }
+        $tail = self::inFormOf($pattern, $tail);
 
         return [
             'module' => $module,
             'generator' => $generator,
-            'name' => $this->modulePrefix($generator, $module).$tail,
+            'name' => $this->modulePrefix($pattern, $module).$tail,
+            // --create and --table are make:migration's own options, so this
+            // stays tied to that generator rather than to the snake form.
             'options' => $generator === 'migration'
                 ? [...$extra, ...$this->tableOption($tail, $extra)]
                 : $extra,
         ];
+    }
+
+    /**
+     * The rest of the name, written the same way the module in front of it is.
+     *
+     * Half a name converted and half left alone is the one result nobody wants:
+     * "modsx-blog-MailSettings" is neither a config key you would type nor one
+     * Laravel would generate. The pattern already says which form this
+     * generator takes, so it decides for the whole name, not just the module.
+     *
+     * Converted segment by segment: Str::kebab("Admin/PostList") is
+     * "admin/-post-list", the separator having been read as a word boundary.
+     */
+    private static function inFormOf(string $pattern, string $tail): string
+    {
+        if (str_contains($pattern, '{Studly}')) {
+            // Class names and their namespace directories are already written
+            // the way the generator wants them.
+            return $tail;
+        }
+
+        $delimiter = str_contains($pattern, '{snake}') ? '_' : '-';
+
+        return (string) preg_replace_callback(
+            '#[^/.]+#',
+            static fn (array $m): string => Str::snake(trim($m[0]), $delimiter),
+            $tail
+        );
     }
 
     /**
@@ -87,17 +116,21 @@ class ModuleMaker
     }
 
     /**
-     * The module, written the way this generator expects to read it.
-     *
-     * @throws ModsxException
+     * The form this generator writes the module in, from the config table.
      */
-    private function modulePrefix(string $generator, ModuleName $module): string
+    private function pattern(string $generator): string
     {
         /** @var array<string, string> $patterns */
         $patterns = (array) $this->config->get('modsx.generators', []);
 
-        $pattern = (string) ($patterns[$generator] ?? $patterns['*'] ?? '{Studly}/');
+        return (string) ($patterns[$generator] ?? $patterns['*'] ?? '{Studly}/');
+    }
 
+    /**
+     * The module, written the way this generator expects to read it.
+     */
+    private function modulePrefix(string $pattern, ModuleName $module): string
+    {
         return str_replace(
             ['{Studly}', '{kebab}', '{snake}'],
             [

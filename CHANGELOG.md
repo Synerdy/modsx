@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-08-31
+
+### Documentation
+
+- Installation now reads `composer require --dev synerdy/modsx`. Outside an
+  artisan command the package does nothing at all - the service provider
+  returns immediately unless the application is running in the console - and
+  nothing in an application ever calls into it, so it belongs with the tooling.
+  The one case for `require` is named too: running `modsx:*` where dev
+  dependencies are absent.
+- **Removed a limitation that no longer exists.** *Limitations* still said
+  `Blog` and `BlogPost` could not coexist and that `modsx:doctor` reported
+  their prefix as a conflict. Both stopped being true in 0.5.0; what remains is
+  that a migration matching two modules goes to the longer name, which is what
+  that entry now says.
+
+### Added
+
+- The published config now offers a longer `scaffold` list, commented out:
+  Livewire, services, form requests, middleware, factories, seeders, tests,
+  `resources/css/`, `resources/js/`, components. The defaults are unchanged and
+  deliberately short - a directory nobody fills in is invisible to git and
+  reported by `modsx:doctor`, so a generous default would only make work for
+  `--fix`. Anonymous components are listed as
+  `resources/views/components/{kebab}`, which is where Laravel resolves them
+  rather than where they read best - and `layouts/`, `partials/` and `pages/`
+  take the same shape, the module going inside the framework's directory just
+  as it does in `resources/css/`. `layouts/modsx-blog/`, not
+  `modsx-blog/layouts/`: the module comes second everywhere else in this
+  convention, and inverting it here is what would stop
+  `<x-modsx-blog.card>` resolving. A starter kit's own `layouts/app.blade.php`
+  carries no prefix, so no module claims it, and the two sit side by side.
+
+### Fixed
+
+- **`modsx:make` converted only half the name.** The module was written in the
+  generator's form and the rest of the name was passed through untouched, so
+  `modsx:make config Blog/MailSettings` produced `modsx-blog-MailSettings` -
+  kebab-case and StudlyCase inside one identifier, which is neither a config
+  key you would type nor one Laravel would generate. `modsx:make view
+  Blog/PostList` gave `modsx-blog/PostList` for the same reason. Migrations
+  were already converted; nothing else was.
+
+  The entry in `modsx.generators` now settles the whole name: `{kebab}` gives
+  `modsx-blog/post-list`, `{snake}` gives `modsx_blog_create_posts_table`, and
+  `{Studly}` leaves the rest alone, a class name already being written the way
+  its generator wants it. Conversion runs segment by segment, because
+  `Str::kebab('Admin/PostList')` is `admin/-post-list` - the separator reads as
+  a word boundary.
+
 ## [0.5.0] - 2026-08-31
 
 ### Fixed

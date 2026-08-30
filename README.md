@@ -49,8 +49,12 @@ The trade-off is honest: this is not a package manager. It does not resolve depe
 ## Installation
 
 ```bash
-composer require synerdy/modsx
+composer require --dev synerdy/modsx
 ```
+
+`--dev`, because Modsx is tooling: outside an artisan command it does nothing at all — the service provider returns immediately unless the application is running in the console, and no part of your application ever calls into this package. The convention keeps working with Modsx uninstalled; that is the whole point of it.
+
+Install it into `require` instead if you run `modsx:*` where dev dependencies are absent — a deploy script that backs a module up before it changes, or CI that runs `modsx:doctor` after `composer install --no-dev`.
 
 The service provider is auto-discovered. To change anything, publish the config:
 
@@ -88,7 +92,9 @@ Every other form is derived from that one name, and Modsx matches **all** of the
 | Single files — `routes/`, `config/`, `lang/` | `modsx-` + kebab-case | `modsx-blog.php` | `modsx-user-profile.php` |
 | Migration filenames, after the timestamp | `modsx_` + snake_case | `modsx_blog_…` | `modsx_user_profile_…` |
 
-The first two are Laravel's own convention, not an invention of this package — the framework maps `App\View\Components\UserProfile` to `<x-user-profile>` using exactly the same StudlyCase ↔ kebab-case conversion. If your directories already follow Laravel's naming, they already follow this one.
+The first two are Laravel's own convention, not an invention of this package — the framework maps `App\View\Components\UserProfile` to `<x-user-profile>` using exactly the same StudlyCase ↔ kebab-case conversion. With the prefix it works the same way: `App\View\Components\ModsxUserProfile\PostCard` is `<x-modsx-user-profile.post-card>`. If your directories already follow Laravel's naming, they already follow this one.
+
+The split between the two forms is not cosmetic. Directories under `app/` and `database/` are PSR-4 namespace segments, and a PHP identifier cannot contain a hyphen — `App\Support\modsx-blog` is not a name PHP will ever load. Everywhere else the name is just a path, so kebab-case applies.
 
 > **Every form must come from the same name.**
 >
@@ -118,16 +124,15 @@ The `modsx` prefix itself is configurable, so if you prefer `mod-` or your compa
 | `config/modsx-blog.php` | Blog | the name, exactly |
 | `routes/modsx-blog.php` | Blog | any scanned path |
 | `lang/en/modsx-blog.php`, `lang/pl/modsx-blog.php` | Blog | every locale |
-| `public/modsx-blog.css`, `resources/js/modsx-blog.js` | Blog | any extension |
-| `resources/views/modsx-blog.blade.php` | Blog | cut at the **first** dot, so `.blade.php` works |
+| `public/modsx-blog.css`, `public/modsx-blog.min.js` | Blog | any extension, cut at the **first** dot |
 | `config/modsx-blog-post.php` | **BlogPost** | not Blog — same as the directory |
 | `config/modsx-blog-admin.php` | **BlogAdmin** | names a module; unclaimed if there isn't one |
 | `config/blog-modsx.php` | none | the prefix is not at the front |
-| `app/Support/ModsxBlog.php` | none | single files use the kebab form only |
+| `app/Support/ModsxBlog.php` | none | classes live in the module's directory — `app/Support/ModsxBlog/ChangeFormat.php` |
 
 Because module names are unique, at most one module can ever match a file — two modules cannot both claim one.
 
-Need more than one file in the same place? Use a directory. `config/modsx-blog/settings.php` is read by Laravel as `config('modsx-blog.settings')`, and the whole directory belongs to Blog.
+The single-file form is for the places Laravel expects one file per concern — `routes/`, `config/`, `lang/`. Everywhere else a module is a directory: views in `resources/views/modsx-blog/`, source assets in `resources/css/modsx-blog/` and `resources/js/modsx-blog/`, classes in `app/Support/ModsxBlog/`. That is what `modsx:scaffold` creates, and it is the form to reach for whenever you are unsure — a directory is matched by its exact name and holds as much as you like. Even `config/modsx-blog/settings.php` works, read by Laravel as `config('modsx-blog.settings')`.
 
 **Migrations** — the module first, then the ordinary Laravel name:
 
@@ -268,6 +273,20 @@ Three forms of one name, a different one per generator, is the part of the conve
 
 Anything not listed gets `*`, which is right for any PHP class. The generators you can run are whatever your application has registered, not a fixed list, so adding an entry makes one from another package — `make:livewire`, `make:filament-resource` — follow the convention too.
 
+**The form applies to the whole name, not just the module.** Type it however you like and the generator receives it in the form its entry names, converted segment by segment:
+
+```bash
+php artisan modsx:make view Blog/PostList          # -> modsx-blog/post-list
+php artisan modsx:make view Blog/Admin/PostList    # -> modsx-blog/admin/post-list
+php artisan modsx:make config Blog/MailSettings    # -> modsx-blog-mail-settings
+php artisan modsx:make migration Blog/CreatePostsTable
+                                                   # -> modsx_blog_create_posts_table
+php artisan modsx:make controller Blog/PostController
+                                                   # -> ModsxBlog/PostController, untouched
+```
+
+A `{Studly}` entry leaves the rest of the name alone, since a class name is already written the way the generator wants it.
+
 **Options for the generator go after `--`**, and are handed on untouched:
 
 ```bash
@@ -311,6 +330,26 @@ Which directories it creates is up to you, in `config/modsx.php`:
 ```
 
 `{Studly}` becomes `ModsxBlog`, `{kebab}` becomes `modsx-blog`. Both come from the one name you typed.
+
+The published config carries a longer list commented out — Livewire, services, form requests, factories, seeders, tests, `resources/css/`, `resources/js/`, components — so you uncomment what your modules have. The default stays short on purpose: a directory nobody fills in is invisible to git and gets reported by `modsx:doctor`, so a generous default would only make work for `--fix`.
+
+Views follow the same shape as everything else — **the framework's directory first, the module inside it**, exactly like `resources/css/modsx-blog/`:
+
+```
+resources/views/
+├── components/
+│   ├── layouts/app.blade.php     the application's
+│   └── modsx-blog/card.blade.php Blog's   -> <x-modsx-blog.card>
+├── layouts/
+│   ├── app.blade.php             the application's
+│   └── modsx-blog/               Blog's
+├── partials/modsx-blog/          Blog's
+└── modsx-blog/                   Blog's own pages
+```
+
+The two live side by side: a starter kit's `layouts/app.blade.php` carries no prefix, so no module ever claims it, while `layouts/modsx-blog/` is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.
+
+Note the direction. `layouts/modsx-blog/` — not `modsx-blog/layouts/`. The module goes *inside* the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make `<x-modsx-blog.card>` stop resolving.
 
 It creates directories and nothing else — no controller stubs, no boilerplate. Generating code would make this a code generator, which is exactly what Modsx is not. It never overwrites anything either: directories that already exist are reported and left alone, so it is safe to re-run.
 
@@ -608,7 +647,7 @@ Two notes:
 Deliberate, and worth knowing before you rely on this:
 
 - **No database, and therefore no migration restore.** Restoring an older version does not roll back migrations or touch data. Migration *files* are archived into every backup so you can read what a schema used to be, but they are never restored and never deleted — putting an old one back while the schema has moved on would leave your repository and your database disagreeing, with nothing to say so. This is a decision, not a gap to be filled later.
-- **One module owns its prefix entirely.** `Blog` and `BlogPost` cannot coexist, because `modsx_blog_post_*` reads as belonging to either. `modsx:doctor` reports the conflict rather than guessing.
+- **A migration matching two modules goes to the longer name.** `Blog` and `BlogPost` coexist happily — files name one module each — but `modsx_blog_post_create_comments_table` matches both, and the longer name wins. That is right for a migration of BlogPost's; if Blog ever needs one whose name begins with BlogPost's, it has to be named differently. This is the only rule you cannot read off a single filename.
 - **No dependency resolution.** Modsx doesn't know that `Blog` needs `Users`. Restoring one won't restore the other.
 - **No Composer integration.** Third-party packages a module depends on remain your `composer.json`'s problem.
 - **Backups are plain directory copies.** No compression, no deduplication. A large module backed up fifty times occupies fifty copies — hence `modsx:prune` and `--skip-unchanged`.

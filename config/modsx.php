@@ -31,10 +31,38 @@ return [
     //   {Studly} -> ModsxBlog     {kebab} -> modsx-blog
     //
     // Nothing here is required: trim it to the directories you actually use.
+    // The list is deliberately short. A directory nobody fills in is invisible
+    // to git and reported by `modsx:doctor`, so anything not used by nearly
+    // every module is offered below rather than created for you.
     'scaffold' => [
         'app/Http/Controllers/{Studly}',
         'app/Models/{Studly}',
         'resources/views/{kebab}',
+
+        // Uncomment whichever your modules actually have:
+        //
+        // 'app/Livewire/{Studly}',
+        // 'app/Services/{Studly}',
+        // 'app/Http/Requests/{Studly}',
+        // 'app/Http/Middleware/{Studly}',
+        // 'database/factories/{Studly}',
+        // 'database/seeders/{Studly}',
+        // 'tests/Feature/{Studly}',
+        //
+        // 'resources/css/{kebab}',
+        // 'resources/js/{kebab}',
+        //
+        // Views follow the same shape as everything else: the framework's
+        // directory first, the module inside it. That is what makes
+        // <x-modsx-blog.card> resolve, and it is why a module's layouts sit in
+        // layouts/modsx-blog rather than in modsx-blog/layouts - the latter
+        // would be the one place in the whole convention where the module came
+        // first. The kit's own layouts/app.blade.php stays where it is: it
+        // carries no prefix, so no module claims it.
+        // 'resources/views/components/{kebab}',
+        // 'resources/views/layouts/{kebab}',
+        // 'resources/views/partials/{kebab}',
+        // 'resources/views/pages/{kebab}',
     ],
 
     // How `modsx:make` writes the module into the name it hands to Laravel's

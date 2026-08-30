@@ -201,8 +201,10 @@ app/Http/Controllers/ModsxBlog/
 </table>
 <hr />
 <h2 id="installation">Installation</h2>
-<pre><code class="language-bash">composer require synerdy/modsx
+<pre><code class="language-bash">composer require --dev synerdy/modsx
 </code></pre>
+<p><code>--dev</code>, because Modsx is tooling: outside an artisan command it does nothing at all — the service provider returns immediately unless the application is running in the console, and no part of your application ever calls into this package. The convention keeps working with Modsx uninstalled; that is the whole point of it.</p>
+<p>Install it into <code>require</code> instead if you run <code>modsx:*</code> where dev dependencies are absent — a deploy script that backs a module up before it changes, or CI that runs <code>modsx:doctor</code> after <code>composer install --no-dev</code>.</p>
 <p>The service provider is auto-discovered. To change anything, publish the config:</p>
 <pre><code class="language-bash">php artisan vendor:publish --tag=modsx-config
 </code></pre>
@@ -254,7 +256,8 @@ app/Http/Controllers/ModsxBlog/
 </tr>
 </tbody>
 </table>
-<p>The first two are Laravel's own convention, not an invention of this package — the framework maps <code>App\View\Components\UserProfile</code> to <code>&lt;x-user-profile&gt;</code> using exactly the same StudlyCase ↔ kebab-case conversion. If your directories already follow Laravel's naming, they already follow this one.</p>
+<p>The first two are Laravel's own convention, not an invention of this package — the framework maps <code>App\View\Components\UserProfile</code> to <code>&lt;x-user-profile&gt;</code> using exactly the same StudlyCase ↔ kebab-case conversion. With the prefix it works the same way: <code>App\View\Components\ModsxUserProfile\PostCard</code> is <code>&lt;x-modsx-user-profile.post-card&gt;</code>. If your directories already follow Laravel's naming, they already follow this one.</p>
+<p>The split between the two forms is not cosmetic. Directories under <code>app/</code> and <code>database/</code> are PSR-4 namespace segments, and a PHP identifier cannot contain a hyphen — <code>App\Support\modsx-blog</code> is not a name PHP will ever load. Everywhere else the name is just a path, so kebab-case applies.</p>
 <blockquote>
 <p><strong>Every form must come from the same name.</strong></p>
 <p><code>modsx-userprofile</code> and <code>ModsxUserProfile</code> are <strong>two different modules</strong>: the first is <code>Userprofile</code>, the second is <code>UserProfile</code>. Back up <code>UserProfile</code> and the <code>modsx-userprofile</code> views are silently left behind.</p>
@@ -321,14 +324,9 @@ app/Http/Controllers/ModsxBlog/
 <td>every locale</td>
 </tr>
 <tr>
-<td><code>public/modsx-blog.css</code>, <code>resources/js/modsx-blog.js</code></td>
+<td><code>public/modsx-blog.css</code>, <code>public/modsx-blog.min.js</code></td>
 <td>Blog</td>
-<td>any extension</td>
-</tr>
-<tr>
-<td><code>resources/views/modsx-blog.blade.php</code></td>
-<td>Blog</td>
-<td>cut at the <strong>first</strong> dot, so <code>.blade.php</code> works</td>
+<td>any extension, cut at the <strong>first</strong> dot</td>
 </tr>
 <tr>
 <td><code>config/modsx-blog-post.php</code></td>
@@ -348,12 +346,12 @@ app/Http/Controllers/ModsxBlog/
 <tr>
 <td><code>app/Support/ModsxBlog.php</code></td>
 <td>none</td>
-<td>single files use the kebab form only</td>
+<td>classes live in the module's directory — <code>app/Support/ModsxBlog/ChangeFormat.php</code></td>
 </tr>
 </tbody>
 </table>
 <p>Because module names are unique, at most one module can ever match a file — two modules cannot both claim one.</p>
-<p>Need more than one file in the same place? Use a directory. <code>config/modsx-blog/settings.php</code> is read by Laravel as <code>config('modsx-blog.settings')</code>, and the whole directory belongs to Blog.</p>
+<p>The single-file form is for the places Laravel expects one file per concern — <code>routes/</code>, <code>config/</code>, <code>lang/</code>. Everywhere else a module is a directory: views in <code>resources/views/modsx-blog/</code>, source assets in <code>resources/css/modsx-blog/</code> and <code>resources/js/modsx-blog/</code>, classes in <code>app/Support/ModsxBlog/</code>. That is what <code>modsx:scaffold</code> creates, and it is the form to reach for whenever you are unsure — a directory is matched by its exact name and holds as much as you like. Even <code>config/modsx-blog/settings.php</code> works, read by Laravel as <code>config('modsx-blog.settings')</code>.</p>
 <p><strong>Migrations</strong> — the module first, then the ordinary Laravel name:</p>
 <table>
 <thead>
@@ -581,6 +579,16 @@ php artisan modsx:make migration Blog/create_posts_table
 ],
 </code></pre>
 <p>Anything not listed gets <code>*</code>, which is right for any PHP class. The generators you can run are whatever your application has registered, not a fixed list, so adding an entry makes one from another package — <code>make:livewire</code>, <code>make:filament-resource</code> — follow the convention too.</p>
+<p><strong>The form applies to the whole name, not just the module.</strong> Type it however you like and the generator receives it in the form its entry names, converted segment by segment:</p>
+<pre><code class="language-bash">php artisan modsx:make view Blog/PostList          # -&gt; modsx-blog/post-list
+php artisan modsx:make view Blog/Admin/PostList    # -&gt; modsx-blog/admin/post-list
+php artisan modsx:make config Blog/MailSettings    # -&gt; modsx-blog-mail-settings
+php artisan modsx:make migration Blog/CreatePostsTable
+                                                   # -&gt; modsx_blog_create_posts_table
+php artisan modsx:make controller Blog/PostController
+                                                   # -&gt; ModsxBlog/PostController, untouched
+</code></pre>
+<p>A <code>{Studly}</code> entry leaves the rest of the name alone, since a class name is already written the way the generator wants it.</p>
 <p><strong>Options for the generator go after <code>--</code></strong>, and are handed on untouched:</p>
 <pre><code class="language-bash">php artisan modsx:make controller Blog/PostController -- --resource --model=Post
 php artisan modsx:make model Blog/Post -- -mfs
@@ -607,6 +615,20 @@ php artisan modsx:scaffold user-profile   # any case; it is normalised
 ],
 </code></pre>
 <p><code>{Studly}</code> becomes <code>ModsxBlog</code>, <code>{kebab}</code> becomes <code>modsx-blog</code>. Both come from the one name you typed.</p>
+<p>The published config carries a longer list commented out — Livewire, services, form requests, factories, seeders, tests, <code>resources/css/</code>, <code>resources/js/</code>, components — so you uncomment what your modules have. The default stays short on purpose: a directory nobody fills in is invisible to git and gets reported by <code>modsx:doctor</code>, so a generous default would only make work for <code>--fix</code>.</p>
+<p>Views follow the same shape as everything else — <strong>the framework's directory first, the module inside it</strong>, exactly like <code>resources/css/modsx-blog/</code>:</p>
+<pre><code>resources/views/
+├── components/
+│   ├── layouts/app.blade.php     the application's
+│   └── modsx-blog/card.blade.php Blog's   -&gt; &lt;x-modsx-blog.card&gt;
+├── layouts/
+│   ├── app.blade.php             the application's
+│   └── modsx-blog/               Blog's
+├── partials/modsx-blog/          Blog's
+└── modsx-blog/                   Blog's own pages
+</code></pre>
+<p>The two live side by side: a starter kit's <code>layouts/app.blade.php</code> carries no prefix, so no module ever claims it, while <code>layouts/modsx-blog/</code> is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.</p>
+<p>Note the direction. <code>layouts/modsx-blog/</code> — not <code>modsx-blog/layouts/</code>. The module goes <em>inside</em> the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make <code>&lt;x-modsx-blog.card&gt;</code> stop resolving.</p>
 <p>It creates directories and nothing else — no controller stubs, no boilerplate. Generating code would make this a code generator, which is exactly what Modsx is not. It never overwrites anything either: directories that already exist are reported and left alone, so it is safe to re-run.</p>
 <p>Note that git does not track empty directories, so a skeleton you never fill in quietly disappears at your next commit. That is the intended behaviour: the directories you actually use will have files in them. Until then it still sits on disk, though — <code>php artisan modsx:doctor --fix</code> finds and removes any of a module's directories left empty, so you don't have to hunt for them by hand.</p>
 <h3 id="modsxlist"><code>modsx:list</code></h3>
@@ -821,7 +843,7 @@ php artisan modsx:doctor --fix     # remove empty module directories
 <p>Deliberate, and worth knowing before you rely on this:</p>
 <ul>
 <li><strong>No database, and therefore no migration restore.</strong> Restoring an older version does not roll back migrations or touch data. Migration <em>files</em> are archived into every backup so you can read what a schema used to be, but they are never restored and never deleted — putting an old one back while the schema has moved on would leave your repository and your database disagreeing, with nothing to say so. This is a decision, not a gap to be filled later.</li>
-<li><strong>One module owns its prefix entirely.</strong> <code>Blog</code> and <code>BlogPost</code> cannot coexist, because <code>modsx_blog_post_*</code> reads as belonging to either. <code>modsx:doctor</code> reports the conflict rather than guessing.</li>
+<li><strong>A migration matching two modules goes to the longer name.</strong> <code>Blog</code> and <code>BlogPost</code> coexist happily — files name one module each — but <code>modsx_blog_post_create_comments_table</code> matches both, and the longer name wins. That is right for a migration of BlogPost's; if Blog ever needs one whose name begins with BlogPost's, it has to be named differently. This is the only rule you cannot read off a single filename.</li>
 <li><strong>No dependency resolution.</strong> Modsx doesn't know that <code>Blog</code> needs <code>Users</code>. Restoring one won't restore the other.</li>
 <li><strong>No Composer integration.</strong> Third-party packages a module depends on remain your <code>composer.json</code>'s problem.</li>
 <li><strong>Backups are plain directory copies.</strong> No compression, no deduplication. A large module backed up fifty times occupies fifty copies — hence <code>modsx:prune</code> and <code>--skip-unchanged</code>.</li>

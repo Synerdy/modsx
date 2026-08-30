@@ -47,6 +47,29 @@ it('follows the configured scaffold rather than a fixed layout', function () {
     expect($output['created'])->toBe(['app/Livewire/ModsxBlog', 'resources/css/modsx-blog']);
 });
 
+it('creates the nested layouts the config offers', function () {
+    // The commented-out entries in config/modsx.php. Views take the same shape
+    // as everything else - the framework's directory first, the module inside
+    // it - which is what makes <x-modsx-blog.card> resolve.
+    config()->set('modsx.scaffold', [
+        'resources/views/components/{kebab}',
+        'resources/views/layouts/{kebab}',
+        'resources/css/{kebab}',
+        'app/Livewire/{Studly}',
+    ]);
+
+    $output = json_decode(artisanOutput('modsx:scaffold Blog --json'), true);
+
+    expect($output['created'])->toBe([
+        'resources/views/components/modsx-blog',
+        'resources/views/layouts/modsx-blog',
+        'resources/css/modsx-blog',
+        'app/Livewire/ModsxBlog',
+    ])
+        ->and(File::isDirectory($this->root.'/resources/views/components/modsx-blog'))->toBeTrue()
+        ->and(File::isDirectory($this->root.'/resources/views/layouts/modsx-blog'))->toBeTrue();
+});
+
 it('rejects a name that could escape the project', function () {
     $this->artisan('modsx:scaffold', ['name' => '../etc'])->assertExitCode(1);
 });

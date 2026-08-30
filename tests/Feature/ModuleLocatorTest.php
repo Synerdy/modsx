@@ -75,6 +75,27 @@ it('does not treat the backup tree as application files', function () {
     expect(app(ModuleLocator::class)->files('Blog'))->toBe([]);
 });
 
+it('finds a module inside a starter kit directory, at any depth', function () {
+    // A real Laravel 13 install. The kit's own files stay the application's -
+    // they carry no prefix - while a module takes a directory under each of
+    // them, the same shape as resources/css/modsx-blog.
+    foreach (['components', 'flux', 'layouts', 'pages', 'partials'] as $shared) {
+        $this->makeModuleDirectory('resources/views/'.$shared, 'app.blade.php', 'the app\'s own');
+    }
+
+    $this->makeModuleDirectory('resources/views/layouts/modsx-blog', 'dashboard.blade.php', 'v1');
+    $this->makeModuleDirectory('resources/views/components/modsx-blog', 'card.blade.php', 'v1');
+    $this->makeModuleDirectory('resources/views/partials/modsx-blog', 'head.blade.php', 'v1');
+    $this->makeFile('resources/views/dashboard.blade.php');
+
+    expect(app(ModuleLocator::class)->paths('Blog'))->toBe([
+        'resources/views/components/modsx-blog',
+        'resources/views/layouts/modsx-blog',
+        'resources/views/modsx-blog',
+        'resources/views/partials/modsx-blog',
+    ]);
+});
+
 it('finds migrations named per the convention', function () {
     $this->makeFile('database/migrations/2026_01_01_000000_modsx_blog_posts_table.php');
     $this->makeFile('database/migrations/2026_01_02_000000_modsx_blog.php');
