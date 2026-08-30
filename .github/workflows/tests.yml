@@ -2,9 +2,10 @@ name: tests
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -30,7 +31,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, fileinfo
+          extensions: mbstring, fileinfo, zip
           coverage: none
 
       - name: Install dependencies
