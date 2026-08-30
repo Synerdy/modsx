@@ -855,7 +855,12 @@ odłożone na później — patrz <a href="#ograniczenia">Ograniczenia</a>.</p>
 <pre><code class="language-bash">composer install
 composer test
 composer lint
+composer analyse
+
+# Uruchomienie komendy ręcznie w aplikacji Testbench
+composer smoke -- modsx:doctor
 </code></pre>
+<p><code>composer smoke</code> przed uruchomieniem przebudowuje wykrywanie pakietów. Zestaw testów rejestruje service providera samodzielnie, więc po jego uruchomieniu zostaje manifest pakietów, w którym Modsx nie występuje — a wtedy <code>vendor/bin/testbench</code> w ogóle nie widzi komend.</p>
 <h2 id="licencja">Licencja</h2>
 <p>MIT. Patrz <a href="https://github.com/Synerdy/modsx/blob/master/LICENSE">LICENSE</a>.</p>
 

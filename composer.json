@@ -55,7 +55,11 @@
         "lint": "pint",
         "lint:test": "pint --test",
         "analyse": "phpstan analyse",
-        "docs": "php docs/build.php"
+        "docs": "php docs/build.php",
+        "smoke": "@php vendor/bin/testbench package:discover --quiet && php vendor/bin/testbench"
+    },
+    "scripts-descriptions": {
+        "smoke": "Run the commands by hand in a Testbench app. Rebuilds package discovery first: the test suite registers the provider itself, so running it writes a manifest without this package and the testbench binary then cannot see the commands."
     },
     "minimum-stability": "stable",
     "prefer-stable": true

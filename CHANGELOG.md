@@ -50,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Blog` alongside `BlogPost` is now a supported layout.** `modsx:doctor` no
   longer counts it as a problem; it is listed informationally, stating how
   their migrations divide.
+- `composer smoke` runs the commands by hand in a Testbench application,
+  rebuilding package discovery first. The test suite registers the service
+  provider itself, so running it writes a package manifest that does not
+  mention this package - after which `vendor/bin/testbench` cannot see the
+  commands at all. Development only; nothing here affects the package.
 - `confirmDestructive()` moved out of `InteractsWithModules`, which every
   command uses, into a `ConfirmsDestructiveActions` trait used only by the
   three that declare `--force`. It had guarded itself with

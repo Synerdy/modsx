@@ -659,7 +659,13 @@ Issues and pull requests welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 composer install
 composer test
 composer lint
+composer analyse
+
+# Run a command by hand in a Testbench app
+composer smoke -- modsx:doctor
 ```
+
+`composer smoke` rebuilds package discovery before it runs. The test suite registers the service provider itself, so running it leaves behind a package manifest that doesn't mention Modsx — after which `vendor/bin/testbench` can't see the commands at all.
 
 ## License
 

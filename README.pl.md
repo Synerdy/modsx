@@ -659,7 +659,13 @@ Zgłoszenia i pull requesty mile widziane — patrz [CONTRIBUTING.md](CONTRIBUTI
 composer install
 composer test
 composer lint
+composer analyse
+
+# Uruchomienie komendy ręcznie w aplikacji Testbench
+composer smoke -- modsx:doctor
 ```
+
+`composer smoke` przed uruchomieniem przebudowuje wykrywanie pakietów. Zestaw testów rejestruje service providera samodzielnie, więc po jego uruchomieniu zostaje manifest pakietów, w którym Modsx nie występuje — a wtedy `vendor/bin/testbench` w ogóle nie widzi komend.
 
 ## Licencja
 

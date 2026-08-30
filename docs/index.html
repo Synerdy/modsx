@@ -855,7 +855,12 @@ pending — see <a href="#limitations">Limitations</a>.</p>
 <pre><code class="language-bash">composer install
 composer test
 composer lint
+composer analyse
+
+# Run a command by hand in a Testbench app
+composer smoke -- modsx:doctor
 </code></pre>
+<p><code>composer smoke</code> rebuilds package discovery before it runs. The test suite registers the service provider itself, so running it leaves behind a package manifest that doesn't mention Modsx — after which <code>vendor/bin/testbench</code> can't see the commands at all.</p>
 <h2 id="license">License</h2>
 <p>MIT. See <a href="https://github.com/Synerdy/modsx/blob/master/LICENSE">LICENSE</a>.</p>
 
