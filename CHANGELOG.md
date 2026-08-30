@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-31
+
+### Fixed
+
+- **Deleting a module could remove a neighbouring module's files.** `Blog`
+  claimed every file whose name merely started with `modsx-blog`, so
+  `modsx:delete Blog` removed `config/modsx-blog-post.php` - BlogPost's - and
+  `modsx:backup Blog` archived BlogPost's migrations into Blog's version.
+  `modsx:doctor` reported the pair as an error but nothing stopped the command,
+  which is the same shape of bug as the case collision fixed in 0.3.0, where
+  the answer was to refuse.
+
+  The cause was that one name meant two different things: as a directory,
+  `modsx-blog-admin` named the module BlogAdmin, but as a file it was one more
+  of Blog's. Names now read the same way everywhere.
+
+### Changed
+
+- **A file's name identifies a module, exactly as a directory's name does.**
+  The boundary is the first dot, never a hyphen: `config/modsx-blog.php` and
+  `resources/views/modsx-blog.blade.php` are Blog's, `config/modsx-blog-post.php`
+  is BlogPost's alone, and `config/modsx-blog-admin.php` names BlogAdmin.
+  Since module names are unique, two modules can no longer both claim one file.
+
+  **Breaking:** a file like `config/modsx-blog-admin.php` was Blog's and now is
+  not. `modsx:doctor` lists every such file under a new `unclaimed_files` key so
+  nothing goes missing quietly. Where a module genuinely needs several files in
+  one place, the form is a directory - `config/modsx-blog/settings.php`, which
+  Laravel reads as `config('modsx-blog.settings')`.
+
+  Existing backups are unaffected: `restore` reads the manifest, so a version
+  gives back exactly what it recorded.
+- **A migration goes to the longest module name that claims it.**
+  `modsx_blog_post_create_comments_table` belongs to BlogPost when that module
+  exists, and to Blog when it does not. A migration is the one thing that
+  cannot be named for its module and nothing else, so this is the only place a
+  longer name takes precedence. It is decided by the module list, with no
+  vocabulary of migration verbs: `make:migration` accepts any name at all
+  (`backfill_`, `cleanup_`), and module names are themselves sometimes verbs
+  (`Import`, `Update`).
+- **`Blog` alongside `BlogPost` is now a supported layout.** `modsx:doctor` no
+  longer counts it as a problem; it is listed informationally, stating how
+  their migrations divide.
+- `confirmDestructive()` moved out of `InteractsWithModules`, which every
+  command uses, into a `ConfirmsDestructiveActions` trait used only by the
+  three that declare `--force`. It had guarded itself with
+  `hasOption('force')` precisely because the other eleven commands did not
+  have it, which static analysis reported as eleven errors once a stale
+  PHPStan cache stopped hiding them. Putting the method where the option
+  exists removes the reason for the guard rather than silencing the report.
+
 ## [0.4.1] - 2026-08-29
 
 ### Added

@@ -98,12 +98,12 @@ it('restores the module files and drops ones the version did not have', function
     $manager->backup('Blog');
 
     File::put($this->root.'/routes/modsx-blog.php', 'v2');
-    $this->makeFile('routes/modsx-blog-admin.php', 'added later');
+    $this->makeFile('config/modsx-blog.php', 'added later');
 
     $manager->restore('Blog', '0001');
 
     expect(File::get($this->root.'/routes/modsx-blog.php'))->toBe('v1')
-        ->and(File::exists($this->root.'/routes/modsx-blog-admin.php'))->toBeFalse();
+        ->and(File::exists($this->root.'/config/modsx-blog.php'))->toBeFalse();
 });
 
 it('leaves the application alone when the backup turns out to be incomplete', function () {
@@ -285,6 +285,23 @@ it('removes a module files along with its directories', function () {
 
     expect($removed['files'])->toBe(['routes/modsx-blog.php'])
         ->and(File::exists($this->root.'/routes/modsx-blog.php'))->toBeFalse();
+});
+
+it('never touches a neighbouring module that shares the start of its name', function () {
+    // Regression: Blog used to claim everything starting "modsx-blog", so
+    // deleting it removed BlogPost's config file and archived BlogPost's
+    // migration into Blog's backup. A file names one module, and only one.
+    $this->makeModuleDirectory('resources/views/modsx-blog-post', 'index.blade.php', 'v1');
+    $this->makeFile('config/modsx-blog.php', 'blog');
+    $this->makeFile('config/modsx-blog-post.php', 'blog post');
+    $this->makeFile('database/migrations/2026_01_02_000000_modsx_blog_post_create_comments_table.php', 'schema');
+
+    $removed = app(BackupManager::class)->delete('Blog');
+
+    expect($removed['files'])->toBe(['config/modsx-blog.php'])
+        ->and($removed['migrations'])->toBe([])
+        ->and(File::get($this->root.'/config/modsx-blog-post.php'))->toBe('blog post')
+        ->and(File::isDirectory($this->root.'/resources/views/modsx-blog-post'))->toBeTrue();
 });
 
 it('leaves migrations in place when deleting, and says so', function () {

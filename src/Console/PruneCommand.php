@@ -7,11 +7,13 @@ namespace Modsx\Console;
 use Illuminate\Console\Command;
 use Modsx\BackupManager;
 use Modsx\BackupRepository;
+use Modsx\Console\Concerns\ConfirmsDestructiveActions;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\Exceptions\ModsxException;
 
 class PruneCommand extends Command
 {
+    use ConfirmsDestructiveActions;
     use InteractsWithModules;
 
     protected $signature = 'modsx:prune

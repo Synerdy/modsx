@@ -6,6 +6,7 @@ namespace Modsx\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\ModuleLocator;
@@ -34,13 +35,16 @@ class DoctorCommand extends Command
         $foreignPrefix = $this->foreignPrefixBackups($locator, $backups);
         $strayDirectories = $this->strayBackupDirectories($backups);
         $emptyDirectories = $this->emptyDirectories($locator);
+        $unclaimedFiles = $locator->unclaimedFiles();
 
         if ($this->option('fix')) {
             $emptyDirectories = $this->removeEmptyDirectories($emptyDirectories);
         }
 
+        // Prefix collisions are no longer counted: Blog next to BlogPost is a
+        // supported layout, files naming one module each and migrations going
+        // to the longest name that claims them.
         $problems = count($ambiguous)
-            + count($prefixCollisions)
             + count($caseCollisions)
             + count($brokenBackups);
 
@@ -55,6 +59,7 @@ class DoctorCommand extends Command
                 'foreign_prefix_backups' => $foreignPrefix,
                 'stray_backup_directories' => $strayDirectories,
                 'empty_directories' => $emptyDirectories,
+                'unclaimed_files' => $unclaimedFiles,
                 'single_form_modules' => $singleForm,
                 'orphaned_backups' => $orphaned,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -65,13 +70,14 @@ class DoctorCommand extends Command
         $this->banner();
 
         $this->renderAmbiguousNames($locator, $ambiguous);
-        $this->renderPrefixCollisions($prefixCollisions);
+        $this->renderPrefixCollisions($locator, $prefixCollisions);
         $this->renderCaseCollisions($caseCollisions);
         $this->renderBrokenBackups($brokenBackups);
         $this->renderMisnamedMigrations($misnamedMigrations);
         $this->renderForeignPrefixBackups($locator, $foreignPrefix);
         $this->renderStrayDirectories($strayDirectories);
         $this->renderEmptyDirectories($emptyDirectories, (bool) $this->option('fix'));
+        $this->renderUnclaimedFiles($locator, $unclaimedFiles);
         $this->renderSingleFormModules($locator, $singleForm);
         $this->renderOrphanedBackups($orphaned);
 
@@ -146,25 +152,64 @@ class DoctorCommand extends Command
     }
 
     /**
+     * Informational: one module's name continuing another's is a supported
+     * layout, not a fault. Files name one module each, and a migration goes to
+     * the longest name that claims it - which is worth stating, because it is
+     * the one rule you cannot read off a single filename.
+     *
      * @param  list<array{owner: string, nested: string}>  $collisions
      */
-    private function renderPrefixCollisions(array $collisions): void
+    private function renderPrefixCollisions(ModuleLocator $locator, array $collisions): void
     {
-        foreach ($collisions as $collision) {
-            $this->components->error(sprintf(
-                'Module [%s] sits inside the prefix owned by [%s], so their migrations are ambiguous.',
-                $collision['nested'],
-                $collision['owner'],
-            ));
+        if ($collisions === []) {
+            return;
+        }
 
+        $prefix = $locator->prefix().'_';
+
+        $this->components->info('Modules whose names continue one another:');
+
+        foreach ($collisions as $collision) {
+            $this->components->twoColumnDetail(
+                sprintf('%s, then %s', $collision['owner'], $collision['nested']),
+                '<fg=gray>longer name wins</>',
+            );
             $this->components->bulletList([
                 sprintf(
-                    'A migration named after [%s] also reads as belonging to [%s]. Rename one of them.',
+                    'Migrations named %s%s_* belong to [%s]; [%s] keeps the ones named %s%s_*.',
+                    $prefix,
+                    Str::snake($collision['nested']),
                     $collision['nested'],
                     $collision['owner'],
+                    $prefix,
+                    Str::snake($collision['owner']),
                 ),
             ]);
         }
+    }
+
+    /**
+     * @param  list<array{module: string, path: string}>  $rows
+     */
+    private function renderUnclaimedFiles(ModuleLocator $locator, array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->components->info('Files naming a module that does not exist:');
+
+        foreach ($rows as $row) {
+            $this->components->twoColumnDetail($row['path'], '<fg=gray>names '.$row['module'].'</>');
+        }
+
+        $this->components->bulletList([
+            sprintf(
+                'A file name identifies a module exactly as a directory name does. Rename it for a '.
+                'module you have, move it into that module\'s directory, or run "%s".',
+                'php artisan modsx:scaffold '.$rows[0]['module'],
+            ),
+        ]);
     }
 
     /**

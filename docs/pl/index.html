@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="../">English</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -260,8 +260,147 @@ app/Http/Controllers/ModsxBlog/
 <p><code>modsx-userprofile</code> i <code>ModsxUserProfile</code> to <strong>dwa różne moduły</strong>: pierwszy to <code>Userprofile</code>, drugi <code>UserProfile</code>. Zrobisz backup <code>UserProfile</code> i widoki z <code>modsx-userprofile</code> zostaną po cichu pominięte.</p>
 <p>Najpierw zapisz nazwę w StudlyCase, potem konwertuj: <code>UserProfile</code> → <code>user-profile</code>, nigdy <code>userprofile</code>. Albo pozwól, żeby <code>php artisan modsx:scaffold UserProfile</code> i <code>php artisan modsx:make</code> zapisały je za Ciebie — to jedyny sposób, żeby mieć pewność, że się zgadzają. Jeśli podejrzewasz, że gdzieś już Ci się to przydarzyło, <code>php artisan modsx:doctor</code> to znajdzie.</p>
 </blockquote>
-<p><strong>Prefiks należy do jednego modułu, w całości.</strong> Jeśli istnieje <code>Blog</code>, to <code>modsx-blog-admin.php</code> i <code>modsx_blog_posts_table</code> są jego — ale drugi moduł nazwany <code>BlogPost</code> rościłby sobie wtedy prawo do nazw, które już czytają się jako należące do <code>Blog</code>. To konflikt nazewniczy, który zgłasza <code>modsx:doctor</code>. Jeden moduł, jeden prefiks.</p>
 <p>Sam prefiks <code>modsx</code> jest konfigurowalny, więc jeśli wolisz <code>mod-</code> albo inicjały firmy, zmieniasz go raz i obowiązują te same reguły.</p>
+<h3 id="które-nazwy-należą-do-modułu">Które nazwy należą do modułu</h3>
+<p><strong>Jedna zasada: nazwa identyfikuje moduł.</strong> Tak samo w katalogu, w pliku i w migracji. <code>modsx-blog</code> należy do Bloga; <code>modsx-blog-post</code> to inna nazwa, więc inny moduł.</p>
+<p><strong>Katalogi — obie formy nazwy:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Ścieżka</th>
+<th>Moduł</th>
+<th>Dlaczego</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app/Models/ModsxBlog/</code></td>
+<td>Blog</td>
+<td>forma StudlyCase</td>
+</tr>
+<tr>
+<td><code>resources/views/modsx-blog/</code></td>
+<td>Blog</td>
+<td>forma kebab-case</td>
+</tr>
+<tr>
+<td><code>resources/views/modsx-blog-post/</code></td>
+<td><strong>BlogPost</strong></td>
+<td>inna nazwa to inny moduł</td>
+</tr>
+<tr>
+<td><code>resources/views/modsx-blogging/</code></td>
+<td>Blogging</td>
+<td>tak samo</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pojedyncze pliki — nazwa do pierwszej kropki, dokładnie:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Ścieżka</th>
+<th>Moduł</th>
+<th>Dlaczego</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config/modsx-blog.php</code></td>
+<td>Blog</td>
+<td>dokładnie ta nazwa</td>
+</tr>
+<tr>
+<td><code>routes/modsx-blog.php</code></td>
+<td>Blog</td>
+<td>dowolna skanowana ścieżka</td>
+</tr>
+<tr>
+<td><code>lang/en/modsx-blog.php</code>, <code>lang/pl/modsx-blog.php</code></td>
+<td>Blog</td>
+<td>każdy język</td>
+</tr>
+<tr>
+<td><code>public/modsx-blog.css</code>, <code>resources/js/modsx-blog.js</code></td>
+<td>Blog</td>
+<td>dowolne rozszerzenie</td>
+</tr>
+<tr>
+<td><code>resources/views/modsx-blog.blade.php</code></td>
+<td>Blog</td>
+<td>cięcie na <strong>pierwszej</strong> kropce, więc <code>.blade.php</code> działa</td>
+</tr>
+<tr>
+<td><code>config/modsx-blog-post.php</code></td>
+<td><strong>BlogPost</strong></td>
+<td>nie Blog — tak samo jak katalog</td>
+</tr>
+<tr>
+<td><code>config/modsx-blog-admin.php</code></td>
+<td><strong>BlogAdmin</strong></td>
+<td>nazywa moduł; niczyj, jeśli takiego nie ma</td>
+</tr>
+<tr>
+<td><code>config/blog-modsx.php</code></td>
+<td>żaden</td>
+<td>prefiks nie z przodu</td>
+</tr>
+<tr>
+<td><code>app/Support/ModsxBlog.php</code></td>
+<td>żaden</td>
+<td>pojedyncze pliki tylko w formie kebab</td>
+</tr>
+</tbody>
+</table>
+<p>Nazwy modułów są unikalne, więc do jednego pliku pasuje najwyżej jeden moduł — dwa nie mogą go sobie przypisać naraz.</p>
+<p>Potrzebujesz kilku plików w jednym miejscu? Użyj katalogu. <code>config/modsx-blog/settings.php</code> Laravel czyta jako <code>config('modsx-blog.settings')</code>, a cały katalog należy do Bloga.</p>
+<p><strong>Migracje — moduł z przodu, potem zwykła nazwa Laravela:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Nazwa po timestampie</th>
+<th>Moduł</th>
+<th>Dlaczego</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsx_blog_create_posts_table</code></td>
+<td>Blog</td>
+<td></td>
+</tr>
+<tr>
+<td><code>modsx_blog_add_slug_to_posts_table</code></td>
+<td>Blog</td>
+<td></td>
+</tr>
+<tr>
+<td><code>modsx_blog_post_create_comments_table</code></td>
+<td><strong>BlogPost</strong>, a gdy go nie ma — Blog</td>
+<td>wygrywa dłuższa nazwa</td>
+</tr>
+<tr>
+<td><code>modsx_blogging_create_x_table</code></td>
+<td>Blogging</td>
+<td></td>
+</tr>
+<tr>
+<td><code>create_modsx_blog_posts_table</code></td>
+<td>żaden</td>
+<td><code>modsx:doctor</code> zgłosi to i poda nazwę do zmiany</td>
+</tr>
+</tbody>
+</table>
+<p>Migracja jest jedyną rzeczą, której nie da się nazwać samą nazwą modułu i niczym więcej — każda potrzebuje własnej nazwy — więc to jedyne miejsce, gdzie dłuższa nazwa modułu ma pierwszeństwo.</p>
+<p><strong><code>Blog</code> obok <code>BlogPost</code> to układ wspierany:</strong></p>
+<pre><code>app/Models/ModsxBlog/                                    Blog
+app/Models/ModsxBlogPost/                                BlogPost
+config/modsx-blog.php                                    Blog
+config/modsx-blog-post.php                               BlogPost
+..._modsx_blog_create_posts_table.php                    Blog
+..._modsx_blog_post_create_comments_table.php            BlogPost
+</code></pre>
+<p><code>modsx:delete Blog</code> rusza wyłącznie pierwszą kolumnę.</p>
 <h3 id="co-należy-do-modułu">Co należy do modułu</h3>
 <table>
 <thead>
@@ -611,7 +750,6 @@ php artisan modsx:doctor --fix     # usuwa puste katalogi modułu
 <ul>
 <li><strong>Nazwy modułów różniące się wyłącznie granicami słów</strong>, np. <code>Userprofile</code> obok <code>UserProfile</code>. Obie nazwy są poprawne, więc nic innego tego nie wyłapie — a to prawie zawsze jeden moduł, który miał być jednym.</li>
 <li><strong>Drzewa backupów różniące się wyłącznie wielkością liter.</strong> Na Windows i macOS to jeden katalog, więc dwa moduły dzielą sekwencję wersji, a przywracanie może zwrócić nie ten.</li>
-<li><strong>Jeden moduł mieszczący się w prefiksie drugiego</strong>, np. <code>BlogPost</code> obok <code>Blog</code>. Migracja nazwana od któregokolwiek z nich czyta się wtedy jako należąca do obu, a nic tu nie zgaduje.</li>
 <li><strong>Wersje backupu bez czytelnego <code>modsx.json</code>.</strong></li>
 </ul>
 <p>Informacyjnie (kod wyjścia 0):</p>
@@ -622,6 +760,8 @@ php artisan modsx:doctor --fix     # usuwa puste katalogi modułu
 <li>Moduły istniejące tylko w jednej z dwóch form katalogów.</li>
 <li>Backupy bez odpowiadającego im modułu w aplikacji.</li>
 <li><strong>Puste katalogi modułu</strong> — pozostawione przez <code>modsx:scaffold</code> albo przez ręczne usunięcie ostatniego pliku. <code>--fix</code> je usuwa. Sprawdzanie uwzględnia też pliki ukryte, więc katalog trzymany celowo dzięki <code>.gitkeep</code> nigdy nie jest ruszany — zgłaszany jest tylko katalog, w którym naprawdę nic nie ma, na żadnej głębokości.</li>
+<li><strong>Pliki nazywające nieistniejący moduł</strong>, np. <code>config/modsx-blog-admin.php</code>, gdy nie ma modułu <code>BlogAdmin</code>. Plik nadal działa w aplikacji — po prostu do niczego nie należy i z niczym nie jest backupowany, co warto wiedzieć.</li>
+<li><strong>Nazwa jednego modułu będąca przedłużeniem drugiej</strong>, np. <code>BlogPost</code> obok <code>Blog</code>. Układ wspierany, wypisywany po to, żeby reguła dla ich migracji była gdzieś powiedziana wprost: wygrywa dłuższa nazwa.</li>
 </ul>
 <hr />
 <h2 id="konfiguracja">Konfiguracja</h2>

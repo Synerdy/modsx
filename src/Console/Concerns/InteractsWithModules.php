@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modsx\Console\Concerns;
 
-use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\select;
 
 use Modsx\BackupRepository;
@@ -118,24 +117,6 @@ trait InteractsWithModules
             default: $newest,
             scroll: 10,
         );
-    }
-
-    /**
-     * Confirm a destructive action, unless --force was passed.
-     */
-    protected function confirmDestructive(string $question): bool
-    {
-        if ($this->getDefinition()->hasOption('force') && $this->option('force')) {
-            return true;
-        }
-
-        if (! $this->input->isInteractive()) {
-            $this->components->error('This command changes files. Re-run it with --force in non-interactive mode.');
-
-            return false;
-        }
-
-        return confirm(label: $question, default: false);
     }
 
     /**

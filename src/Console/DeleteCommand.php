@@ -6,12 +6,14 @@ namespace Modsx\Console;
 
 use Illuminate\Console\Command;
 use Modsx\BackupManager;
+use Modsx\Console\Concerns\ConfirmsDestructiveActions;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\Exceptions\ModsxException;
 use Modsx\ModuleLocator;
 
 class DeleteCommand extends Command
 {
+    use ConfirmsDestructiveActions;
     use InteractsWithModules;
 
     protected $signature = 'modsx:delete

@@ -60,14 +60,50 @@ it('lists orphaned backups informationally, without failing', function () {
         ->and($output['orphaned_backups'])->toBe([['module' => 'Blog', 'versions' => 1]]);
 });
 
-it('flags one module sitting inside another module prefix', function () {
+it('reports one module name continuing another informationally, without failing', function () {
+    // Blog next to BlogPost is a supported layout: files name one module each,
+    // and a migration goes to the longest name that claims it.
     $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
     $this->makeModuleDirectory('resources/views/modsx-blog-post', 'index.blade.php', 'v1');
 
     $output = json_decode(artisanOutput('modsx:doctor --json'), true);
 
-    expect($output['problems'])->toBe(1)
+    expect($output['problems'])->toBe(0)
         ->and($output['prefix_collisions'])->toBe([['owner' => 'Blog', 'nested' => 'BlogPost']]);
+});
+
+it('reports a file naming a module that does not exist', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+    $this->makeFile('config/modsx-blog-admin.php');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['problems'])->toBe(0)
+        ->and($output['unclaimed_files'])->toBe([
+            ['module' => 'BlogAdmin', 'path' => 'config/modsx-blog-admin.php'],
+        ]);
+});
+
+it('says nothing about a file whose module does exist', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+    $this->makeModuleDirectory('resources/views/modsx-blog-admin', 'index.blade.php', 'v1');
+    $this->makeFile('config/modsx-blog.php');
+    $this->makeFile('config/modsx-blog-admin.php');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['unclaimed_files'])->toBe([]);
+});
+
+it('says nothing about a file that travels with its module directory', function () {
+    // Inside the directory it is copied wholesale anyway, so its name naming
+    // nothing is of no consequence.
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+    $this->makeFile('resources/views/modsx-blog/modsx-blog-partial.blade.php');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['unclaimed_files'])->toBe([]);
 });
 
 it('flags backup trees that differ only in letter case', function () {

@@ -96,9 +96,63 @@ The first two are Laravel's own convention, not an invention of this package —
 >
 > Write the name in StudlyCase first, then convert: `UserProfile` → `user-profile`, never `userprofile`. Or let `php artisan modsx:scaffold UserProfile` and `php artisan modsx:make` write them for you, which is the only way to be sure they agree. If you suspect you've already made this mistake somewhere, `php artisan modsx:doctor` will find it.
 
-**The prefix belongs to one module, all the way down.** If `Blog` exists, `modsx-blog-admin.php` and `modsx_blog_posts_table` are Blog's — but a second module called `BlogPost` would then be claiming names that already read as Blog's, which is a naming conflict `modsx:doctor` reports. One module, one prefix.
-
 The `modsx` prefix itself is configurable, so if you prefer `mod-` or your company's initials, change it once and the same rules apply.
+
+### Which names belong to a module
+
+**One rule: a name identifies a module.** The same way in a directory, in a file, and in a migration. `modsx-blog` is Blog's; `modsx-blog-post` is a different name, so it is a different module.
+
+**Directories** — either form of the name:
+
+| Path | Module | Why |
+|---|---|---|
+| `app/Models/ModsxBlog/` | Blog | StudlyCase form |
+| `resources/views/modsx-blog/` | Blog | kebab-case form |
+| `resources/views/modsx-blog-post/` | **BlogPost** | a different name is a different module |
+| `resources/views/modsx-blogging/` | Blogging | likewise |
+
+**Single files** — the name up to the first dot, exactly:
+
+| Path | Module | Why |
+|---|---|---|
+| `config/modsx-blog.php` | Blog | the name, exactly |
+| `routes/modsx-blog.php` | Blog | any scanned path |
+| `lang/en/modsx-blog.php`, `lang/pl/modsx-blog.php` | Blog | every locale |
+| `public/modsx-blog.css`, `resources/js/modsx-blog.js` | Blog | any extension |
+| `resources/views/modsx-blog.blade.php` | Blog | cut at the **first** dot, so `.blade.php` works |
+| `config/modsx-blog-post.php` | **BlogPost** | not Blog — same as the directory |
+| `config/modsx-blog-admin.php` | **BlogAdmin** | names a module; unclaimed if there isn't one |
+| `config/blog-modsx.php` | none | the prefix is not at the front |
+| `app/Support/ModsxBlog.php` | none | single files use the kebab form only |
+
+Because module names are unique, at most one module can ever match a file — two modules cannot both claim one.
+
+Need more than one file in the same place? Use a directory. `config/modsx-blog/settings.php` is read by Laravel as `config('modsx-blog.settings')`, and the whole directory belongs to Blog.
+
+**Migrations** — the module first, then the ordinary Laravel name:
+
+| Name after the timestamp | Module | Why |
+|---|---|---|
+| `modsx_blog_create_posts_table` | Blog | |
+| `modsx_blog_add_slug_to_posts_table` | Blog | |
+| `modsx_blog_post_create_comments_table` | **BlogPost**, or Blog if BlogPost doesn't exist | the longer name wins |
+| `modsx_blogging_create_x_table` | Blogging | |
+| `create_modsx_blog_posts_table` | none | `modsx:doctor` reports it with the name to use |
+
+A migration is the one thing that cannot be named for its module and nothing else — every migration needs its own name — so this is the only place where a longer module name takes precedence.
+
+**`Blog` and `BlogPost` side by side is a supported layout:**
+
+```
+app/Models/ModsxBlog/                                    Blog
+app/Models/ModsxBlogPost/                                BlogPost
+config/modsx-blog.php                                    Blog
+config/modsx-blog-post.php                               BlogPost
+..._modsx_blog_create_posts_table.php                    Blog
+..._modsx_blog_post_create_comments_table.php            BlogPost
+```
+
+`modsx:delete Blog` touches the first column only.
 
 ### What belongs to a module
 
@@ -476,7 +530,6 @@ Problems (exit code 1):
 
 - **Module names that differ only in word boundaries**, such as `Userprofile` alongside `UserProfile`. Both are valid names, so nothing else flags this — but it is almost always one module that was meant to be one.
 - **Backup trees that differ only in letter case.** On Windows and macOS those are one directory, so two modules share a version sequence and a restore can return the wrong one.
-- **One module sitting inside another's prefix**, such as `BlogPost` alongside `Blog`. A migration named after either then reads as belonging to both, and nothing here guesses which was meant.
 - **Backup versions with no readable `modsx.json`.**
 
 Informational (exit code 0):
@@ -487,6 +540,8 @@ Informational (exit code 0):
 - Modules present in only one of the two directory forms.
 - Backups with no matching module in the application.
 - **Empty module directories** — left by `modsx:scaffold`, or by deleting the last file in one by hand. `--fix` removes them. The check looks for files including hidden ones, so a directory kept alive on purpose with a `.gitkeep` is never touched — only a directory with nothing in it at all, at any depth, is reported.
+- **Files naming a module that doesn't exist**, such as `config/modsx-blog-admin.php` with no `BlogAdmin` module. The file keeps working; it just belongs to nothing and is backed up with nothing, which is worth knowing.
+- **One module's name continuing another's**, such as `BlogPost` alongside `Blog`. A supported layout, listed so the rule for their migrations is stated somewhere: the longer name wins.
 
 ---
 

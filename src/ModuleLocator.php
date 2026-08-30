@@ -84,9 +84,10 @@ class ModuleLocator
      * Single files belonging to a module: routes/modsx-blog.php,
      * config/modsx-blog.php, lang/en/modsx-blog.php and the like.
      *
-     * The prefix belongs to the module exclusively, so modsx-blog-admin.php is
-     * Blog's too - but modsx-blogging.php is not, because the match has to end
-     * on a word boundary.
+     * A file's name identifies a module exactly as a directory's name does, so
+     * modsx-blog-admin.php names BlogAdmin rather than being another of Blog's
+     * files. That is what makes two modules unable to claim one file: names
+     * are unique, so at most one module can match.
      *
      * @return list<string>
      */
@@ -107,7 +108,6 @@ class ModuleLocator
             ->ignoreVCS(true)
             ->sortByName();
 
-        $prefix = $this->prefix().'-'.$name->kebab;
         $backupRoot = $this->relativeToBase($this->backupPath());
         $directories = $this->paths($name);
 
@@ -124,7 +124,7 @@ class ModuleLocator
                 continue;
             }
 
-            if (! self::startsWithAtBoundary($file->getFilename(), $prefix, ['-', '.'])) {
+            if ($this->moduleNameFromFilename($file->getFilename())?->equals($name) !== true) {
                 continue;
             }
 
@@ -158,6 +158,10 @@ class ModuleLocator
      * belongs to Blog. Anchoring at a known position is what keeps this
      * unambiguous - searching the middle of the name would not be.
      *
+     * A migration is the one thing that cannot be named for its module and
+     * nothing else, since every migration needs its own name. Which module a
+     * suffixed name belongs to is settled by migrationOwner().
+     *
      * @return list<string>
      */
     public function migrations(ModuleName|string $name): array
@@ -169,8 +173,6 @@ class ModuleLocator
             return [];
         }
 
-        $prefix = $this->prefix().'_'.$name->snake;
-
         // Not recursive, matching Laravel's own migrator, which globs
         // "$path/*_*.php" and does not descend.
         $finder = (new Finder)
@@ -181,10 +183,13 @@ class ModuleLocator
             ->ignoreDotFiles(true)
             ->sortByName();
 
+        $owners = $this->migrationOwners();
         $found = [];
 
         foreach ($finder as $file) {
-            if (! self::startsWithAtBoundary(self::withoutTimestamp($file->getFilename()), $prefix, ['_', '.'])) {
+            $owner = self::migrationOwner(self::withoutTimestamp($file->getFilename()), $owners);
+
+            if ($owner?->equals($name) !== true) {
                 continue;
             }
 
@@ -198,6 +203,55 @@ class ModuleLocator
         sort($found);
 
         return $found;
+    }
+
+    /**
+     * Every module in the application, keyed by the snake prefix a migration of
+     * theirs starts with, longest first.
+     *
+     * @return array<string, ModuleName>
+     */
+    private function migrationOwners(): array
+    {
+        $prefix = $this->prefix();
+        $owners = [];
+
+        foreach ($this->names() as $module) {
+            $name = ModuleName::make($module);
+            $owners[$prefix.'_'.$name->snake] = $name;
+        }
+
+        uksort($owners, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        return $owners;
+    }
+
+    /**
+     * The module a migration belongs to, given every module in the application.
+     *
+     * Both Blog and BlogPost match "modsx_blog_post_create_comments_table" at a
+     * word boundary, so the longer name wins: it is the one that cannot be a
+     * coincidence. Blog's own migration about posts is named
+     * "modsx_blog_create_posts_table" by the same convention and matches Blog
+     * alone, because "create" is not the start of any module name.
+     *
+     * This needs no vocabulary of migration verbs. It is the module list that
+     * draws the boundary - which is just as well, since "make:migration" takes
+     * any name at all ("backfill_", "cleanup_") and module names are themselves
+     * sometimes verbs ("Import", "Update").
+     *
+     * @param  string  $rest  the filename with its timestamp already removed
+     * @param  array<string, ModuleName>  $owners  from migrationOwners(), longest first
+     */
+    private static function migrationOwner(string $rest, array $owners): ?ModuleName
+    {
+        foreach ($owners as $needle => $owner) {
+            if (self::startsWithAtBoundary($rest, $needle, ['_', '.'])) {
+                return $owner;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -361,6 +415,98 @@ class ModuleLocator
         }
 
         return $found;
+    }
+
+    /**
+     * Single files naming a module that does not exist.
+     *
+     * config/modsx-blog-admin.php names BlogAdmin the same way a directory of
+     * that name would. With no such module it belongs to nothing and is backed
+     * up with nothing - which is worth saying out loud, because the file itself
+     * keeps working and nothing else would ever mention it.
+     *
+     * @return list<array{module: string, path: string}>
+     */
+    public function unclaimedFiles(): array
+    {
+        $roots = $this->roots();
+
+        if ($roots === []) {
+            return [];
+        }
+
+        $modules = $this->all();
+        $directories = array_merge(...array_values($modules)) ?: [];
+        $backupRoot = $this->relativeToBase($this->backupPath());
+
+        $finder = (new Finder)
+            ->files()
+            ->in($roots)
+            ->exclude($this->excluded())
+            ->ignoreDotFiles(true)
+            ->ignoreVCS(true)
+            ->sortByName();
+
+        $found = [];
+
+        foreach ($finder as $file) {
+            $module = $this->moduleNameFromFilename($file->getFilename());
+
+            if ($module === null || isset($modules[$module->studly])) {
+                continue;
+            }
+
+            $relative = $this->relativeToBase($file->getPathname());
+
+            if ($relative === null || $relative === '') {
+                continue;
+            }
+
+            if ($backupRoot !== null && str_starts_with($relative.'/', $backupRoot.'/')) {
+                continue;
+            }
+
+            // Inside a module's own directory the file travels with that
+            // directory, so its name naming nothing is of no consequence.
+            foreach ($directories as $directory) {
+                if (str_starts_with($relative, $directory.'/')) {
+                    continue 2;
+                }
+            }
+
+            $found[] = ['module' => $module->studly, 'path' => $relative];
+        }
+
+        return $found;
+    }
+
+    /**
+     * The module a single file's name belongs to, or null if it belongs to none.
+     *
+     * The name is read exactly as a directory name is, taking everything before
+     * the first dot: "modsx-blog.blade.php" is Blog's, and "modsx-blog-admin.php"
+     * names BlogAdmin rather than being one more of Blog's files. Cutting at the
+     * first dot rather than the last is what keeps ".blade.php" working.
+     *
+     * Only the kebab form counts here. A lone "ModsxBlog.php" is nobody's, the
+     * Studly form being reserved for directories - the namespace directories a
+     * class actually lives in.
+     */
+    public function moduleNameFromFilename(string $filename): ?ModuleName
+    {
+        $stem = strstr($filename, '.', true);
+
+        if ($stem === false) {
+            $stem = $filename;
+        }
+
+        $kebabPrefix = $this->prefix().'-';
+
+        if (! str_starts_with($stem, $kebabPrefix)) {
+            return null;
+        }
+
+        return ModuleName::tryMake(substr($stem, strlen($kebabPrefix)));
     }
 
     /**
