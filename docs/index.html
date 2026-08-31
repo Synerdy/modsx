@@ -806,6 +806,29 @@ php artisan modsx:make controller Blog/PostController
 <pre><code class="language-bash">php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # any case; it is normalised
 </code></pre>
+<h4>The configured list</h4>
+<p>Which directories it creates is up to you, in <code>config/modsx.php</code>:</p>
+<pre><code class="language-php">'scaffold' =&gt; [
+    'app/Http/Controllers/{Studly}',
+    'app/Models/{Studly}',
+    'resources/views/{kebab}',
+],
+</code></pre>
+<p><code>{Studly}</code> becomes <code>ModsxBlog</code>, <code>{kebab}</code> becomes <code>modsx-blog</code>. Both come from the one name you typed.</p>
+<p>The published config carries a longer list commented out — Livewire, services, form requests, factories, seeders, tests, <code>resources/css/</code>, <code>resources/js/</code>, components — so you uncomment what your modules have. The default stays short on purpose: a directory nobody fills in is invisible to git and gets reported by <code>modsx:doctor</code>, so a generous default would only make work for <code>--fix</code>.</p>
+<p>Views follow the same shape as everything else — <strong>the framework's directory first, the module inside it</strong>, exactly like <code>resources/css/modsx-blog/</code>:</p>
+<pre><code>resources/views/
+├── components/
+│   ├── layouts/app.blade.php     the application's
+│   └── modsx-blog/card.blade.php Blog's   -&gt; &lt;x-modsx-blog.card&gt;
+├── layouts/
+│   ├── app.blade.php             the application's
+│   └── modsx-blog/               Blog's
+├── partials/modsx-blog/          Blog's
+└── modsx-blog/                   Blog's own pages
+</code></pre>
+<p>The two live side by side: a starter kit's <code>layouts/app.blade.php</code> carries no prefix, so no module ever claims it, while <code>layouts/modsx-blog/</code> is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.</p>
+<p>Note the direction. <code>layouts/modsx-blog/</code> — not <code>modsx-blog/layouts/</code>. The module goes <em>inside</em> the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make <code>&lt;x-modsx-blog.card&gt;</code> stop resolving.</p>
 <h4>Naming the directories yourself</h4>
 <p>Name directories after the module and it makes those instead of the configured list — for the one you want now, without changing what every future module gets:</p>
 <pre><code class="language-bash">php artisan modsx:scaffold Blog resources/css
@@ -893,29 +916,6 @@ $ php artisan modsx:scaffold Blog resources/css
    ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
           &quot;resources/css&quot; or &quot;app/Services&quot;; it may not contain &quot;..&quot;.
 </code></pre>
-<h4>The configured list</h4>
-<p>With no directories named, it makes the ones in <code>config/modsx.php</code>:</p>
-<pre><code class="language-php">'scaffold' =&gt; [
-    'app/Http/Controllers/{Studly}',
-    'app/Models/{Studly}',
-    'resources/views/{kebab}',
-],
-</code></pre>
-<p><code>{Studly}</code> becomes <code>ModsxBlog</code>, <code>{kebab}</code> becomes <code>modsx-blog</code>. Both come from the one name you typed.</p>
-<p>The published config carries a longer list commented out — Livewire, services, form requests, factories, seeders, tests, <code>resources/css/</code>, <code>resources/js/</code>, components — so you uncomment what your modules have. The default stays short on purpose: a directory nobody fills in is invisible to git and gets reported by <code>modsx:doctor</code>, so a generous default would only make work for <code>--fix</code>.</p>
-<p>Views follow the same shape as everything else — <strong>the framework's directory first, the module inside it</strong>, exactly like <code>resources/css/modsx-blog/</code>:</p>
-<pre><code>resources/views/
-├── components/
-│   ├── layouts/app.blade.php     the application's
-│   └── modsx-blog/card.blade.php Blog's   -&gt; &lt;x-modsx-blog.card&gt;
-├── layouts/
-│   ├── app.blade.php             the application's
-│   └── modsx-blog/               Blog's
-├── partials/modsx-blog/          Blog's
-└── modsx-blog/                   Blog's own pages
-</code></pre>
-<p>The two live side by side: a starter kit's <code>layouts/app.blade.php</code> carries no prefix, so no module ever claims it, while <code>layouts/modsx-blog/</code> is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.</p>
-<p>Note the direction. <code>layouts/modsx-blog/</code> — not <code>modsx-blog/layouts/</code>. The module goes <em>inside</em> the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make <code>&lt;x-modsx-blog.card&gt;</code> stop resolving.</p>
 <p>It creates directories and nothing else — no controller stubs, no boilerplate. Generating code would make this a code generator, which is exactly what Modsx is not. It never overwrites anything either: directories that already exist are reported and left alone, so it is safe to re-run.</p>
 <p>Note that git does not track empty directories, so a skeleton you never fill in quietly disappears at your next commit. That is the intended behaviour: the directories you actually use will have files in them. Until then it still sits on disk, though — <code>php artisan modsx:doctor --fix</code> finds and removes any of a module's directories left empty, so you don't have to hunt for them by hand.</p>
 <h3 id="modsxlist"><code>modsx:list</code></h3>

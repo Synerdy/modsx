@@ -411,6 +411,40 @@ php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # any case; it is normalised
 ```
 
+#### The configured list
+
+Which directories it creates is up to you, in `config/modsx.php`:
+
+```php
+'scaffold' => [
+    'app/Http/Controllers/{Studly}',
+    'app/Models/{Studly}',
+    'resources/views/{kebab}',
+],
+```
+
+`{Studly}` becomes `ModsxBlog`, `{kebab}` becomes `modsx-blog`. Both come from the one name you typed.
+
+The published config carries a longer list commented out — Livewire, services, form requests, factories, seeders, tests, `resources/css/`, `resources/js/`, components — so you uncomment what your modules have. The default stays short on purpose: a directory nobody fills in is invisible to git and gets reported by `modsx:doctor`, so a generous default would only make work for `--fix`.
+
+Views follow the same shape as everything else — **the framework's directory first, the module inside it**, exactly like `resources/css/modsx-blog/`:
+
+```
+resources/views/
+├── components/
+│   ├── layouts/app.blade.php     the application's
+│   └── modsx-blog/card.blade.php Blog's   -> <x-modsx-blog.card>
+├── layouts/
+│   ├── app.blade.php             the application's
+│   └── modsx-blog/               Blog's
+├── partials/modsx-blog/          Blog's
+└── modsx-blog/                   Blog's own pages
+```
+
+The two live side by side: a starter kit's `layouts/app.blade.php` carries no prefix, so no module ever claims it, while `layouts/modsx-blog/` is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.
+
+Note the direction. `layouts/modsx-blog/` — not `modsx-blog/layouts/`. The module goes *inside* the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make `<x-modsx-blog.card>` stop resolving.
+
 #### Naming the directories yourself
 
 Name directories after the module and it makes those instead of the configured list — for the one you want now, without changing what every future module gets:
@@ -468,40 +502,6 @@ $ php artisan modsx:scaffold Blog ../../etc
    ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
           "resources/css" or "app/Services"; it may not contain "..".
 ```
-
-#### The configured list
-
-With no directories named, it makes the ones in `config/modsx.php`:
-
-```php
-'scaffold' => [
-    'app/Http/Controllers/{Studly}',
-    'app/Models/{Studly}',
-    'resources/views/{kebab}',
-],
-```
-
-`{Studly}` becomes `ModsxBlog`, `{kebab}` becomes `modsx-blog`. Both come from the one name you typed.
-
-The published config carries a longer list commented out — Livewire, services, form requests, factories, seeders, tests, `resources/css/`, `resources/js/`, components — so you uncomment what your modules have. The default stays short on purpose: a directory nobody fills in is invisible to git and gets reported by `modsx:doctor`, so a generous default would only make work for `--fix`.
-
-Views follow the same shape as everything else — **the framework's directory first, the module inside it**, exactly like `resources/css/modsx-blog/`:
-
-```
-resources/views/
-├── components/
-│   ├── layouts/app.blade.php     the application's
-│   └── modsx-blog/card.blade.php Blog's   -> <x-modsx-blog.card>
-├── layouts/
-│   ├── app.blade.php             the application's
-│   └── modsx-blog/               Blog's
-├── partials/modsx-blog/          Blog's
-└── modsx-blog/                   Blog's own pages
-```
-
-The two live side by side: a starter kit's `layouts/app.blade.php` carries no prefix, so no module ever claims it, while `layouts/modsx-blog/` is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.
-
-Note the direction. `layouts/modsx-blog/` — not `modsx-blog/layouts/`. The module goes *inside* the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make `<x-modsx-blog.card>` stop resolving.
 
 It creates directories and nothing else — no controller stubs, no boilerplate. Generating code would make this a code generator, which is exactly what Modsx is not. It never overwrites anything either: directories that already exist are reported and left alone, so it is safe to re-run.
 

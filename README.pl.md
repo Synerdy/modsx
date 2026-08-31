@@ -411,6 +411,40 @@ php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # dowolna wielkość liter, jest normalizowana
 ```
 
+#### Lista z konfiguracji
+
+Które katalogi powstaną, zależy od Ciebie — `config/modsx.php`:
+
+```php
+'scaffold' => [
+    'app/Http/Controllers/{Studly}',
+    'app/Models/{Studly}',
+    'resources/views/{kebab}',
+],
+```
+
+`{Studly}` staje się `ModsxBlog`, `{kebab}` staje się `modsx-blog`. Oba z tej jednej nazwy, którą wpisałeś.
+
+Opublikowany config niesie dłuższą listę, zakomentowaną — Livewire, serwisy, form requesty, fabryki, seedery, testy, `resources/css/`, `resources/js/`, komponenty — więc odkomentowujesz to, co Twoje moduły faktycznie mają. Domyślna lista jest krótka celowo: katalog, którego nikt nie wypełni, jest niewidoczny dla gita i zgłasza go `modsx:doctor`, więc hojna wartość domyślna robiłaby tylko robotę dla `--fix`.
+
+Widoki mają ten sam kształt co wszystko inne — **najpierw katalog frameworka, moduł w środku**, dokładnie jak `resources/css/modsx-blog/`:
+
+```
+resources/views/
+├── components/
+│   ├── layouts/app.blade.php     aplikacji
+│   └── modsx-blog/card.blade.php Bloga   -> <x-modsx-blog.card>
+├── layouts/
+│   ├── app.blade.php             aplikacji
+│   └── modsx-blog/               Bloga
+├── partials/modsx-blog/          Bloga
+└── modsx-blog/                   własne strony Bloga
+```
+
+Jedno i drugie żyje obok siebie: `layouts/app.blade.php` ze starter kitu nie nosi prefiksu, więc żaden moduł go nie zagarnie, a `layouts/modsx-blog/` jest Bloga i wędruje razem z nim. Moduły są znajdowane na dowolnej głębokości, więc zagnieżdżenie o poziom nic nie kosztuje.
+
+Zwróć uwagę na kolejność. `layouts/modsx-blog/` — nie `modsx-blog/layouts/`. W całej tej konwencji moduł idzie *do wnętrza* katalogu frameworka i widoki nie są wyjątkiem; odwrócenie tego akurat tutaj sprawiłoby, że `<x-modsx-blog.card>` przestaje się rozwiązywać.
+
 #### Wskazanie katalogów wprost
 
 Podaj katalogi po nazwie modułu, a powstaną one zamiast listy z konfiguracji — ten jeden, którego potrzebujesz teraz, bez zmieniania tego, co dostaje każdy przyszły moduł:
@@ -468,40 +502,6 @@ $ php artisan modsx:scaffold Blog ../../etc
    ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
           "resources/css" or "app/Services"; it may not contain "..".
 ```
-
-#### Lista z konfiguracji
-
-Gdy nie podasz żadnego katalogu, powstają te z `config/modsx.php`:
-
-```php
-'scaffold' => [
-    'app/Http/Controllers/{Studly}',
-    'app/Models/{Studly}',
-    'resources/views/{kebab}',
-],
-```
-
-`{Studly}` staje się `ModsxBlog`, `{kebab}` staje się `modsx-blog`. Oba z tej jednej nazwy, którą wpisałeś.
-
-Opublikowany config niesie dłuższą listę, zakomentowaną — Livewire, serwisy, form requesty, fabryki, seedery, testy, `resources/css/`, `resources/js/`, komponenty — więc odkomentowujesz to, co Twoje moduły faktycznie mają. Domyślna lista jest krótka celowo: katalog, którego nikt nie wypełni, jest niewidoczny dla gita i zgłasza go `modsx:doctor`, więc hojna wartość domyślna robiłaby tylko robotę dla `--fix`.
-
-Widoki mają ten sam kształt co wszystko inne — **najpierw katalog frameworka, moduł w środku**, dokładnie jak `resources/css/modsx-blog/`:
-
-```
-resources/views/
-├── components/
-│   ├── layouts/app.blade.php     aplikacji
-│   └── modsx-blog/card.blade.php Bloga   -> <x-modsx-blog.card>
-├── layouts/
-│   ├── app.blade.php             aplikacji
-│   └── modsx-blog/               Bloga
-├── partials/modsx-blog/          Bloga
-└── modsx-blog/                   własne strony Bloga
-```
-
-Jedno i drugie żyje obok siebie: `layouts/app.blade.php` ze starter kitu nie nosi prefiksu, więc żaden moduł go nie zagarnie, a `layouts/modsx-blog/` jest Bloga i wędruje razem z nim. Moduły są znajdowane na dowolnej głębokości, więc zagnieżdżenie o poziom nic nie kosztuje.
-
-Zwróć uwagę na kolejność. `layouts/modsx-blog/` — nie `modsx-blog/layouts/`. W całej tej konwencji moduł idzie *do wnętrza* katalogu frameworka i widoki nie są wyjątkiem; odwrócenie tego akurat tutaj sprawiłoby, że `<x-modsx-blog.card>` przestaje się rozwiązywać.
 
 Tworzy katalogi i nic poza tym — żadnych stubów kontrolerów, żadnego boilerplate'u. Generowanie kodu uczyniłoby z tego generator, czyli dokładnie to, czym Modsx nie jest. Niczego też nie nadpisuje: istniejące katalogi są raportowane i zostawiane w spokoju, więc komendę można bezpiecznie uruchomić ponownie.
 

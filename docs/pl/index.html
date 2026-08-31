@@ -806,6 +806,29 @@ php artisan modsx:make controller Blog/PostController
 <pre><code class="language-bash">php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # dowolna wielkość liter, jest normalizowana
 </code></pre>
+<h4>Lista z konfiguracji</h4>
+<p>Które katalogi powstaną, zależy od Ciebie — <code>config/modsx.php</code>:</p>
+<pre><code class="language-php">'scaffold' =&gt; [
+    'app/Http/Controllers/{Studly}',
+    'app/Models/{Studly}',
+    'resources/views/{kebab}',
+],
+</code></pre>
+<p><code>{Studly}</code> staje się <code>ModsxBlog</code>, <code>{kebab}</code> staje się <code>modsx-blog</code>. Oba z tej jednej nazwy, którą wpisałeś.</p>
+<p>Opublikowany config niesie dłuższą listę, zakomentowaną — Livewire, serwisy, form requesty, fabryki, seedery, testy, <code>resources/css/</code>, <code>resources/js/</code>, komponenty — więc odkomentowujesz to, co Twoje moduły faktycznie mają. Domyślna lista jest krótka celowo: katalog, którego nikt nie wypełni, jest niewidoczny dla gita i zgłasza go <code>modsx:doctor</code>, więc hojna wartość domyślna robiłaby tylko robotę dla <code>--fix</code>.</p>
+<p>Widoki mają ten sam kształt co wszystko inne — <strong>najpierw katalog frameworka, moduł w środku</strong>, dokładnie jak <code>resources/css/modsx-blog/</code>:</p>
+<pre><code>resources/views/
+├── components/
+│   ├── layouts/app.blade.php     aplikacji
+│   └── modsx-blog/card.blade.php Bloga   -&gt; &lt;x-modsx-blog.card&gt;
+├── layouts/
+│   ├── app.blade.php             aplikacji
+│   └── modsx-blog/               Bloga
+├── partials/modsx-blog/          Bloga
+└── modsx-blog/                   własne strony Bloga
+</code></pre>
+<p>Jedno i drugie żyje obok siebie: <code>layouts/app.blade.php</code> ze starter kitu nie nosi prefiksu, więc żaden moduł go nie zagarnie, a <code>layouts/modsx-blog/</code> jest Bloga i wędruje razem z nim. Moduły są znajdowane na dowolnej głębokości, więc zagnieżdżenie o poziom nic nie kosztuje.</p>
+<p>Zwróć uwagę na kolejność. <code>layouts/modsx-blog/</code> — nie <code>modsx-blog/layouts/</code>. W całej tej konwencji moduł idzie <em>do wnętrza</em> katalogu frameworka i widoki nie są wyjątkiem; odwrócenie tego akurat tutaj sprawiłoby, że <code>&lt;x-modsx-blog.card&gt;</code> przestaje się rozwiązywać.</p>
 <h4>Wskazanie katalogów wprost</h4>
 <p>Podaj katalogi po nazwie modułu, a powstaną one zamiast listy z konfiguracji — ten jeden, którego potrzebujesz teraz, bez zmieniania tego, co dostaje każdy przyszły moduł:</p>
 <pre><code class="language-bash">php artisan modsx:scaffold Blog resources/css
@@ -893,29 +916,6 @@ $ php artisan modsx:scaffold Blog resources/css
    ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
           &quot;resources/css&quot; or &quot;app/Services&quot;; it may not contain &quot;..&quot;.
 </code></pre>
-<h4>Lista z konfiguracji</h4>
-<p>Gdy nie podasz żadnego katalogu, powstają te z <code>config/modsx.php</code>:</p>
-<pre><code class="language-php">'scaffold' =&gt; [
-    'app/Http/Controllers/{Studly}',
-    'app/Models/{Studly}',
-    'resources/views/{kebab}',
-],
-</code></pre>
-<p><code>{Studly}</code> staje się <code>ModsxBlog</code>, <code>{kebab}</code> staje się <code>modsx-blog</code>. Oba z tej jednej nazwy, którą wpisałeś.</p>
-<p>Opublikowany config niesie dłuższą listę, zakomentowaną — Livewire, serwisy, form requesty, fabryki, seedery, testy, <code>resources/css/</code>, <code>resources/js/</code>, komponenty — więc odkomentowujesz to, co Twoje moduły faktycznie mają. Domyślna lista jest krótka celowo: katalog, którego nikt nie wypełni, jest niewidoczny dla gita i zgłasza go <code>modsx:doctor</code>, więc hojna wartość domyślna robiłaby tylko robotę dla <code>--fix</code>.</p>
-<p>Widoki mają ten sam kształt co wszystko inne — <strong>najpierw katalog frameworka, moduł w środku</strong>, dokładnie jak <code>resources/css/modsx-blog/</code>:</p>
-<pre><code>resources/views/
-├── components/
-│   ├── layouts/app.blade.php     aplikacji
-│   └── modsx-blog/card.blade.php Bloga   -&gt; &lt;x-modsx-blog.card&gt;
-├── layouts/
-│   ├── app.blade.php             aplikacji
-│   └── modsx-blog/               Bloga
-├── partials/modsx-blog/          Bloga
-└── modsx-blog/                   własne strony Bloga
-</code></pre>
-<p>Jedno i drugie żyje obok siebie: <code>layouts/app.blade.php</code> ze starter kitu nie nosi prefiksu, więc żaden moduł go nie zagarnie, a <code>layouts/modsx-blog/</code> jest Bloga i wędruje razem z nim. Moduły są znajdowane na dowolnej głębokości, więc zagnieżdżenie o poziom nic nie kosztuje.</p>
-<p>Zwróć uwagę na kolejność. <code>layouts/modsx-blog/</code> — nie <code>modsx-blog/layouts/</code>. W całej tej konwencji moduł idzie <em>do wnętrza</em> katalogu frameworka i widoki nie są wyjątkiem; odwrócenie tego akurat tutaj sprawiłoby, że <code>&lt;x-modsx-blog.card&gt;</code> przestaje się rozwiązywać.</p>
 <p>Tworzy katalogi i nic poza tym — żadnych stubów kontrolerów, żadnego boilerplate'u. Generowanie kodu uczyniłoby z tego generator, czyli dokładnie to, czym Modsx nie jest. Niczego też nie nadpisuje: istniejące katalogi są raportowane i zostawiane w spokoju, więc komendę można bezpiecznie uruchomić ponownie.</p>
 <p>Pamiętaj, że git nie śledzi pustych katalogów, więc szkielet, którego nie wypełnisz, po cichu zniknie przy następnym commicie. Tak ma być: katalogi, których faktycznie używasz, będą miały w sobie pliki. Do tego czasu wciąż leży na dysku — <code>php artisan modsx:doctor --fix</code> znajduje i usuwa puste katalogi modułu, więc nie trzeba ich szukać ręcznie.</p>
 <h3 id="modsxlist"><code>modsx:list</code></h3>
