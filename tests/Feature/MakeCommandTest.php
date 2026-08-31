@@ -11,12 +11,58 @@ beforeEach(function () {
     File::put($this->root.'/composer.json', (string) json_encode([
         'autoload' => ['psr-4' => ['App\\' => 'app/']],
     ]));
+
+    // Two things a real application has and a bare test root does not.
+    // make:model writes into app/Models only when that directory exists, and
+    // Testbench resolved view.paths before the base path was moved here.
+    File::ensureDirectoryExists($this->root.'/app/Models');
+    config()->set('view.paths', [$this->root.'/resources/views']);
 });
 
 it('generates into the module directory', function () {
     $this->artisan('modsx:make controller Blog/PostController --no-interaction')->assertExitCode(0);
 
     expect(File::exists($this->root.'/app/Http/Controllers/ModsxBlog/PostController.php'))->toBeTrue();
+});
+
+it('puts each name form where Laravel keeps it', function (string $command, string $expected) {
+    // End to end, against the real generators: not what we print, but where
+    // the file lands. Every form the reference table documents.
+    $this->artisan('modsx:make '.$command.' --no-interaction')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/'.$expected))->toBeTrue();
+})->with([
+    'class into its namespace directory' => ['controller Blog/UserController', 'app/Http/Controllers/ModsxBlog/UserController.php'],
+    'model' => ['model Blog/User', 'app/Models/ModsxBlog/User.php'],
+    'enum' => ['enum Blog/OrderStatus', 'app/ModsxBlog/OrderStatus.php'],
+    'config as a prefixed file' => ['config Blog/services', 'config/modsx-blog-services.php'],
+
+    // The same calls, written with a dot instead.
+    'a dot reaches the same class' => ['controller Blog.UserController', 'app/Http/Controllers/ModsxBlog/UserController.php'],
+    'a dot reaches the same config' => ['config blog.services', 'config/modsx-blog-services.php'],
+]);
+
+it('turns a dotted view name into the directories Laravel reads', function () {
+    // make:view does str_replace(['\\', '.'], '/', $name) itself, so the dots
+    // in the tail become directories - which is why "modsx-blog/users.index"
+    // and "modsx-blog.users.index" are one and the same view.
+    $this->artisan('modsx:make view blog.users.index --no-interaction')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/resources/views/modsx-blog/users/index.blade.php'))->toBeTrue();
+});
+
+it('generates a migration the archive then picks up', function () {
+    // A migration is attributed to the longest module name that claims it, and
+    // that list comes from the modules present - so the module has to exist
+    // for its migration to be found, which in any real order of work it does.
+    $this->artisan('modsx:make controller blog.PostController --no-interaction')->assertExitCode(0);
+    $this->artisan('modsx:make migration blog.create_users_table --no-interaction')->assertExitCode(0);
+
+    $migrations = File::glob($this->root.'/database/migrations/*_modsx_blog_create_users_table.php');
+
+    expect($migrations)->toHaveCount(1)
+        ->and(File::get($migrations[0]))->toContain("Schema::create('users'")
+        ->and(app(ModuleLocator::class)->migrations('Blog'))->toHaveCount(1);
 });
 
 it('shows the translated command without running it', function () {

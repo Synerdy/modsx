@@ -96,17 +96,27 @@ class ModuleMaker
      */
     private function split(string $rawName): array
     {
-        // Both separators are accepted. PowerShell escapes with a backtick, so
-        // a backslash reaches us intact there and is the natural thing to type;
-        // in a POSIX shell it is eaten before the process starts, which is what
-        // missingModuleSegment() is there to explain.
+        // The module ends at the first "/", "\" or "." - whichever comes
+        // first - because all three are how you would write it to artisan.
+        // A view name reads with dots there ("blog.create"), a class path with
+        // slashes, and PowerShell escapes with a backtick so a backslash
+        // reaches us intact and is the natural thing to type on Windows. A
+        // POSIX shell eats that backslash before the process even starts,
+        // which is what missingModuleSegment() is left to explain.
+        //
+        // Only the first separator divides: the module name cannot contain one
+        // (ModuleName::make rejects it), so everything after it is the tail,
+        // dots and all.
         $normalised = trim(str_replace('\\', '/', trim($rawName)), '/');
 
-        if (! str_contains($normalised, '/')) {
+        $at = strcspn($normalised, '/.');
+
+        if ($at === 0 || $at === strlen($normalised)) {
             throw ModsxException::missingModuleSegment($rawName);
         }
 
-        [$module, $tail] = explode('/', $normalised, 2);
+        $module = substr($normalised, 0, $at);
+        $tail = substr($normalised, $at + 1);
 
         if (trim($tail) === '') {
             throw ModsxException::missingModuleSegment($rawName);

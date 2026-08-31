@@ -247,7 +247,7 @@ Runs one of Laravel's own generators with the module written in for you.
 
 ```bash
 php artisan modsx:make controller Blog/PostController
-php artisan modsx:make view Blog/index
+php artisan modsx:make view blog.index
 php artisan modsx:make migration Blog/create_posts_table
 ```
 
@@ -256,7 +256,7 @@ This is `php artisan make:*` with the prefix cut out. The generator is Laravel's
 | You type | It runs |
 |---|---|
 | `modsx:make controller Blog/PostController` | `make:controller ModsxBlog/PostController` |
-| `modsx:make view Blog/index` | `make:view modsx-blog/index` |
+| `modsx:make view blog.index` | `make:view modsx-blog/index` |
 | `modsx:make config Blog/settings` | `make:config modsx-blog-settings` |
 | `modsx:make migration Blog/create_posts_table` | `make:migration modsx_blog_create_posts_table --create=posts` |
 
@@ -273,11 +273,68 @@ Three forms of one name, a different one per generator, is the part of the conve
 
 Anything not listed gets `*`, which is right for any PHP class. The generators you can run are whatever your application has registered, not a fixed list, so adding an entry makes one from another package — `make:livewire`, `make:filament-resource` — follow the convention too.
 
+#### Every Laravel generator, and the name it gets
+
+Laravel ships three naming styles across its generators, and the table above covers all three. Written out in full, against Laravel 12/13:
+
+**PascalCase — into the module's namespace directory.** These all fall under `*`:
+
+| You type | It runs |
+|---|---|
+| `modsx:make cast Blog/MoneyCast` | `make:cast ModsxBlog/MoneyCast` |
+| `modsx:make channel Blog/OrderChannel` | `make:channel ModsxBlog/OrderChannel` |
+| `modsx:make class Blog/PaymentService` | `make:class ModsxBlog/PaymentService` |
+| `modsx:make command Blog/SendEmails` | `make:command ModsxBlog/SendEmails` |
+| `modsx:make component Blog/Alert` | `make:component ModsxBlog/Alert` |
+| `modsx:make controller Blog/UserController` | `make:controller ModsxBlog/UserController` |
+| `modsx:make enum Blog/OrderStatus` | `make:enum ModsxBlog/OrderStatus` |
+| `modsx:make event Blog/OrderCreated` | `make:event ModsxBlog/OrderCreated` |
+| `modsx:make exception Blog/PaymentException` | `make:exception ModsxBlog/PaymentException` |
+| `modsx:make factory Blog/UserFactory` | `make:factory ModsxBlog/UserFactory` |
+| `modsx:make interface Blog/PaymentGateway` | `make:interface ModsxBlog/PaymentGateway` |
+| `modsx:make job Blog/ProcessOrder` | `make:job ModsxBlog/ProcessOrder` |
+| `modsx:make job-middleware Blog/RateLimited` | `make:job-middleware ModsxBlog/RateLimited` |
+| `modsx:make listener Blog/SendWelcomeEmail` | `make:listener ModsxBlog/SendWelcomeEmail` |
+| `modsx:make mail Blog/OrderShipped` | `make:mail ModsxBlog/OrderShipped` |
+| `modsx:make middleware Blog/Authenticate` | `make:middleware ModsxBlog/Authenticate` |
+| `modsx:make model Blog/User` | `make:model ModsxBlog/User` |
+| `modsx:make notification Blog/InvoicePaid` | `make:notification ModsxBlog/InvoicePaid` |
+| `modsx:make observer Blog/UserObserver` | `make:observer ModsxBlog/UserObserver` |
+| `modsx:make policy Blog/UserPolicy` | `make:policy ModsxBlog/UserPolicy` |
+| `modsx:make provider Blog/AppServiceProvider` | `make:provider ModsxBlog/AppServiceProvider` |
+| `modsx:make request Blog/StoreUserRequest` | `make:request ModsxBlog/StoreUserRequest` |
+| `modsx:make resource Blog/UserResource` | `make:resource ModsxBlog/UserResource` |
+| `modsx:make rule Blog/ValidPhoneNumber` | `make:rule ModsxBlog/ValidPhoneNumber` |
+| `modsx:make scope Blog/PopularScope` | `make:scope ModsxBlog/PopularScope` |
+| `modsx:make seeder Blog/UserSeeder` | `make:seeder ModsxBlog/UserSeeder` |
+| `modsx:make test Blog/UserTest` | `make:test ModsxBlog/UserTest` |
+| `modsx:make trait Blog/HasRoles` | `make:trait ModsxBlog/HasRoles` |
+
+**The three that differ:**
+
+| You type | It runs | Form |
+|---|---|---|
+| `modsx:make view blog.users.index` | `make:view modsx-blog/users.index` | view path |
+| `modsx:make config blog.services` | `make:config modsx-blog-services` | kebab-case |
+| `modsx:make migration blog.create_users_table` | `make:migration modsx_blog_create_users_table --create=users` | snake_case |
+
+**Either separator, for every generator.** The tables above pick whichever reads more naturally, but the module ends at the first `/`, `\` or `.` whatever you are generating. These are the same call:
+
+| | |
+|---|---|
+| `modsx:make config Blog/services` | `modsx:make config blog.services` |
+| `modsx:make migration Blog/create_users_table` | `modsx:make migration blog.create_users_table` |
+| `modsx:make controller Blog/UserController` | `modsx:make controller Blog.UserController` |
+
+`make:config` is the one place Modsx departs from plain Laravel, where a config name is snake_case. It has to: `config/modsx_blog_services.php` would **not** be recognised as the module's file — the rule looks for the `modsx-` kebab prefix — so the config would be orphaned, backed up with nothing and removed with nothing. Kebab-case here is forced by the convention, not chosen.
+
+**Not module-scoped at all:** `make:cache-table`, `make:session-table`, `make:notifications-table`, `make:queue-table`, `make:queue-batches-table` and `make:queue-failed-table` take no name — they generate a fixed framework migration. Pass one through `modsx:make` and Laravel answers *"No arguments expected"*, which is the right answer: those tables belong to the application, not to a module.
+
 **The form applies to the whole name, not just the module.** Type it however you like and the generator receives it in the form its entry names, converted segment by segment:
 
 ```bash
-php artisan modsx:make view Blog/PostList          # -> modsx-blog/post-list
-php artisan modsx:make view Blog/Admin/PostList    # -> modsx-blog/admin/post-list
+php artisan modsx:make view blog.PostList          # -> modsx-blog/post-list
+php artisan modsx:make view blog.admin.PostList    # -> modsx-blog/admin.post-list
 php artisan modsx:make config Blog/MailSettings    # -> modsx-blog-mail-settings
 php artisan modsx:make migration Blog/CreatePostsTable
                                                    # -> modsx_blog_create_posts_table
@@ -294,7 +351,17 @@ php artisan modsx:make controller Blog/PostController -- --resource --model=Post
 php artisan modsx:make model Blog/Post -- -mfs
 ```
 
-**Use `/`, not `\`.** Both are accepted, but a POSIX shell removes an unquoted backslash before Modsx ever sees it — `Blog\PostController` arrives as `BlogPostController`. PowerShell escapes with a backtick, so a backslash does survive there. `/` is the form that works in every shell.
+**Separate the module with `/` or `.`,** whichever the generator you are calling reads better with. A view name is written with dots in Laravel's own documentation, so write it that way here too — all lower case, exactly as you would type it to `make:view`:
+
+```bash
+php artisan modsx:make view blog.create        # -> make:view modsx-blog/create
+php artisan modsx:make view blog.admin.index   # -> make:view modsx-blog/admin.index
+php artisan modsx:make controller Blog/PostController
+```
+
+Only the **first** separator divides — a module name can contain neither — so the rest of the name keeps its own dots. The two forms are interchangeable, and so is the result: `make:view` turns dots into slashes itself, which is why `modsx-blog/create` is the same view as `modsx-blog.create`.
+
+A backslash works too, but avoid it in a POSIX shell: an unquoted one is removed before Modsx ever sees it, so `Blog\PostController` arrives as `BlogPostController`. PowerShell escapes with a backtick, so there it survives.
 
 `--dry-run` prints the command it would run and stops:
 

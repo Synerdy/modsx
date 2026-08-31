@@ -138,6 +138,9 @@ class ModsxException extends RuntimeException
     /**
      * The name given to modsx:make carries no module.
      *
+     * Both "/" and "." divide it, whichever suits the generator: a view name
+     * reads with dots in Laravel's own documentation, a class path with slashes.
+     *
      * The mention of the shell is not padding: a backslash written without
      * quotes is removed by the shell before the process starts, so
      * "Blog\PostController" arrives here as "BlogPostController" with nothing
@@ -146,9 +149,10 @@ class ModsxException extends RuntimeException
     public static function missingModuleSegment(string $name): self
     {
         return new self(sprintf(
-            'The name [%s] does not say which module it belongs to. Write it as '.
-            'Module/Name, for example Blog/PostController. If you typed a backslash, '.
-            'your shell may have removed it - "/" works in every shell.',
+            'The name [%s] does not say which module it belongs to. Put the module '.
+            'first, separated by "/" or "." - Blog/PostController, or blog.create the '.
+            'way a view name reads. A backslash works too, but a POSIX shell removes '.
+            'an unquoted one before this command ever sees it.',
             $name
         ));
     }

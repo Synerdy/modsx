@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-08-31
+
+### Fixed
+
+- **`modsx:make` rejected the way Laravel writes a view name.** A view is
+  `blog.create` in the framework's own documentation - all lower case, dots
+  throughout - but the module had to be separated with a slash, and typing the
+  natural form got an error about backslashes. The module now ends at the first
+  `/`, `\` or `.`, whichever comes first, so `modsx:make view blog.create` and
+  `modsx:make view Blog/create` are the same call. Only the first separator
+  divides, a module name being unable to contain one, so the rest of the name
+  keeps its own dots.
+
+  The output was never wrong: `make:view` does `str_replace(['\\', '.'], '/', $name)`
+  itself, which makes `modsx-blog/create` and `modsx-blog.create` the same view.
+  It was the input that was too narrow.
+
+### Documentation
+
+- The `modsx:make` section now lists every generator Laravel ships, written as
+  the call you would make through Modsx, with the name each one receives. All
+  of it was read off real runs rather than reasoned about: 28 generators take
+  PascalCase and fall under `*`, three have a form of their own, and the six
+  `*-table` generators take no name at all, being framework scaffolds rather
+  than anything belonging to a module.
+- Named the one place Modsx departs from plain Laravel. A config name is
+  snake_case to `make:config`, but `config/modsx_blog_services.php` would not
+  be recognised as the module's file - the rule looks for the `modsx-` kebab
+  prefix - so the config would be orphaned, backed up with nothing and removed
+  with nothing. Kebab-case there is forced by the convention, not chosen.
+
 ## [0.5.1] - 2026-08-31
 
 ### Documentation

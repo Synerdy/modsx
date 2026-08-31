@@ -41,6 +41,52 @@ it('accepts a backslash as well as a slash', function () {
         ->toBe('ModsxBlog/PostController');
 });
 
+it('accepts a view name written the way Laravel writes one', function () {
+    // "make:view blog.create" - all lower case, dots throughout - is how the
+    // framework's own documentation puts it, so naming the module off the
+    // front of that has to work as typed, without reaching for StudlyCase.
+    $maker = app(ModuleMaker::class);
+
+    expect($maker->resolve('view', 'blog.create')['name'])->toBe('modsx-blog/create')
+        ->and($maker->resolve('view', 'user-profile.create')['name'])->toBe('modsx-user-profile/create')
+        ->and($maker->resolve('controller', 'Blog.PostController')['name'])->toBe('ModsxBlog/PostController');
+});
+
+it('divides on the first separator only, leaving the rest of the name whole', function () {
+    // A module name can hold no separator of its own, so everything past the
+    // first one is the tail - dots included.
+    $maker = app(ModuleMaker::class);
+
+    expect($maker->resolve('view', 'blog.admin.index')['name'])->toBe('modsx-blog/admin.index')
+        ->and($maker->resolve('view', 'Blog/admin.index')['name'])->toBe('modsx-blog/admin.index');
+});
+
+it('rejects a name that starts with a separator', function () {
+    expect(fn () => app(ModuleMaker::class)->resolve('view', '.create'))
+        ->toThrow(ModsxException::class, 'does not say which module');
+});
+
+it('gives each Laravel generator the name form it expects', function (string $generator, string $typed, string $expected) {
+    // The reference table in the README, pinned to the code so the two cannot
+    // drift apart. Laravel has three naming styles across its generators;
+    // everything not listed in modsx.generators is a PHP class and takes '*'.
+    expect(app(ModuleMaker::class)->resolve($generator, $typed)['name'])->toBe($expected);
+})->with([
+    'class into the namespace directory' => ['controller', 'Blog/UserController', 'ModsxBlog/UserController'],
+    'enum is a class too' => ['enum', 'Blog/OrderStatus', 'ModsxBlog/OrderStatus'],
+    'a hyphenated generator name changes nothing' => ['job-middleware', 'Blog/RateLimited', 'ModsxBlog/RateLimited'],
+    'a generator from another package' => ['livewire', 'Blog/UserProfile', 'ModsxBlog/UserProfile'],
+    'view takes a view path' => ['view', 'blog.users.index', 'modsx-blog/users.index'],
+    'config takes kebab-case' => ['config', 'Blog/services', 'modsx-blog-services'],
+    'migration takes snake_case' => ['migration', 'Blog/create_users_table', 'modsx_blog_create_users_table'],
+
+    // The separator is free at every generator, not only where a dot reads
+    // naturally - these pair with the three rows above.
+    'a dot works for config too' => ['config', 'blog.services', 'modsx-blog-services'],
+    'a dot works for a migration too' => ['migration', 'blog.create_users_table', 'modsx_blog_create_users_table'],
+    'a dot works for a class too' => ['controller', 'Blog.UserController', 'ModsxBlog/UserController'],
+]);
+
 it('falls back to the studly directory for a generator it has never heard of', function () {
     expect(app(ModuleMaker::class)->resolve('livewire', 'Blog/PostList')['name'])
         ->toBe('ModsxBlog/PostList');
