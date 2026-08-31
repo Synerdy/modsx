@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-01
+
+### Added
+
+- **`modsx:scaffold` takes the directories to create.** Naming them makes those
+  instead of the configured list, for the one you want now without changing
+  what every future module gets - which until now meant either editing the
+  config or typing `modsx-blog` into `mkdir` by hand, the mistake this command
+  exists to prevent.
+
+  ```
+  modsx:scaffold Blog resources/css               ->  resources/css/modsx-blog/
+  modsx:scaffold Blog resources/js app/Services   ->  resources/js/modsx-blog/
+                                                      app/Services/ModsxBlog/
+  ```
+
+  You write the path as it looks in the project, and the form of the module's
+  own directory is read off where that path leads: `app/`, `database/` and
+  `tests/` are the PSR-4 roots of a stock Laravel application, where a hyphen
+  is not a legal PHP identifier, so those take StudlyCase; everywhere else the
+  name is only ever a path. Writing a placeholder settles it yourself for the
+  layouts that cannot know about - `modsx:scaffold Blog "modules/Shared/{Studly}"`.
+
+  An existing directory is skipped and reported, as with the configured list,
+  and a path may not contain `..`.
+- **`modsx:make layout`, `page` and `partial`.** A module's own views are
+  `resources/views/modsx-blog/`, but its layout is one slice of the
+  application's `layouts/` - the framework's directory first, the module
+  second, exactly as in `resources/css/modsx-blog/`. That was the one shape the
+  command could not express, since it writes the module at the front of the
+  name; the workaround was `make:view layouts.modsx-blog.app`, typing the kebab
+  form by hand, which is the mistake this command exists to prevent.
+
+  ```
+  modsx:make layout  blog.app    ->  views/layouts/modsx-blog/app.blade.php
+  modsx:make page    blog.index  ->  views/pages/modsx-blog/index.blade.php
+  modsx:make partial blog.head   ->  views/partials/modsx-blog/head.blade.php
+  ```
+
+  There is no `make:layout` in Laravel. These are entries in the same
+  `modsx.generators` table, and what makes them different is that the entry
+  names the generator to run as well as the form:
+  `'layout' => ['view', 'layouts/{kebab}/']`. So the names are yours:
+  `'service' => ['class', 'Services/{Studly}/']` gives you `modsx:make service`,
+  and it appears in the interactive picker alongside Laravel's own generators.
+
+  Deliberately no `component`: `make:component` is Laravel's own and already
+  lands correctly, writing the class and letting Laravel derive
+  `views/components/modsx-blog/` from where that class went.
+
 ## [0.5.2] - 2026-08-31
 
 ### Fixed

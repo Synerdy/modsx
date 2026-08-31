@@ -127,6 +127,20 @@ class ModsxException extends RuntimeException
         ));
     }
 
+    /**
+     * The same fault as invalidScaffoldPath, but typed rather than configured -
+     * worth its own message, so it does not send the reader to a config file
+     * they never touched.
+     */
+    public static function invalidPath(string $path): self
+    {
+        return new self(sprintf(
+            'Invalid path [%s]. Give a directory inside the project, such as '.
+            '"resources/css" or "app/Services"; it may not contain "..".',
+            $path
+        ));
+    }
+
     public static function unknownGenerator(string $generator): self
     {
         return new self(sprintf(

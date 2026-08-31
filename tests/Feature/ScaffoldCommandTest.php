@@ -70,6 +70,50 @@ it('creates the nested layouts the config offers', function () {
         ->and(File::isDirectory($this->root.'/resources/views/layouts/modsx-blog'))->toBeTrue();
 });
 
+it('creates just the directories named, not the configured list', function () {
+    $output = json_decode(artisanOutput('modsx:scaffold Blog resources/css resources/js --json'), true);
+
+    expect($output['created'])->toBe(['resources/css/modsx-blog', 'resources/js/modsx-blog'])
+        ->and(File::isDirectory($this->root.'/app/Models/ModsxBlog'))->toBeFalse();
+});
+
+it('reads the name form off the directory the path leads to', function (string $path, string $expected) {
+    // app/, database/ and tests/ are PSR-4 namespace roots, where a hyphen is
+    // not a legal PHP identifier; everywhere else the name is only a path.
+    $output = json_decode(artisanOutput('modsx:scaffold Blog '.$path.' --json'), true);
+
+    expect($output['created'])->toBe([$expected]);
+})->with([
+    'assets are a path' => ['resources/css', 'resources/css/modsx-blog'],
+    'so is public' => ['public/vendor', 'public/vendor/modsx-blog'],
+    'app is a namespace' => ['app/Services', 'app/Services/ModsxBlog'],
+    'so is database' => ['database/factories', 'database/factories/ModsxBlog'],
+    'and tests' => ['tests/Feature', 'tests/Feature/ModsxBlog'],
+]);
+
+it('lets a placeholder settle the form itself', function () {
+    // For the layouts inference cannot know about - a PSR-4 root of your own.
+    $output = json_decode(artisanOutput('modsx:scaffold Blog docs/{Studly} --json'), true);
+
+    expect($output['created'])->toBe(['docs/ModsxBlog']);
+});
+
+it('skips a named directory that already exists', function () {
+    $this->makeModuleDirectory('resources/css/modsx-blog', 'blog.css', 'v1');
+
+    $output = json_decode(artisanOutput('modsx:scaffold Blog resources/css --json'), true);
+
+    expect($output['created'])->toBe([])
+        ->and($output['skipped'])->toBe(['resources/css/modsx-blog'])
+        ->and(File::get($this->root.'/resources/css/modsx-blog/blog.css'))->toBe('v1');
+});
+
+it('rejects a named path that could escape the project', function () {
+    // Named separately from the config's own message, so it does not send the
+    // reader to a file they never touched.
+    expect(artisanOutput('modsx:scaffold Blog ../../etc'))->toContain('Invalid path');
+});
+
 it('rejects a name that could escape the project', function () {
     $this->artisan('modsx:scaffold', ['name' => '../etc'])->assertExitCode(1);
 });

@@ -76,11 +76,25 @@ return [
     // Add an entry for a generator from another package (make:livewire,
     // make:filament-resource) and it follows the convention too. Anything
     // unlisted gets '*', which is right for any PHP class.
+    // A value of its own runs the generator of the same name. A pair runs the
+    // generator you name, with the module placed inside one of the
+    // application's own directories - which is where a module's layout goes,
+    // the framework's directory first and the module second, exactly as in
+    // resources/css/modsx-blog. Add your own; the name is yours to pick.
     'generators' => [
         '*' => '{Studly}/',        // ModsxBlog/PostController
         'view' => '{kebab}/',      // modsx-blog/index
         'config' => '{kebab}-',    // modsx-blog-settings  (a file, not a directory)
         'migration' => '{snake}_', // modsx_blog_create_posts_table
+
+        // modsx:make layout blog.app  ->  views/layouts/modsx-blog/app.blade.php
+        //
+        // Not "component": make:component is a generator of Laravel's own, and
+        // it already lands correctly - it writes the class, and Laravel derives
+        // views/components/modsx-blog/ from where that class went.
+        'layout' => ['view', 'layouts/{kebab}/'],
+        'page' => ['view', 'pages/{kebab}/'],
+        'partial' => ['view', 'partials/{kebab}/'],
     ],
 
     // Zero-padded width of version numbers (0001, 0002, ...).

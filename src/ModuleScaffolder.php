@@ -30,18 +30,21 @@ class ModuleScaffolder
     ) {}
 
     /**
+     * @param  list<string>  $paths  directories to create; the configured list when empty
      * @return array{created: list<string>, skipped: list<string>}
      *
      * @throws ModsxException
      */
-    public function scaffold(ModuleName|string $name): array
+    public function scaffold(ModuleName|string $name, array $paths = []): array
     {
         $name = ModuleName::make($name);
 
         $created = [];
         $skipped = [];
 
-        foreach ($this->templates() as $template) {
+        $templates = $paths === [] ? $this->templates() : $this->templatesFor($paths);
+
+        foreach ($templates as $template) {
             $relative = $this->fill($template, $name);
             $path = base_path($relative);
 
@@ -56,6 +59,54 @@ class ModuleScaffolder
         }
 
         return ['created' => $created, 'skipped' => $skipped];
+    }
+
+    /**
+     * Turn directories typed on the command line into templates.
+     *
+     * You write the path as it looks in the project - "resources/css",
+     * "app/Services" - and the form of the module's own directory is read off
+     * where that path leads. Directories under app/, database/ and tests/ are
+     * PSR-4 namespace segments, where a hyphen is not a legal PHP identifier,
+     * so those take the StudlyCase form; everywhere else the name is only ever
+     * a path, so it takes kebab-case. That is the convention's own rule rather
+     * than a new one.
+     *
+     * Writing a placeholder yourself settles it instead, for the layouts this
+     * cannot know about - a PSR-4 root of your own, say.
+     *
+     * @param  list<string>  $paths
+     * @return list<string>
+     *
+     * @throws ModsxException
+     */
+    private function templatesFor(array $paths): array
+    {
+        $templates = [];
+
+        foreach ($paths as $path) {
+            $template = trim(str_replace('\\', '/', trim($path)), '/ ');
+
+            if ($template === '' || str_contains($template, '..')) {
+                throw ModsxException::invalidPath($path);
+            }
+
+            $templates[] = str_contains($template, '{')
+                ? $template
+                : $template.'/'.self::formFor($template);
+        }
+
+        return $templates;
+    }
+
+    /**
+     * The placeholder a directory takes, from the root it sits under.
+     */
+    private static function formFor(string $path): string
+    {
+        $root = strtok($path, '/');
+
+        return in_array($root, ['app', 'database', 'tests'], true) ? '{Studly}' : '{kebab}';
     }
 
     private function fill(string $template, ModuleName $name): string

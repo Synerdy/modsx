@@ -61,6 +61,44 @@ it('divides on the first separator only, leaving the rest of the name whole', fu
         ->and($maker->resolve('view', 'Blog/admin.index')['name'])->toBe('modsx-blog/admin.index');
 });
 
+it('gives a name of its own the directory that name stands for', function () {
+    // A module's own views are modsx-blog/, but its layout is one slice of the
+    // application's layouts/ - the framework's directory first, the module
+    // second, exactly as in resources/css/modsx-blog.
+    $maker = app(ModuleMaker::class);
+
+    expect($maker->resolve('layout', 'blog.app')['name'])->toBe('layouts/modsx-blog/app')
+        ->and($maker->resolve('page', 'blog.index')['name'])->toBe('pages/modsx-blog/index')
+        ->and($maker->resolve('partial', 'blog.head')['name'])->toBe('partials/modsx-blog/head')
+        ->and($maker->resolve('view', 'blog.index')['name'])->toBe('modsx-blog/index');
+});
+
+it('runs the generator the name points at, not one of its own', function () {
+    // There is no make:layout. The entry says which generator does the work.
+    $maker = app(ModuleMaker::class);
+
+    expect($maker->resolve('layout', 'blog.app')['generator'])->toBe('view')
+        ->and($maker->resolve('view', 'blog.index')['generator'])->toBe('view')
+        ->and($maker->resolve('controller', 'Blog/Post')['generator'])->toBe('controller');
+});
+
+it('converts the rest of the name for a name of its own too', function () {
+    expect(app(ModuleMaker::class)->resolve('layout', 'blog.AppShell')['name'])
+        ->toBe('layouts/modsx-blog/app-shell');
+});
+
+it('takes a name of its own from the config, not from a fixed list', function () {
+    config()->set('modsx.generators', [
+        '*' => '{Studly}/',
+        'service' => ['class', 'Services/{Studly}/'],
+    ]);
+
+    $target = app(ModuleMaker::class)->resolve('service', 'Blog/PostPublisher');
+
+    expect($target['generator'])->toBe('class')
+        ->and($target['name'])->toBe('Services/ModsxBlog/PostPublisher');
+});
+
 it('rejects a name that starts with a separator', function () {
     expect(fn () => app(ModuleMaker::class)->resolve('view', '.create'))
         ->toThrow(ModsxException::class, 'does not say which module');

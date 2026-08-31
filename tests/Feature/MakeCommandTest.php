@@ -51,6 +51,31 @@ it('turns a dotted view name into the directories Laravel reads', function () {
     expect(File::exists($this->root.'/resources/views/modsx-blog/users/index.blade.php'))->toBeTrue();
 });
 
+it('puts a layout in the application directory, as its own slice of it', function () {
+    // End to end: the file lands beside the application's own layouts, not
+    // inside the module's view directory.
+    $this->artisan('modsx:make layout blog.app --no-interaction')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/resources/views/layouts/modsx-blog/app.blade.php'))->toBeTrue()
+        ->and(File::exists($this->root.'/resources/views/modsx-blog/layouts/app.blade.php'))->toBeFalse();
+});
+
+it('puts a page and a partial in theirs', function () {
+    $this->artisan('modsx:make page blog.index --no-interaction')->assertExitCode(0);
+    $this->artisan('modsx:make partial blog.head --no-interaction')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/resources/views/pages/modsx-blog/index.blade.php'))->toBeTrue()
+        ->and(File::exists($this->root.'/resources/views/partials/modsx-blog/head.blade.php'))->toBeTrue();
+});
+
+it('still finds a module nested in a shared directory', function () {
+    // The whole point of putting it there: it is the module's, and the
+    // package sees it as such.
+    $this->artisan('modsx:make layout blog.app --no-interaction')->assertExitCode(0);
+
+    expect(app(ModuleLocator::class)->paths('Blog'))->toContain('resources/views/layouts/modsx-blog');
+});
+
 it('generates a migration the archive then picks up', function () {
     // A migration is attributed to the longest module name that claims it, and
     // that list comes from the modules present - so the module has to exist

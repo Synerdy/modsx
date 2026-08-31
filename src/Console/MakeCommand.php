@@ -70,6 +70,19 @@ class MakeCommand extends Command
             return self::FAILURE;
         }
 
+        // A configured name points at a generator that has to exist too. Only
+        // a config can get this wrong, so it is worth saying which entry did.
+        if ($this->getApplication()?->has('make:'.$target['generator']) !== true) {
+            $this->components->error(ModsxException::unknownGenerator($target['generator'])->getMessage());
+            $this->components->warn(sprintf(
+                'The modsx.generators entry for [%s] runs [%s], which this application does not have.',
+                $generator,
+                $target['generator'],
+            ));
+
+            return self::FAILURE;
+        }
+
         $line = $this->commandLine($target['generator'], $target['name'], $target['options']);
         $unknown = ! $this->isKnownModule($target['module'], $locator, $backups);
 
@@ -197,14 +210,33 @@ class MakeCommand extends Command
             }
         }
 
+        // Names of your own from modsx.generators - "layout", "page" - are
+        // generators as far as anyone using this command is concerned, so the
+        // list has to offer them alongside Laravel's.
+        foreach (array_keys((array) config('modsx.generators', [])) as $configured) {
+            if ($configured !== '*') {
+                $names[] = (string) $configured;
+            }
+        }
+
+        $names = array_values(array_unique($names));
+
         sort($names);
 
         return $names;
     }
 
+    /**
+     * A name is usable when Laravel has a generator of that name, or when the
+     * config gives it one - "layout" runs make:view and there is no make:layout.
+     */
     private function generatorExists(string $generator): bool
     {
         if ($this->getApplication()?->has('make:'.$generator) === true) {
+            return true;
+        }
+
+        if (array_key_exists($generator, (array) config('modsx.generators', []))) {
             return true;
         }
 

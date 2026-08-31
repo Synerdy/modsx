@@ -88,13 +88,13 @@ Every other form is derived from that one name, and Modsx matches **all** of the
 | Where | Form | `Blog` | `UserProfile` |
 |---|---|---|---|
 | Directories under `resources/`, `public/`, `lang/` | `modsx-` + kebab-case | `modsx-blog` | `modsx-user-profile` |
-| PHP namespace directories under `app/`, `database/` | `Modsx` + StudlyCase | `ModsxBlog` | `ModsxUserProfile` |
+| PHP namespace directories under `app/`, `database/`, `tests/` | `Modsx` + StudlyCase | `ModsxBlog` | `ModsxUserProfile` |
 | Single files — `routes/`, `config/`, `lang/` | `modsx-` + kebab-case | `modsx-blog.php` | `modsx-user-profile.php` |
 | Migration filenames, after the timestamp | `modsx_` + snake_case | `modsx_blog_…` | `modsx_user_profile_…` |
 
 The first two are Laravel's own convention, not an invention of this package — the framework maps `App\View\Components\UserProfile` to `<x-user-profile>` using exactly the same StudlyCase ↔ kebab-case conversion. With the prefix it works the same way: `App\View\Components\ModsxUserProfile\PostCard` is `<x-modsx-user-profile.post-card>`. If your directories already follow Laravel's naming, they already follow this one.
 
-The split between the two forms is not cosmetic. Directories under `app/` and `database/` are PSR-4 namespace segments, and a PHP identifier cannot contain a hyphen — `App\Support\modsx-blog` is not a name PHP will ever load. Everywhere else the name is just a path, so kebab-case applies.
+The split between the two forms is not cosmetic. Directories under `app/`, `database/` and `tests/` are PSR-4 namespace segments, and a PHP identifier cannot contain a hyphen — `App\Support\modsx-blog` is not a name PHP will ever load. Everywhere else the name is just a path, so kebab-case applies.
 
 > **Every form must come from the same name.**
 >
@@ -227,7 +227,7 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | Command | Purpose |
 |---|---|
 | `modsx:make {generator} {Module/Name}` | Run one of Laravel's generators with the module filled in |
-| `modsx:scaffold {name}` | Create the directory skeleton for a new module |
+| `modsx:scaffold {name} {path?*}` | Create a module's directories, configured or named |
 | `modsx:list` | Modules currently present in the application |
 | `modsx:path {name?}` | Everything belonging to a module |
 | `modsx:backup {name?}` | Copy a module to a new numbered version |
@@ -318,6 +318,31 @@ Laravel ships three naming styles across its generators, and the table above cov
 | `modsx:make config blog.services` | `make:config modsx-blog-services` | kebab-case |
 | `modsx:make migration blog.create_users_table` | `make:migration modsx_blog_create_users_table --create=users` | snake_case |
 
+#### `layout`, `page`, `partial`
+
+A module's own views live in `resources/views/modsx-blog/`, but its layout is one slice of the application's `layouts/` — the framework's directory first, the module second, exactly as in `resources/css/modsx-blog/`. Three names of Modsx's own reach those:
+
+```bash
+php artisan modsx:make layout blog.app     # -> resources/views/layouts/modsx-blog/app.blade.php
+php artisan modsx:make page blog.index     # -> resources/views/pages/modsx-blog/index.blade.php
+php artisan modsx:make partial blog.head   # -> resources/views/partials/modsx-blog/head.blade.php
+```
+
+There is no `make:layout` in Laravel. These are entries in the same config table, and what makes them different is that the entry names the generator to run as well as the form:
+
+```php
+'generators' => [
+    'view'    => '{kebab}/',                  // runs make:view
+    'layout'  => ['view', 'layouts/{kebab}/'],  // also make:view, elsewhere
+    'page'    => ['view', 'pages/{kebab}/'],
+    'partial' => ['view', 'partials/{kebab}/'],
+],
+```
+
+So the names are yours to choose. `'service' => ['class', 'Services/{Studly}/']` gives you `modsx:make service Blog/PostPublisher` writing `app/Services/ModsxBlog/PostPublisher.php`, and it appears in the picker alongside Laravel's own.
+
+There is deliberately no `component`: `make:component` is a generator of Laravel's and already lands correctly — it writes the class, and Laravel derives `views/components/modsx-blog/` from where that class went.
+
 **Either separator, for every generator.** The tables above pick whichever reads more naturally, but the module ends at the first `/`, `\` or `.` whatever you are generating. These are the same call:
 
 | | |
@@ -386,7 +411,67 @@ php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # any case; it is normalised
 ```
 
-Which directories it creates is up to you, in `config/modsx.php`:
+#### Naming the directories yourself
+
+Name directories after the module and it makes those instead of the configured list — for the one you want now, without changing what every future module gets:
+
+```bash
+php artisan modsx:scaffold Blog resources/css
+# resources/css/modsx-blog/
+
+php artisan modsx:scaffold Blog resources/css resources/js app/Services
+# resources/css/modsx-blog/
+# resources/js/modsx-blog/
+# app/Services/ModsxBlog/
+```
+
+Note the third one: **`ModsxBlog`, not `modsx-blog`**. You write the path as it looks in the project and the form of the module's own directory is read off where that path leads:
+
+| You type | It creates | Why |
+|---|---|---|
+| `resources/css` | `resources/css/modsx-blog` | a path, so kebab-case |
+| `resources/js` | `resources/js/modsx-blog` | |
+| `resources/views/layouts` | `resources/views/layouts/modsx-blog` | |
+| `public/vendor` | `public/vendor/modsx-blog` | |
+| `lang/en` | `lang/en/modsx-blog` | |
+| `app/Services` | `app/Services/`**`ModsxBlog`** | `app/` is PSR-4 |
+| `app/Livewire` | `app/Livewire/`**`ModsxBlog`** | |
+| `database/factories` | `database/factories/`**`ModsxBlog`** | `database/` is PSR-4 |
+| `tests/Feature` | `tests/Feature/`**`ModsxBlog`** | `tests/` is PSR-4 |
+
+`app/`, `database/` and `tests/` are the PSR-4 roots of a stock Laravel application — `App\`, `Database\`, `Tests\` — and a hyphen is not a legal PHP identifier, so directories under them take the StudlyCase form. Everywhere else the name is only ever a path. This is the convention's own rule, applied for you rather than invented here.
+
+Where that guess is wrong — a PSR-4 root of your own, say — write the placeholder and it settles the form instead:
+
+```bash
+php artisan modsx:scaffold Blog "modules/Shared/{Studly}"
+# modules/Shared/ModsxBlog/
+
+php artisan modsx:scaffold Blog "storage/exports/{kebab}"
+# storage/exports/modsx-blog/
+```
+
+A directory that already exists is reported and left alone, exactly as with the configured list, so running it twice is safe:
+
+```bash
+$ php artisan modsx:scaffold Blog resources/css
+  resources/css/modsx-blog ...................................... created
+
+$ php artisan modsx:scaffold Blog resources/css
+  resources/css/modsx-blog ................................ already existed
+```
+
+And a path cannot leave the project:
+
+```bash
+$ php artisan modsx:scaffold Blog ../../etc
+   ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
+          "resources/css" or "app/Services"; it may not contain "..".
+```
+
+#### The configured list
+
+With no directories named, it makes the ones in `config/modsx.php`:
 
 ```php
 'scaffold' => [

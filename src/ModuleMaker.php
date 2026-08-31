@@ -42,8 +42,7 @@ class ModuleMaker
      */
     public function resolve(string $generator, string $rawName, array $extra = []): array
     {
-        $generator = trim($generator);
-        $pattern = $this->pattern($generator);
+        [$command, $pattern] = $this->entry(trim($generator));
 
         [$module, $tail] = $this->split($rawName);
 
@@ -51,14 +50,41 @@ class ModuleMaker
 
         return [
             'module' => $module,
-            'generator' => $generator,
+            'generator' => $command,
             'name' => $this->modulePrefix($pattern, $module).$tail,
             // --create and --table are make:migration's own options, so this
             // stays tied to that generator rather than to the snake form.
-            'options' => $generator === 'migration'
+            'options' => $command === 'migration'
                 ? [...$extra, ...$this->tableOption($tail, $extra)]
                 : $extra,
         ];
+    }
+
+    /**
+     * The generator a name runs, and the form it writes the module in.
+     *
+     * Most names are a generator of Laravel's and carry a pattern of their
+     * own. A name can instead carry a pair, running some other generator with
+     * the module placed inside one of the application's directories: a
+     * module's own views are resources/views/modsx-blog, but its layout is one
+     * slice of the application's layouts/, the framework's directory first and
+     * the module second - the same shape as resources/css/modsx-blog. That is
+     * the one arrangement a front-of-the-name prefix cannot express.
+     *
+     * @return array{string, string} the generator to run, and its pattern
+     */
+    private function entry(string $generator): array
+    {
+        // A hand-edited config can hold anything, so a pair is read as the list
+        // it might not be rather than the one it should.
+        /** @var array<string, string|list<string>> $entries */
+        $entries = (array) $this->config->get('modsx.generators', []);
+
+        $entry = $entries[$generator] ?? $entries['*'] ?? '{Studly}/';
+
+        return is_array($entry)
+            ? [(string) ($entry[0] ?? $generator), (string) ($entry[1] ?? '{Studly}/')]
+            : [$generator, $entry];
     }
 
     /**
@@ -123,17 +149,6 @@ class ModuleMaker
         }
 
         return [ModuleName::make($module), $tail];
-    }
-
-    /**
-     * The form this generator writes the module in, from the config table.
-     */
-    private function pattern(string $generator): string
-    {
-        /** @var array<string, string> $patterns */
-        $patterns = (array) $this->config->get('modsx.generators', []);
-
-        return (string) ($patterns[$generator] ?? $patterns['*'] ?? '{Studly}/');
     }
 
     /**

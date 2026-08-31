@@ -237,7 +237,7 @@ app/Http/Controllers/ModsxBlog/
 <td><code>modsx-user-profile</code></td>
 </tr>
 <tr>
-<td>PHP namespace directories under <code>app/</code>, <code>database/</code></td>
+<td>PHP namespace directories under <code>app/</code>, <code>database/</code>, <code>tests/</code></td>
 <td><code>Modsx</code> + StudlyCase</td>
 <td><code>ModsxBlog</code></td>
 <td><code>ModsxUserProfile</code></td>
@@ -257,7 +257,7 @@ app/Http/Controllers/ModsxBlog/
 </tbody>
 </table>
 <p>The first two are Laravel's own convention, not an invention of this package — the framework maps <code>App\View\Components\UserProfile</code> to <code>&lt;x-user-profile&gt;</code> using exactly the same StudlyCase ↔ kebab-case conversion. With the prefix it works the same way: <code>App\View\Components\ModsxUserProfile\PostCard</code> is <code>&lt;x-modsx-user-profile.post-card&gt;</code>. If your directories already follow Laravel's naming, they already follow this one.</p>
-<p>The split between the two forms is not cosmetic. Directories under <code>app/</code> and <code>database/</code> are PSR-4 namespace segments, and a PHP identifier cannot contain a hyphen — <code>App\Support\modsx-blog</code> is not a name PHP will ever load. Everywhere else the name is just a path, so kebab-case applies.</p>
+<p>The split between the two forms is not cosmetic. Directories under <code>app/</code>, <code>database/</code> and <code>tests/</code> are PSR-4 namespace segments, and a PHP identifier cannot contain a hyphen — <code>App\Support\modsx-blog</code> is not a name PHP will ever load. Everywhere else the name is just a path, so kebab-case applies.</p>
 <blockquote>
 <p><strong>Every form must come from the same name.</strong></p>
 <p><code>modsx-userprofile</code> and <code>ModsxUserProfile</code> are <strong>two different modules</strong>: the first is <code>Userprofile</code>, the second is <code>UserProfile</code>. Back up <code>UserProfile</code> and the <code>modsx-userprofile</code> views are silently left behind.</p>
@@ -484,8 +484,8 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 <td>Run one of Laravel's generators with the module filled in</td>
 </tr>
 <tr>
-<td><code>modsx:scaffold {name}</code></td>
-<td>Create the directory skeleton for a new module</td>
+<td><code>modsx:scaffold {name} {path?*}</code></td>
+<td>Create a module's directories, configured or named</td>
 </tr>
 <tr>
 <td><code>modsx:list</code></td>
@@ -731,6 +731,22 @@ php artisan modsx:make migration Blog/create_posts_table
 </tr>
 </tbody>
 </table>
+<h4><code>layout</code>, <code>page</code>, <code>partial</code></h4>
+<p>A module's own views live in <code>resources/views/modsx-blog/</code>, but its layout is one slice of the application's <code>layouts/</code> — the framework's directory first, the module second, exactly as in <code>resources/css/modsx-blog/</code>. Three names of Modsx's own reach those:</p>
+<pre><code class="language-bash">php artisan modsx:make layout blog.app     # -&gt; resources/views/layouts/modsx-blog/app.blade.php
+php artisan modsx:make page blog.index     # -&gt; resources/views/pages/modsx-blog/index.blade.php
+php artisan modsx:make partial blog.head   # -&gt; resources/views/partials/modsx-blog/head.blade.php
+</code></pre>
+<p>There is no <code>make:layout</code> in Laravel. These are entries in the same config table, and what makes them different is that the entry names the generator to run as well as the form:</p>
+<pre><code class="language-php">'generators' =&gt; [
+    'view'    =&gt; '{kebab}/',                  // runs make:view
+    'layout'  =&gt; ['view', 'layouts/{kebab}/'],  // also make:view, elsewhere
+    'page'    =&gt; ['view', 'pages/{kebab}/'],
+    'partial' =&gt; ['view', 'partials/{kebab}/'],
+],
+</code></pre>
+<p>So the names are yours to choose. <code>'service' =&gt; ['class', 'Services/{Studly}/']</code> gives you <code>modsx:make service Blog/PostPublisher</code> writing <code>app/Services/ModsxBlog/PostPublisher.php</code>, and it appears in the picker alongside Laravel's own.</p>
+<p>There is deliberately no <code>component</code>: <code>make:component</code> is a generator of Laravel's and already lands correctly — it writes the class, and Laravel derives <code>views/components/modsx-blog/</code> from where that class went.</p>
 <p><strong>Either separator, for every generator.</strong> The tables above pick whichever reads more naturally, but the module ends at the first <code>/</code>, <code>\</code> or <code>.</code> whatever you are generating. These are the same call:</p>
 <table>
 <thead>
@@ -790,7 +806,95 @@ php artisan modsx:make controller Blog/PostController
 <pre><code class="language-bash">php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # any case; it is normalised
 </code></pre>
-<p>Which directories it creates is up to you, in <code>config/modsx.php</code>:</p>
+<h4>Naming the directories yourself</h4>
+<p>Name directories after the module and it makes those instead of the configured list — for the one you want now, without changing what every future module gets:</p>
+<pre><code class="language-bash">php artisan modsx:scaffold Blog resources/css
+# resources/css/modsx-blog/
+
+php artisan modsx:scaffold Blog resources/css resources/js app/Services
+# resources/css/modsx-blog/
+# resources/js/modsx-blog/
+# app/Services/ModsxBlog/
+</code></pre>
+<p>Note the third one: <strong><code>ModsxBlog</code>, not <code>modsx-blog</code></strong>. You write the path as it looks in the project and the form of the module's own directory is read off where that path leads:</p>
+<table>
+<thead>
+<tr>
+<th>You type</th>
+<th>It creates</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>resources/css</code></td>
+<td><code>resources/css/modsx-blog</code></td>
+<td>a path, so kebab-case</td>
+</tr>
+<tr>
+<td><code>resources/js</code></td>
+<td><code>resources/js/modsx-blog</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>resources/views/layouts</code></td>
+<td><code>resources/views/layouts/modsx-blog</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>public/vendor</code></td>
+<td><code>public/vendor/modsx-blog</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lang/en</code></td>
+<td><code>lang/en/modsx-blog</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>app/Services</code></td>
+<td><code>app/Services/</code><strong><code>ModsxBlog</code></strong></td>
+<td><code>app/</code> is PSR-4</td>
+</tr>
+<tr>
+<td><code>app/Livewire</code></td>
+<td><code>app/Livewire/</code><strong><code>ModsxBlog</code></strong></td>
+<td></td>
+</tr>
+<tr>
+<td><code>database/factories</code></td>
+<td><code>database/factories/</code><strong><code>ModsxBlog</code></strong></td>
+<td><code>database/</code> is PSR-4</td>
+</tr>
+<tr>
+<td><code>tests/Feature</code></td>
+<td><code>tests/Feature/</code><strong><code>ModsxBlog</code></strong></td>
+<td><code>tests/</code> is PSR-4</td>
+</tr>
+</tbody>
+</table>
+<p><code>app/</code>, <code>database/</code> and <code>tests/</code> are the PSR-4 roots of a stock Laravel application — <code>App\</code>, <code>Database\</code>, <code>Tests\</code> — and a hyphen is not a legal PHP identifier, so directories under them take the StudlyCase form. Everywhere else the name is only ever a path. This is the convention's own rule, applied for you rather than invented here.</p>
+<p>Where that guess is wrong — a PSR-4 root of your own, say — write the placeholder and it settles the form instead:</p>
+<pre><code class="language-bash">php artisan modsx:scaffold Blog &quot;modules/Shared/{Studly}&quot;
+# modules/Shared/ModsxBlog/
+
+php artisan modsx:scaffold Blog &quot;storage/exports/{kebab}&quot;
+# storage/exports/modsx-blog/
+</code></pre>
+<p>A directory that already exists is reported and left alone, exactly as with the configured list, so running it twice is safe:</p>
+<pre><code class="language-bash">$ php artisan modsx:scaffold Blog resources/css
+  resources/css/modsx-blog ...................................... created
+
+$ php artisan modsx:scaffold Blog resources/css
+  resources/css/modsx-blog ................................ already existed
+</code></pre>
+<p>And a path cannot leave the project:</p>
+<pre><code class="language-bash">$ php artisan modsx:scaffold Blog ../../etc
+   ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
+          &quot;resources/css&quot; or &quot;app/Services&quot;; it may not contain &quot;..&quot;.
+</code></pre>
+<h4>The configured list</h4>
+<p>With no directories named, it makes the ones in <code>config/modsx.php</code>:</p>
 <pre><code class="language-php">'scaffold' =&gt; [
     'app/Http/Controllers/{Studly}',
     'app/Models/{Studly}',

@@ -22,6 +22,7 @@ class ScaffoldCommand extends Command
 
     protected $signature = 'modsx:scaffold
                             {name : Module name, in any case; it is normalised}
+                            {path?* : Directories to create; omit for the configured list}
                             {--json : Output machine-readable JSON}';
 
     protected $description = 'Create the directory skeleton for a new module';
@@ -35,7 +36,10 @@ class ScaffoldCommand extends Command
         }
 
         try {
-            $result = $scaffolder->scaffold((string) $this->argument('name'));
+            /** @var list<string> $paths */
+            $paths = (array) $this->argument('path');
+
+            $result = $scaffolder->scaffold((string) $this->argument('name'), $paths);
         } catch (ModsxException $exception) {
             if ($json) {
                 $this->line((string) json_encode(['error' => $exception->getMessage()], JSON_PRETTY_PRINT));

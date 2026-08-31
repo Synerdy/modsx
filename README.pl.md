@@ -88,13 +88,13 @@ Z tej nazwy wyprowadzane są wszystkie pozostałe formy — Modsx dopasowuje **k
 | Gdzie | Forma | `Blog` | `UserProfile` |
 |---|---|---|---|
 | Katalogi w `resources/`, `public/`, `lang/` | `modsx-` + kebab-case | `modsx-blog` | `modsx-user-profile` |
-| Katalogi przestrzeni nazw w `app/`, `database/` | `Modsx` + StudlyCase | `ModsxBlog` | `ModsxUserProfile` |
+| Katalogi przestrzeni nazw w `app/`, `database/`, `tests/` | `Modsx` + StudlyCase | `ModsxBlog` | `ModsxUserProfile` |
 | Pojedyncze pliki — `routes/`, `config/`, `lang/` | `modsx-` + kebab-case | `modsx-blog.php` | `modsx-user-profile.php` |
 | Nazwy migracji, po timestampie | `modsx_` + snake_case | `modsx_blog_…` | `modsx_user_profile_…` |
 
 Dwie pierwsze to konwencja samego Laravela, a nie wymysł tego pakietu — framework mapuje `App\View\Components\UserProfile` na `<x-user-profile>` dokładnie tą samą konwersją StudlyCase ↔ kebab-case. Z prefiksem jest identycznie: `App\View\Components\ModsxUserProfile\PostCard` to `<x-modsx-user-profile.post-card>`. Jeśli Twoje katalogi już trzymają się nazewnictwa Laravela, to tym samym trzymają się i tego.
 
-Podział na dwie formy nie jest kosmetyczny. Katalogi w `app/` i `database/` to segmenty przestrzeni nazw PSR-4, a identyfikator PHP nie może zawierać myślnika — `App\Support\modsx-blog` to nazwa, której PHP nigdy nie załaduje. Wszędzie indziej nazwa jest po prostu ścieżką, więc obowiązuje kebab-case.
+Podział na dwie formy nie jest kosmetyczny. Katalogi w `app/`, `database/` i `tests/` to segmenty przestrzeni nazw PSR-4, a identyfikator PHP nie może zawierać myślnika — `App\Support\modsx-blog` to nazwa, której PHP nigdy nie załaduje. Wszędzie indziej nazwa jest po prostu ścieżką, więc obowiązuje kebab-case.
 
 > **Każda forma musi pochodzić od tej samej nazwy.**
 >
@@ -227,7 +227,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | Komenda | Do czego |
 |---|---|
 | `modsx:make {generator} {Moduł/Nazwa}` | Uruchamia generator Laravela z wpisanym modułem |
-| `modsx:scaffold {name}` | Tworzy szkielet katalogów nowego modułu |
+| `modsx:scaffold {name} {path?*}` | Tworzy katalogi modułu — z konfiguracji albo wskazane |
 | `modsx:list` | Moduły obecne w aplikacji |
 | `modsx:path {name?}` | Wszystko, co należy do modułu |
 | `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
@@ -318,6 +318,31 @@ Laravel używa w swoich generatorach trzech stylów nazewnictwa i powyższa tabe
 | `modsx:make config blog.services` | `make:config modsx-blog-services` | kebab-case |
 | `modsx:make migration blog.create_users_table` | `make:migration modsx_blog_create_users_table --create=users` | snake_case |
 
+#### `layout`, `page`, `partial`
+
+Własne widoki modułu mieszkają w `resources/views/modsx-blog/`, ale jego layout jest wycinkiem wspólnego `layouts/` aplikacji — najpierw katalog frameworka, potem moduł, dokładnie jak w `resources/css/modsx-blog/`. Sięgają tam trzy własne nazwy Modsx:
+
+```bash
+php artisan modsx:make layout blog.app     # -> resources/views/layouts/modsx-blog/app.blade.php
+php artisan modsx:make page blog.index     # -> resources/views/pages/modsx-blog/index.blade.php
+php artisan modsx:make partial blog.head   # -> resources/views/partials/modsx-blog/head.blade.php
+```
+
+W Laravelu nie ma `make:layout`. To wpisy w tej samej tabeli konfiguracji, a różni je to, że wpis podaje nie tylko formę, ale i generator do uruchomienia:
+
+```php
+'generators' => [
+    'view'    => '{kebab}/',                    // uruchamia make:view
+    'layout'  => ['view', 'layouts/{kebab}/'],  // też make:view, tylko gdzie indziej
+    'page'    => ['view', 'pages/{kebab}/'],
+    'partial' => ['view', 'partials/{kebab}/'],
+],
+```
+
+Nazwy są więc Twoje do wyboru. `'service' => ['class', 'Services/{Studly}/']` daje `modsx:make service Blog/PostPublisher` zapisujące `app/Services/ModsxBlog/PostPublisher.php` — i pojawia się w liście wyboru obok generatorów Laravela.
+
+Świadomie nie ma tu `component`: `make:component` to generator samego Laravela i już teraz ląduje poprawnie — zapisuje klasę, a Laravel wyprowadza `views/components/modsx-blog/` z tego, gdzie ta klasa trafiła.
+
 **Dowolny separator, przy każdym generatorze.** Tabele powyżej wybierają ten, który czyta się naturalniej, ale moduł kończy się na pierwszym `/`, `\` albo `.` — niezależnie od tego, co generujesz. To są te same wywołania:
 
 | | |
@@ -386,7 +411,67 @@ php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # dowolna wielkość liter, jest normalizowana
 ```
 
-Które katalogi powstaną, zależy od Ciebie — `config/modsx.php`:
+#### Wskazanie katalogów wprost
+
+Podaj katalogi po nazwie modułu, a powstaną one zamiast listy z konfiguracji — ten jeden, którego potrzebujesz teraz, bez zmieniania tego, co dostaje każdy przyszły moduł:
+
+```bash
+php artisan modsx:scaffold Blog resources/css
+# resources/css/modsx-blog/
+
+php artisan modsx:scaffold Blog resources/css resources/js app/Services
+# resources/css/modsx-blog/
+# resources/js/modsx-blog/
+# app/Services/ModsxBlog/
+```
+
+Zwróć uwagę na trzeci: **`ModsxBlog`, nie `modsx-blog`**. Piszesz ścieżkę tak, jak wygląda w projekcie, a forma katalogu modułu jest odczytywana z tego, dokąd ta ścieżka prowadzi:
+
+| Wpisujesz | Powstaje | Dlaczego |
+|---|---|---|
+| `resources/css` | `resources/css/modsx-blog` | ścieżka, więc kebab-case |
+| `resources/js` | `resources/js/modsx-blog` | |
+| `resources/views/layouts` | `resources/views/layouts/modsx-blog` | |
+| `public/vendor` | `public/vendor/modsx-blog` | |
+| `lang/en` | `lang/en/modsx-blog` | |
+| `app/Services` | `app/Services/`**`ModsxBlog`** | `app/` to PSR-4 |
+| `app/Livewire` | `app/Livewire/`**`ModsxBlog`** | |
+| `database/factories` | `database/factories/`**`ModsxBlog`** | `database/` to PSR-4 |
+| `tests/Feature` | `tests/Feature/`**`ModsxBlog`** | `tests/` to PSR-4 |
+
+`app/`, `database/` i `tests/` to korzenie PSR-4 standardowej aplikacji Laravela — `App\`, `Database\`, `Tests\` — a myślnik nie jest poprawnym identyfikatorem PHP, więc katalogi pod nimi biorą formę StudlyCase. Wszędzie indziej nazwa jest wyłącznie ścieżką. To ta sama reguła, którą opisuje tabela konwencji, tylko zastosowana za Ciebie.
+
+Gdy to odgadnięcie jest nietrafione — na przykład przy własnym korzeniu PSR-4 — wpisujesz placeholder i to on rozstrzyga:
+
+```bash
+php artisan modsx:scaffold Blog "modules/Shared/{Studly}"
+# modules/Shared/ModsxBlog/
+
+php artisan modsx:scaffold Blog "storage/exports/{kebab}"
+# storage/exports/modsx-blog/
+```
+
+Istniejący katalog jest raportowany i zostawiany w spokoju, tak samo jak przy liście z konfiguracji, więc ponowne uruchomienie jest bezpieczne:
+
+```bash
+$ php artisan modsx:scaffold Blog resources/css
+  resources/css/modsx-blog ...................................... created
+
+$ php artisan modsx:scaffold Blog resources/css
+  resources/css/modsx-blog ................................ already existed
+```
+
+A ścieżka nie może opuścić projektu:
+
+```bash
+$ php artisan modsx:scaffold Blog ../../etc
+   ERROR  Invalid path [../../etc]. Give a directory inside the project, such as
+          "resources/css" or "app/Services"; it may not contain "..".
+```
+
+#### Lista z konfiguracji
+
+Gdy nie podasz żadnego katalogu, powstają te z `config/modsx.php`:
 
 ```php
 'scaffold' => [
