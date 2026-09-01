@@ -6,6 +6,7 @@ namespace Modsx;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Support\Facades\File;
+use Modsx\Exceptions\ModsxException;
 
 /**
  * Reads and describes the backup tree.
@@ -63,8 +64,27 @@ class BackupRepository
         return null;
     }
 
+    /**
+     * Where a version of a module lives.
+     *
+     * The version is checked here rather than at each caller, because this is
+     * the one place it becomes a path. Every version this package writes is
+     * digits - nextVersion() pads a number, and versions() returns nothing
+     * else - so anything further is not a version at all.
+     *
+     * That matters because a version does not always come from us:
+     * modsx:import reads one out of the manifest of a zip somebody else made,
+     * and "../../.." there would put the imported files outside the project
+     * altogether.
+     *
+     * @throws ModsxException
+     */
     public function versionPath(ModuleName|string $name, string $version): string
     {
+        if (preg_match('/^\d+$/', $version) !== 1) {
+            throw ModsxException::invalidVersion($version);
+        }
+
         return $this->pathFor($name).'/'.$version;
     }
 
@@ -193,7 +213,7 @@ class BackupRepository
     /**
      * Human-facing description of one version, for listings.
      *
-     * @return array{version: string, created_at: ?string, paths: int, comment: ?string}
+     * @return array{version: string, created_at: ?string, paths: int, files: int, archived: int, comment: ?string}
      */
     public function describe(ModuleName|string $name, string $version): array
     {
@@ -208,10 +228,14 @@ class BackupRepository
             ? count($manifest['paths'])
             : count(File::directories($path));
 
+        // A version has held files and archived migrations since 0.3.0, so
+        // counting only its directories described less than half of it.
         return [
             'version' => $version,
             'created_at' => $createdAt,
             'paths' => $paths,
+            'files' => is_array($manifest['files'] ?? null) ? count($manifest['files']) : 0,
+            'archived' => is_array($manifest['archived'] ?? null) ? count($manifest['archived']) : 0,
             'comment' => is_string($manifest['comment'] ?? null) ? $manifest['comment'] : null,
         ];
     }

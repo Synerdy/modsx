@@ -158,3 +158,17 @@ it('does not recurse into migration subdirectories, matching Laravel', function 
 
     expect(app(ModuleLocator::class)->migrations('Blog'))->toBe([]);
 });
+
+it('stays out of the places a module never lives', function (string $where) {
+    // Every one of these is a module directory by name, so if discovery walks
+    // there it finds one - which is how a build artefact or a vendored copy
+    // ends up looking like a module of yours.
+    $this->makeModuleDirectory($where.'/modsx-intruder', 'x.txt', 'v');
+
+    expect(app(ModuleLocator::class)->names())->not->toContain('Intruder');
+})->with([
+    'the public storage symlink' => ['public/storage'],
+    'whatever the bundler wrote' => ['public/build'],
+    'a vendored copy' => ['app/vendor'],
+    'installed packages' => ['resources/node_modules'],
+]);

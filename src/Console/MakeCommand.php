@@ -16,6 +16,7 @@ use Modsx\Exceptions\ModsxException;
 use Modsx\ModuleLocator;
 use Modsx\ModuleMaker;
 use Modsx\ModuleName;
+use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\StringInput;
 
 /**
@@ -38,29 +39,150 @@ class MakeCommand extends Command
     protected $signature = 'modsx:make
                             {generator? : Generator to run, without the "make:" prefix}
                             {name? : Module/Name, e.g. Blog/PostController}
-                            {extra?* : Options for the generator, written after --}
+                            {extra?* : Options for the generator; -- before them is optional}
                             {--dry-run : Print the command instead of running it}';
 
     protected $description = "Run one of Laravel's generators with the module prefix filled in";
+
+    /**
+     * The generator's options are not ours to declare, and there is no
+     * knowing them: every package brings its own. So this command stops
+     * Symfony rejecting what it does not recognise and sorts the tokens
+     * itself, which is what lets "--resource" be written where anyone would
+     * write it rather than behind a "--" they have to remember.
+     *
+     * The cost is that a misspelling of our own option is no longer caught
+     * here; it is forwarded, and the generator says it does not know it.
+     * unknownOption() spots the near misses before that happens.
+     */
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->ignoreValidationErrors();
+    }
+
+    /**
+     * What was typed, sorted into the two positional arguments and everything
+     * meant for the generator.
+     *
+     * Read from the raw tokens rather than the bound input, because binding
+     * stops at the first option this command does not declare - which, now
+     * that the generator's options need no "--", is most of them. Anything
+     * after a "--" is the generator's whatever it looks like, so the form that
+     * was required before still works.
+     *
+     * An input that carries no tokens - Artisan::call() with an array - never
+     * had this problem, and falls back to what Symfony bound.
+     *
+     * @return array{?string, ?string, list<string>}
+     */
+    private function typed(): array
+    {
+        if (! $this->input instanceof ArgvInput) {
+            /** @var list<string> $extra */
+            $extra = (array) $this->argument('extra');
+
+            return [
+                $this->argument('generator') === null ? null : (string) $this->argument('generator'),
+                $this->argument('name') === null ? null : (string) $this->argument('name'),
+                $extra,
+            ];
+        }
+
+        $positional = [];
+        $forGenerator = [];
+        $literal = false;
+
+        foreach ($this->input->getRawTokens(true) as $token) {
+            if ($literal) {
+                $forGenerator[] = $token;
+
+                continue;
+            }
+
+            if ($token === '--') {
+                $literal = true;
+
+                continue;
+            }
+
+            if (! str_starts_with($token, '-') || $token === '-') {
+                $positional[] = $token;
+
+                continue;
+            }
+
+            if (self::isOurs($token)) {
+                continue;
+            }
+
+            $forGenerator[] = $token;
+        }
+
+        return [$positional[0] ?? null, $positional[1] ?? null, $forGenerator];
+    }
+
+    /**
+     * A misspelling of our own option, before it is forwarded to a generator
+     * that will only say it has never heard of it.
+     *
+     * @param  list<string>  $extra
+     */
+    private function unknownOption(array $extra): ?string
+    {
+        foreach ($extra as $token) {
+            $name = strstr($token, '=', true) ?: $token;
+
+            if (str_starts_with($name, '--') && levenshtein($name, '--dry-run') <= 2) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * True for the options this command answers itself, and for the ones every
+     * artisan command carries - Symfony reads those off the raw tokens before
+     * any command runs, so passing them on would only repeat them.
+     */
+    private static function isOurs(string $token): bool
+    {
+        $name = strstr($token, '=', true) ?: $token;
+
+        return in_array($name, [
+            '--dry-run',
+            '--help', '-h', '--quiet', '-q', '--version', '-V',
+            '--ansi', '--no-ansi', '--no-interaction', '-n',
+            '--verbose', '-v', '-vv', '-vvv', '--env',
+        ], true);
+    }
 
     public function handle(ModuleMaker $maker, ModuleLocator $locator, BackupRepository $backups): int
     {
         $this->banner();
 
-        $generator = $this->resolveGenerator();
+        [$typedGenerator, $typedName, $extra] = $this->typed();
 
-        if ($generator === null || ! $this->generatorExists($generator)) {
+        if (($misspelt = $this->unknownOption($extra)) !== null) {
+            $this->components->error(sprintf('The "%s" option does not exist.', $misspelt));
+            $this->components->warn('Did you mean "--dry-run"?');
+
             return self::FAILURE;
         }
 
-        $name = $this->resolveName($locator);
+        $generator = $this->resolveGenerator($typedGenerator);
+
+        if ($generator === null || ! $this->generatorExists($generator, $typedName)) {
+            return self::FAILURE;
+        }
+
+        $name = $this->resolveName($locator, $typedName);
 
         if ($name === null) {
             return self::FAILURE;
         }
-
-        /** @var list<string> $extra */
-        $extra = (array) $this->argument('extra');
 
         try {
             $target = $maker->resolve($generator, $name, $extra);
@@ -90,7 +212,7 @@ class MakeCommand extends Command
             $this->warnUnknownModule($target['module'], $locator, $backups);
         }
 
-        if ($this->option('dry-run')) {
+        if ($this->input->hasParameterOption('--dry-run', true)) {
             $this->components->info('Would run:');
             $this->line('  <fg=green>php artisan '.$line.'</>');
             $this->newLine();
@@ -121,8 +243,8 @@ class MakeCommand extends Command
      *
      * Through the command's own run() rather than Artisan::call(), so we do not
      * re-enter the console application, and so a generator that throws throws
-     * where we can see it. StringInput is what makes an option written after --
-     * arrive parsed exactly as the generator declared it, short clusters (-mfs)
+     * where we can see it. StringInput is what makes a forwarded option arrive
+     * parsed exactly as the generator declared it, short clusters (-mfs)
      * included, which is why the command name is part of the line: Symfony
      * binds the first token to the "command" argument.
      */
@@ -159,12 +281,10 @@ class MakeCommand extends Command
             : $token;
     }
 
-    private function resolveGenerator(): ?string
+    private function resolveGenerator(?string $given): ?string
     {
-        $given = $this->argument('generator');
-
         if ($given !== null) {
-            return (string) $given;
+            return $given;
         }
 
         $generators = $this->generators();
@@ -230,7 +350,7 @@ class MakeCommand extends Command
      * A name is usable when Laravel has a generator of that name, or when the
      * config gives it one - "layout" runs make:view and there is no make:layout.
      */
-    private function generatorExists(string $generator): bool
+    private function generatorExists(string $generator, ?string $typedName): bool
     {
         if ($this->getApplication()?->has('make:'.$generator) === true) {
             return true;
@@ -244,7 +364,7 @@ class MakeCommand extends Command
 
         // The whole deprecation path for 0.3.0's modsx:make, which took a
         // module name: one message, at the one moment it can be recognised.
-        if ($this->argument('name') === null && ModuleName::tryMake($generator) !== null) {
+        if ($typedName === null && ModuleName::tryMake($generator) !== null) {
             $this->components->warn(sprintf(
                 'To create the directory skeleton for a module, that command is now '.
                 '"php artisan modsx:scaffold %s".',
@@ -255,12 +375,10 @@ class MakeCommand extends Command
         return false;
     }
 
-    private function resolveName(ModuleLocator $locator): ?string
+    private function resolveName(ModuleLocator $locator, ?string $given): ?string
     {
-        $given = $this->argument('name');
-
         if ($given !== null) {
-            return (string) $given;
+            return $given;
         }
 
         if (! $this->input->isInteractive()) {

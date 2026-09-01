@@ -124,6 +124,31 @@ it('generates files the package then recognises as the module', function () {
         ->and($locator->migrations('Blog'))->toHaveCount(1);
 });
 
+it('passes an option written where anyone would write it', function () {
+    // No "--" to remember: the command answers to --dry-run and nothing else,
+    // so everything it does not recognise belongs to the generator.
+    $this->artisan('modsx:make controller Blog/PostController --resource --no-interaction')
+        ->assertExitCode(0);
+
+    expect(File::get($this->root.'/app/Http/Controllers/ModsxBlog/PostController.php'))
+        ->toContain('public function store');
+});
+
+it('keeps its own options to itself', function () {
+    expect(artisanOutput('modsx:make controller Blog/PostController --dry-run --no-interaction'))
+        ->toContain('make:controller ModsxBlog/PostController')
+        ->not->toContain('--dry-run')
+        ->and(artisanOutput('modsx:make controller Blog/PostController --dry-run --no-interaction'))
+        ->not->toContain('--no-interaction');
+});
+
+it('says which option you meant when it is nearly ours', function () {
+    // Symfony no longer rejects what it does not know, so a misspelling of our
+    // own option would otherwise reach the generator and be blamed on it.
+    expect(artisanOutput('modsx:make controller Blog/PostController --dry-runn --no-interaction'))
+        ->toContain('Did you mean');
+});
+
 it('passes options written after -- to the generator', function () {
     $this->artisan('modsx:make controller Blog/PostController --no-interaction -- --resource')
         ->assertExitCode(0);

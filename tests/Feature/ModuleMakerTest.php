@@ -113,7 +113,10 @@ it('gives each Laravel generator the name form it expects', function (string $ge
     'class into the namespace directory' => ['controller', 'Blog/UserController', 'ModsxBlog/UserController'],
     'enum is a class too' => ['enum', 'Blog/OrderStatus', 'ModsxBlog/OrderStatus'],
     'a hyphenated generator name changes nothing' => ['job-middleware', 'Blog/RateLimited', 'ModsxBlog/RateLimited'],
-    'a generator from another package' => ['livewire', 'Blog/UserProfile', 'ModsxBlog/UserProfile'],
+    // These two are documented with an example each, and are the only rows of
+    // that table a Laravel install cannot check for itself.
+    'a generator from another package' => ['livewire', 'Blog/Alert', 'ModsxBlog/Alert'],
+    'and one with a hyphen in its name' => ['filament-resource', 'Blog/PostResource', 'ModsxBlog/PostResource'],
     'view takes a view path' => ['view', 'blog.users.index', 'modsx-blog/users.index'],
     'config takes kebab-case' => ['config', 'Blog/services', 'modsx-blog-services'],
     'migration takes snake_case' => ['migration', 'Blog/create_users_table', 'modsx_blog_create_users_table'],
@@ -198,6 +201,22 @@ it('guesses no table when the name does not name one', function () {
 it('normalises a migration name the way Laravel does', function () {
     expect(app(ModuleMaker::class)->resolve('migration', 'Blog/CreatePostsTable')['name'])
         ->toBe('modsx_blog_create_posts_table');
+});
+
+it('guesses the table after converting the name, not before', function () {
+    // Order matters and nothing else would catch it being wrong.
+    // TableGuesser matches /^create_(\w+)_table$/, which "CreatePostsTable"
+    // cannot satisfy - so a guess run before the snake conversion would find
+    // no table and hand back an empty migration, silently.
+    $target = app(ModuleMaker::class)->resolve('migration', 'Blog/CreatePostsTable');
+
+    expect($target['options'])->toBe(['--create=posts'])
+        ->and($target['name'])->toBe('modsx_blog_create_posts_table');
+});
+
+it('guesses the table for a change migration written in StudlyCase too', function () {
+    expect(app(ModuleMaker::class)->resolve('migration', 'Blog/AddSlugToPostsTable')['options'])
+        ->toBe(['--table=posts']);
 });
 
 it('passes the generator options through untouched', function () {

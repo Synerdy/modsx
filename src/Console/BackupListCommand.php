@@ -80,11 +80,13 @@ class BackupListCommand extends Command
             $this->components->info($module);
 
             $this->table(
-                ['Version', 'Created', 'Directories', 'Comment'],
+                ['Version', 'Created', 'Directories', 'Files', 'Archived', 'Comment'],
                 array_map(static fn (array $row): array => [
                     $row['version'],
                     $row['created_at'] ?? '-',
                     (string) $row['paths'],
+                    $row['files'] > 0 ? (string) $row['files'] : '-',
+                    $row['archived'] > 0 ? (string) $row['archived'] : '-',
                     $row['comment'] ?? '-',
                 ], $versions),
             );

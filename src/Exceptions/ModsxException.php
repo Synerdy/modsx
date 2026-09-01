@@ -31,6 +31,30 @@ class ModsxException extends RuntimeException
         return new self(sprintf('Module [%s] was not found in the application.', $module));
     }
 
+    /**
+     * Files name the module, but no directory does.
+     *
+     * A module is a set of directories - that is the whole premise - and a
+     * file named for one belongs to it rather than making it. Saying only
+     * "not found" would be baffling with config/modsx-blog.php sitting right
+     * there, so this names what was found and what is missing.
+     *
+     * @param  list<string>  $files
+     */
+    public static function moduleIsOnlyFiles(string $module, array $files): self
+    {
+        return new self(sprintf(
+            'Module [%s] has no directories, only files: %s. A module is a set of '.
+            'directories, and a file named for one belongs to it rather than making '.
+            'it - which is why "%s" is reported by modsx:doctor as naming a module '.
+            'that does not exist. Create a directory for it: php artisan modsx:scaffold %s',
+            $module,
+            implode(', ', $files),
+            $files[0] ?? '',
+            $module
+        ));
+    }
+
     public static function noBackups(string $module): self
     {
         return new self(sprintf('Module [%s] has no backups.', $module));
@@ -39,6 +63,32 @@ class ModsxException extends RuntimeException
     public static function versionNotFound(string $module, string $version): self
     {
         return new self(sprintf('Version [%s] of module [%s] does not exist.', $version, $module));
+    }
+
+    public static function invalidVersion(string $version): self
+    {
+        return new self(sprintf(
+            'Invalid version [%s]. A version is a number, as written by every backup '.
+            'this package takes - 0001, 0002 and so on.',
+            $version
+        ));
+    }
+
+    /**
+     * A path read out of a manifest that would not stay inside the project.
+     *
+     * The manifest of an imported version was written by whoever made the zip,
+     * so restoring one means writing files to paths that came from outside.
+     */
+    public static function unsafeManifestPath(string $path, string $version): self
+    {
+        return new self(sprintf(
+            'Backup version [%s] lists the path [%s], which does not stay inside the '.
+            'project. A manifest may only name relative paths, and never one '.
+            'containing "..". Refusing to touch it.',
+            $version,
+            $path
+        ));
     }
 
     public static function versionAlreadyExists(string $module, string $version): self

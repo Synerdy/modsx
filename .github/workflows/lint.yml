@@ -43,3 +43,41 @@ jobs:
 
       - name: Run static analysis
         run: vendor/bin/phpstan analyse --no-progress
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, fileinfo, zip
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      # docs/ is generated HTML that is committed, so the site and the README
+      # can drift apart without anything saying so. Rebuilding and diffing is
+      # the only thing that notices.
+      - name: Documentation site is up to date
+        run: |
+          composer docs
+          git diff --exit-code docs/ \
+            || (echo "::error::docs/ is stale - run 'composer docs' and commit the result" && exit 1)
+
+      # Nothing else keeps the translation in step with the original. Comparing
+      # the shape catches a section added to one and not the other, which is
+      # how they come apart in practice.
+      - name: Both READMEs have the same shape
+        run: |
+          diff <(grep -oE '^#{2,4} ' README.md) <(grep -oE '^#{2,4} ' README.pl.md) \
+            || (echo "::error::README.md and README.pl.md have different heading structures" && exit 1)
+          for pattern in '^```' '^\| '; do
+            en=$(grep -c "$pattern" README.md)
+            pl=$(grep -c "$pattern" README.pl.md)
+            [ "$en" = "$pl" ] \
+              || (echo "::error::README.md has $en lines matching $pattern, README.pl.md has $pl" && exit 1)
+          done

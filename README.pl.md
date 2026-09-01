@@ -71,6 +71,18 @@ Backupy trafiają do `modsx-backups/` w katalogu głównym projektu. Prawie na p
 
 Zostawienie ich w Gicie też jest sensownym wyborem, jeśli chcesz, żeby wersje modułów podróżowały razem z repozytorium — pamiętaj tylko, że backup to pełna kopia katalogów, więc repo urośnie przy każdym.
 
+### Aktualizacja
+
+Dopóki Modsx jest w `0.x`, nowy minor **nie** przyjdzie zwykłym `composer update`. Trzeba go wskazać wprost:
+
+```bash
+composer require --dev synerdy/modsx:^0.7
+```
+
+Composer traktuje wszystko poniżej `1.0.0` z ostrożnością należną wersjom przedpremierowym: tam `^0.6.1` znaczy `>=0.6.1 <0.7.0`, czyli minor stoi w miejscu, w którym normalnie stoi major. Dlatego `composer update` zostaje przy zainstalowanym minorze — celowo, a nie przez przypadek — a `composer why-not synerdy/modsx 0.7.0` to potwierdzi. Wymuszenie nowego minora przepisuje ograniczenie i aktualizuje za jednym razem.
+
+Warto najpierw zajrzeć do [changelogu](https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md): w `0.x` minor może nieść zmianę łamiącą i wtedy jest to tam wyraźnie zaznaczone.
+
 ---
 
 ## Konwencja nazewnictwa
@@ -196,7 +208,7 @@ resources/
 
 routes/modsx-blog.php
 config/modsx-blog.php
-database/migrations/2026_01_01_000000_modsx_blog_posts_table.php
+database/migrations/2026_01_01_000000_modsx_blog_create_posts_table.php
 ```
 
 Nic z tego nie jest obowiązkowe. Modułem może być pojedynczy katalog widoków.
@@ -236,7 +248,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:import {path}` | Rozpakowuje .zip stworzony przez `modsx:export` |
 | `modsx:delete {name?}` | Robi backup, po czym usuwa moduł |
 | `modsx:restore {name?} {version?}` | Backupuje stan bieżący, po czym przywraca wersję |
-| `modsx:diff {name?} {version?}` | Porównanie stanu bieżącego z wersją w backupie |
+| `modsx:diff {name?} {version?} {against?}` | Porównanie z wersją w backupie albo dwóch wersji ze sobą |
 | `modsx:info {name?}` | Rozmiar, liczba plików i historia backupów |
 | `modsx:prune {name?}` | Usuwa stare wersje, zostawiając najnowsze |
 | `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
@@ -271,7 +283,9 @@ Trzy formy jednej nazwy, inna przy każdym generatorze, to ta część konwencji
 ],
 ```
 
-Wszystko, czego nie ma na liście, dostaje `*` — co jest poprawne dla każdej klasy PHP. Dostępne generatory to te zarejestrowane w Twojej aplikacji, a nie sztywna lista, więc dopisanie wpisu sprawia, że konwencję zaczyna respektować też generator z innego pakietu (`make:livewire`, `make:filament-resource`).
+Wszystko, czego nie ma na liście, dostaje `*` — co jest poprawne dla każdej klasy PHP.
+
+Wszystko, czego nie ma na liście, dostaje `*`, a dostępne generatory to te zarejestrowane w Twojej aplikacji, a nie sztywny zbiór — generator z pakietu jest obsłużony tak samo dobrze jak ten od Laravela.
 
 #### Wszystkie generatory Laravela i nazwa, jaką dostają
 
@@ -318,6 +332,27 @@ Laravel używa w swoich generatorach trzech stylów nazewnictwa i powyższa tabe
 | `modsx:make config blog.services` | `make:config modsx-blog-services` | kebab-case |
 | `modsx:make migration blog.create_users_table` | `make:migration modsx_blog_create_users_table --create=users` | snake_case |
 
+**Dowolny separator, przy każdym generatorze.** Tabele powyżej wybierają ten, który czyta się naturalniej, ale moduł kończy się na pierwszym `/`, `\` albo `.` — niezależnie od tego, co generujesz. To są te same wywołania:
+
+| | |
+|---|---|
+| `modsx:make config Blog/services` | `modsx:make config blog.services` |
+| `modsx:make migration Blog/create_users_table` | `modsx:make migration blog.create_users_table` |
+| `modsx:make controller Blog/UserController` | `modsx:make controller Blog.UserController` |
+
+`make:config` to jedyne miejsce, w którym Modsx odchodzi od gołego Laravela, gdzie nazwa konfiguracji jest w snake_case. I musi: `config/modsx_blog_services.php` **nie** zostałby rozpoznany jako plik modułu — reguła szuka kebabowego prefiksu `modsx-` — więc konfiguracja byłaby osierocona, backupowana z niczym i usuwana z niczym. Kebab-case jest tu wymuszony przez konwencję, a nie wybrany.
+
+**Zupełnie poza zakresem modułu:** `make:cache-table`, `make:session-table`, `make:notifications-table`, `make:queue-table`, `make:queue-batches-table` i `make:queue-failed-table` nie przyjmują nazwy — generują stałą migrację frameworka. Podanie jej przez `modsx:make` kończy się odpowiedzią Laravela *„No arguments expected"*, i słusznie: te tabele należą do aplikacji, a nie do modułu.
+
+**Generatory z innych pakietów** są traktowane tak samo — lista to te zarejestrowane w Twojej aplikacji, a `*` jest już właściwą formą dla klasy:
+
+| Wpisujesz | Uruchamia się | Co dostajesz |
+|---|---|---|
+| `modsx:make livewire Blog/Alert` | `make:livewire ModsxBlog/Alert` | `app/Livewire/ModsxBlog/Alert.php` oraz `views/livewire/modsx-blog/alert.blade.php`, czyli `<livewire:modsx-blog.alert />` |
+| `modsx:make filament-resource Blog/PostResource` | `make:filament-resource ModsxBlog/PostResource` | `app/Filament/Resources/ModsxBlog/PostResource.php` |
+
+Livewire wyprowadza ścieżkę widoku z tego, gdzie trafiła klasa — dokładnie tak jak komponenty samego Laravela — więc StudlyCase to wszystko, czego od nas potrzebuje. Wpis w `modsx.generators` dopisujesz tylko wtedy, gdy `*` jest dla danego generatora **niewłaściwe** — gdy jego nazwa jest ścieżką albo nazwą pliku, a nie klasy.
+
 #### `layout`, `page`, `partial`
 
 Własne widoki modułu mieszkają w `resources/views/modsx-blog/`, ale jego layout jest wycinkiem wspólnego `layouts/` aplikacji — najpierw katalog frameworka, potem moduł, dokładnie jak w `resources/css/modsx-blog/`. Sięgają tam trzy własne nazwy Modsx:
@@ -343,18 +378,6 @@ Nazwy są więc Twoje do wyboru. `'service' => ['class', 'Services/{Studly}/']` 
 
 Świadomie nie ma tu `component`: `make:component` to generator samego Laravela i już teraz ląduje poprawnie — zapisuje klasę, a Laravel wyprowadza `views/components/modsx-blog/` z tego, gdzie ta klasa trafiła.
 
-**Dowolny separator, przy każdym generatorze.** Tabele powyżej wybierają ten, który czyta się naturalniej, ale moduł kończy się na pierwszym `/`, `\` albo `.` — niezależnie od tego, co generujesz. To są te same wywołania:
-
-| | |
-|---|---|
-| `modsx:make config Blog/services` | `modsx:make config blog.services` |
-| `modsx:make migration Blog/create_users_table` | `modsx:make migration blog.create_users_table` |
-| `modsx:make controller Blog/UserController` | `modsx:make controller Blog.UserController` |
-
-`make:config` to jedyne miejsce, w którym Modsx odchodzi od gołego Laravela, gdzie nazwa konfiguracji jest w snake_case. I musi: `config/modsx_blog_services.php` **nie** zostałby rozpoznany jako plik modułu — reguła szuka kebabowego prefiksu `modsx-` — więc konfiguracja byłaby osierocona, backupowana z niczym i usuwana z niczym. Kebab-case jest tu wymuszony przez konwencję, a nie wybrany.
-
-**Zupełnie poza zakresem modułu:** `make:cache-table`, `make:session-table`, `make:notifications-table`, `make:queue-table`, `make:queue-batches-table` i `make:queue-failed-table` nie przyjmują nazwy — generują stałą migrację frameworka. Podanie jej przez `modsx:make` kończy się odpowiedzią Laravela *„No arguments expected"*, i słusznie: te tabele należą do aplikacji, a nie do modułu.
-
 **Forma dotyczy całej nazwy, nie tylko modułu.** Wpisujesz, jak Ci wygodnie, a generator dostaje nazwę w formie ze swojego wpisu, przerobioną człon po członie:
 
 ```bash
@@ -369,11 +392,20 @@ php artisan modsx:make controller Blog/PostController
 
 Wpis `{Studly}` zostawia resztę nazwy w spokoju, bo nazwa klasy jest już zapisana tak, jak generator jej oczekuje.
 
-**Opcje dla generatora idą po `--`** i są przekazywane bez zmian:
+**Opcje generatora piszesz tam, gdzie i tak byś je napisał** — są przekazywane bez zmian:
 
 ```bash
-php artisan modsx:make controller Blog/PostController -- --resource --model=Post
-php artisan modsx:make model Blog/Post -- -mfs
+php artisan modsx:make controller Blog/PostController --resource --model=Post
+php artisan modsx:make model Blog/Post -fs
+php artisan modsx:make component blog.alert --view
+```
+
+`modsx:make` ma dokładnie jedną własną opcję, `--dry-run`. Wszystko, czego nie rozpoznaje, należy do generatora i jest przekazywane dalej — dlatego dla `make:livewire` ani żadnego innego pakietu nie trzeba niczego deklarować.
+
+`--` nadal działa i jest sposobem na opcję generatora, która koliduje z naszą:
+
+```bash
+php artisan modsx:make controller Blog/PostController -- --dry-run
 ```
 
 **Moduł oddzielasz `/` albo `.`** — tym, co lepiej czyta się z danym generatorem. Nazwę widoku w dokumentacji Laravela pisze się kropkami, więc tutaj pisz ją tak samo: małymi literami, dokładnie jak wpisałbyś ją do `make:view`:
@@ -520,7 +552,7 @@ php artisan modsx:list --json
  UserProfile   2             -       -         -
 ```
 
-Moduł pojawia się na liście, jeśli istnieje **którykolwiek** z jego katalogów.
+Moduł pojawia się na liście, jeśli istnieje **którykolwiek z jego katalogów** — moduł to zbiór katalogów i to one go tworzą. Pliki i migracje nazwane od modułu do niego należą i są liczone w kolumnach powyżej, ale go nie powołują do istnienia: `config/modsx-blog.php` bez żadnego katalogu `modsx-blog` jest zgłaszany przez `modsx:doctor` jako nazywający nieistniejący moduł, a `modsx:backup Blog` powie to samo.
 
 ### `modsx:path`
 
@@ -584,7 +616,7 @@ php artisan modsx:backuplist --json
 
 ```
  Blog
- Version   Created                     Directories   Comment
+ Version   Created                     Directories   Files   Archived   Comment
  0001      2026-08-20T09:14:02+02:00   2             -
  0002      2026-08-21T17:40:55+02:00   2             przed przejściem na repository pattern
 ```
@@ -643,6 +675,7 @@ php artisan modsx:restore Blog          # najnowsza wersja
 php artisan modsx:restore Blog 0003     # konkretna wersja
 php artisan modsx:restore               # interaktywnie
 php artisan modsx:restore Blog --json
+php artisan modsx:restore Blog 0003 --force   # bez pytania, do skryptów
 ```
 
 Kolejność działań:
@@ -667,6 +700,7 @@ php artisan modsx:prune                          # wszystkie moduły, domyślna 
 php artisan modsx:prune Blog --keep=5
 php artisan modsx:prune --keep=3 --dry-run       # pokazuje plan, nic nie zmienia
 php artisan modsx:prune --dry-run --json         # plan w formacie JSON, do CI
+php artisan modsx:prune Blog --keep=3 --force    # bez pytania, do skryptów
 ```
 
 Wypisuje dokładnie, które wersje znikną, i dopiero pyta. Najnowsza wersja nie jest usuwana nigdy, niezależnie od `--keep`.
@@ -692,6 +726,26 @@ Porównywana jest zawartość plików, a nie nazwy katalogów, więc moduł, w k
 ```bash
 php artisan modsx:diff Blog --summary   # same liczby, bez listy plików
 ```
+
+#### Dwie wersje względem siebie
+
+Podaj drugą wersję, a aplikacja całkowicie wypada z porównania — porównywane są obie wersje ze sobą:
+
+```bash
+php artisan modsx:diff Blog 0002 0004
+```
+
+Pierwsza wersja jest punktem odniesienia, druga tym, z czym ją porównujemy — dokładnie tak, jak się to czyta na głos: *co stało się z Blogiem między `0002` a `0004`*. Trzy grupy zachowują nazwy i zmieniają znaczenie:
+
+- **Dodane** — tylko w `0004`; pojawiły się po `0002`.
+- **Zmienione** — są w obu wersjach, ale zawartość się różni.
+- **Usunięte** — tylko w `0002`; do `0004` już ich nie ma.
+
+Zamiana argumentów miejscami daje to samo porównanie widziane z drugiej strony: co było dodane, staje się tym, czego brakuje. W żadną stronę nie ma tu przywracania, więc nic nie jest opisane w jego kategoriach.
+
+W tym trybie katalog roboczy nie jest w ogóle czytany, więc odpowiedź jest ta sama niezależnie od tego, w jakim stanie jest w tej chwili aplikacja.
+
+`--summary` i `--json` działają również tutaj. W JSON-ie zamiast `version` pojawiają się `from` i `to`, więc skrypt rozpozna tryb po samym kształcie odpowiedzi.
 
 Warto uruchomić przed `modsx:restore` — pokazuje dokładnie, co się za chwilę straci.
 
@@ -761,21 +815,30 @@ return [
         'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea', '.vscode',
     ],
 
-    // Co tworzy modsx:scaffold. Oba placeholdery pochodzą z jednej nazwy,
-    // którą wpisujesz — i to właśnie zapobiega rozjechaniu się obu form.
+    // Co tworzy modsx:scaffold, gdy sam nie wskażesz katalogów. Oba
+    // placeholdery pochodzą z jednej nazwy, którą wpisujesz — i to właśnie
+    // zapobiega rozjechaniu się obu form. Opublikowany plik niesie pod spodem
+    // dłuższą listę, zakomentowaną — Livewire, serwisy, form requesty,
+    // fabryki, seedery, testy, resources/css, resources/js, komponenty —
+    // więc odkomentowujesz to, co Twoje moduły faktycznie mają.
     'scaffold' => [
         'app/Http/Controllers/{Studly}',
         'app/Models/{Studly}',
         'resources/views/{kebab}',
     ],
 
-    // Jak modsx:make wpisuje moduł w nazwę przekazywaną generatorowi
-    // Laravela. '*' to reguła dla wszystkiego, czego nie ma na liście.
+    // Co modsx:make przekazuje każdemu generatorowi. Wartość sama w sobie
+    // uruchamia generator o tej nazwie; para uruchamia generator, który
+    // wskażesz, z modułem umieszczonym w jednym z katalogów aplikacji.
     'generators' => [
         '*' => '{Studly}/',
         'view' => '{kebab}/',
         'config' => '{kebab}-',
         'migration' => '{snake}_',
+
+        'layout' => ['view', 'layouts/{kebab}/'],
+        'page' => ['view', 'pages/{kebab}/'],
+        'partial' => ['view', 'partials/{kebab}/'],
     ],
 
     // 4 daje 0001, 0002, ...

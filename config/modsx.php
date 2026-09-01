@@ -19,9 +19,15 @@ return [
         'app', 'resources', 'routes', 'database', 'config', 'lang', 'public', 'tests',
     ],
 
-    // Never descended into, wherever they appear under a scan path.
+    // Never descended into, wherever they appear under a scan path. A bare
+    // name matches a directory of that name at any depth; a name with a slash
+    // matches that shape of path below a scanned directory.
+    //
+    // These are not idle: "storage" is what keeps discovery out of the
+    // public/storage symlink, and "build" out of whatever the asset bundler
+    // wrote there - both live under public/, which is scanned.
     'exclude' => [
-        'vendor', 'node_modules', 'storage', 'bootstrap/cache', '.git', '.idea',
+        'vendor', 'node_modules', 'storage', 'build', 'bootstrap/cache', '.git', '.idea',
     ],
 
     // Directories `modsx:scaffold` creates for a new module. Both placeholders

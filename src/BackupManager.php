@@ -50,7 +50,7 @@ class BackupManager
         $paths = $this->locator->paths($name);
 
         if ($paths === []) {
-            throw ModsxException::moduleNotFound($name->studly);
+            throw $this->nothingToActOn($name);
         }
 
         $files = $this->locator->files($name);
@@ -148,6 +148,33 @@ class BackupManager
     }
 
     /**
+     * The filename modsx:export writes, and modsx:prune removes with its
+     * version. One place, so the two cannot disagree.
+     */
+    private function exportName(ModuleName $name, string $version): string
+    {
+        return $name->studly.'-'.$version.'.zip';
+    }
+
+    /**
+     * Why there is nothing to back up or remove.
+     *
+     * A module is a set of directories, so no directory means no module. But
+     * "not found" reads as nonsense to someone looking at config/modsx-blog.php,
+     * and that case has an answer worth giving: the file belongs to a module
+     * rather than making one, which is the same thing modsx:doctor says when it
+     * lists files naming a module that does not exist.
+     */
+    private function nothingToActOn(ModuleName $name): ModsxException
+    {
+        $files = $this->locator->files($name);
+
+        return $files === []
+            ? ModsxException::moduleNotFound($name->studly)
+            : ModsxException::moduleIsOnlyFiles($name->studly, $files);
+    }
+
+    /**
      * The newest version's number when the module is byte-for-byte identical
      * to it, or null when there is nothing to compare against or it differs.
      *
@@ -197,7 +224,7 @@ class BackupManager
         $paths = $this->locator->paths($name);
 
         if ($paths === []) {
-            throw ModsxException::moduleNotFound($name->studly);
+            throw $this->nothingToActOn($name);
         }
 
         $files = $this->locator->files($name);
@@ -434,7 +461,11 @@ class BackupManager
         }
 
         $source = $this->backups->versionPath($name, $version);
-        $target = $source.'.zip';
+
+        // Named for the module as well as the version. A zip is the form a
+        // module travels in, and "0002.zip" says nothing at all once it has
+        // been copied anywhere else.
+        $target = $this->backups->pathFor($name).'/'.$this->exportName($name, $version);
         $staging = $target.'.tmp-'.bin2hex(random_bytes(6));
 
         $zip = new ZipArchive;
@@ -585,12 +616,57 @@ class BackupManager
                 File::deleteDirectory($this->backups->versionPath($name, $version));
 
                 // A version's exported zip (if one was ever made) is a
-                // derived artifact of that version - it goes with it.
+                // derived artifact of that version - it goes with it. The
+                // older name is swept too, so a tree written before exports
+                // carried the module name does not keep them for ever.
+                File::delete($this->backups->pathFor($name).'/'.$this->exportName($name, $version));
                 File::delete($this->backups->versionPath($name, $version).'.zip');
             }
         }
 
         return $removable;
+    }
+
+    /**
+     * The paths a manifest lists, once each has been shown to stay inside the
+     * project.
+     *
+     * Restoring a version writes to base_path() of everything the manifest
+     * names, and a manifest is not always ours: modsx:import takes one out of
+     * a zip that somebody else built, and modsx:export is documented as the
+     * way a module travels between projects. An entry of "../../.env" would be
+     * written exactly there.
+     *
+     * A bad entry stops the whole version rather than being quietly dropped.
+     * Skipping it would restore a module missing a piece, and say nothing.
+     *
+     * @param  array<mixed>  $paths
+     * @return list<string>
+     *
+     * @throws ModsxException
+     */
+    private static function safePaths(array $paths, string $version): array
+    {
+        $safe = [];
+
+        foreach (array_filter($paths, 'is_string') as $path) {
+            $normalised = str_replace('\\', '/', $path);
+
+            if (
+                $normalised === ''
+                || str_contains($normalised, '..')
+                || str_starts_with($normalised, '/')
+                // A Windows drive letter is absolute too, and survives a
+                // manifest written on one platform and read on another.
+                || preg_match('#^[A-Za-z]:#', $normalised) === 1
+            ) {
+                throw ModsxException::unsafeManifestPath($path, $version);
+            }
+
+            $safe[] = $normalised;
+        }
+
+        return $safe;
     }
 
     /**
@@ -610,7 +686,7 @@ class BackupManager
         $manifest = $this->backups->manifest($name, $version);
 
         if (is_array($manifest['paths'] ?? null) && $manifest['paths'] !== []) {
-            return array_values(array_filter($manifest['paths'], 'is_string'));
+            return self::safePaths($manifest['paths'], $version);
         }
 
         $source = $this->backups->versionPath($name, $version);
@@ -655,7 +731,7 @@ class BackupManager
             return [];
         }
 
-        return array_values(array_filter($manifest['files'], 'is_string'));
+        return self::safePaths($manifest['files'], $version);
     }
 
     /**
@@ -672,7 +748,7 @@ class BackupManager
             return [];
         }
 
-        return array_values(array_filter($manifest['archived'], 'is_string'));
+        return self::safePaths($manifest['archived'], $version);
     }
 
     /**

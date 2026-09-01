@@ -333,11 +333,11 @@ it('removes a pruned version\'s exported zip along with it', function () {
 
     $this->makeBackupVersion('Blog', '0002');
 
-    expect(File::exists($this->root.'/modsx-backups/Blog/0001.zip'))->toBeTrue();
+    expect(File::exists($this->root.'/modsx-backups/Blog/Blog-0001.zip'))->toBeTrue();
 
     $manager->prune('Blog', keep: 1);
 
-    expect(File::exists($this->root.'/modsx-backups/Blog/0001.zip'))->toBeFalse();
+    expect(File::exists($this->root.'/modsx-backups/Blog/Blog-0001.zip'))->toBeFalse();
 });
 
 it('changes nothing on a dry run', function () {
@@ -366,7 +366,7 @@ it('exports a version to a zip next to it, containing the manifest and every bac
     $root = str_replace('\\', '/', $this->root);
 
     expect($result['version'])->toBe('0001')
-        ->and($result['path'])->toBe($root.'/modsx-backups/Blog/0001.zip')
+        ->and($result['path'])->toBe($root.'/modsx-backups/Blog/Blog-0001.zip')
         ->and(File::exists($result['path']))->toBeTrue()
         ->and($result['size_bytes'])->toBeGreaterThan(0);
 
@@ -470,4 +470,22 @@ it('leaves no staging directory behind after import', function () {
     );
 
     expect($leftovers)->toBeEmpty();
+});
+
+it('explains itself when a module is only files', function () {
+    // A module is a set of directories; a file named for one belongs to it
+    // rather than making it - which is why modsx:doctor calls such a file
+    // unclaimed. Saying only "not found" would be baffling with the file
+    // sitting right there.
+    $this->makeFile('config/modsx-reports.php', 'x');
+
+    expect(fn () => app(BackupManager::class)->backup('Reports'))
+        ->toThrow(ModsxException::class, 'has no directories, only files')
+        ->and(fn () => app(BackupManager::class)->delete('Reports'))
+        ->toThrow(ModsxException::class, 'config/modsx-reports.php');
+});
+
+it('still says plainly when there is nothing at all', function () {
+    expect(fn () => app(BackupManager::class)->backup('Nowhere'))
+        ->toThrow(ModsxException::class, 'was not found in the application');
 });

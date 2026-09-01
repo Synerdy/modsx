@@ -67,6 +67,16 @@ it('fails as json when the named module has no backups', function () {
 });
 
 it('removes a pruned version\'s exported zip along with it', function () {
+    File::put($this->root.'/modsx-backups/Blog/Blog-0001.zip', 'zip contents');
+
+    $this->artisan('modsx:prune Blog --keep=2 --force')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/modsx-backups/Blog/Blog-0001.zip'))->toBeFalse();
+});
+
+it('sweeps a zip left under the name exports used to carry', function () {
+    // Trees written before the module name was part of it would otherwise keep
+    // those zips for ever, since nothing else ever looks at them again.
     File::put($this->root.'/modsx-backups/Blog/0001.zip', 'zip contents');
 
     $this->artisan('modsx:prune Blog --keep=2 --force')->assertExitCode(0);

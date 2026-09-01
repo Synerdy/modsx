@@ -5,7 +5,100 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-09-02
+
+### Added
+
+- **`modsx:diff` compares two versions with each other.**
+  `modsx:diff Blog 0002 0004` leaves the application out of it and answers
+  what happened to the module between those two backups. The version named
+  first is the baseline in both modes, so `modsx:diff Blog 0002` and
+  `modsx:diff Blog 0002 0004` ask the same question from the same starting
+  point and only the other side moves; swapping the arguments gives the same
+  comparison seen from the other end. The wording follows: between two
+  versions no restore is in sight, so the three groups are no longer described
+  by what a restore would do to them. The JSON carries `from` and `to` in
+  place of `version`, which is how a script tells the two modes apart.
+
+- **`modsx:backuplist` counts files and archived migrations.** A version has
+  held both since 0.3.0, so a listing of its directories alone described less
+  than half of what was in it.
+
+### Changed
+
+- **A generator's options no longer need `--` in front of them.**
+  `modsx:make component blog.alert --view` works, where it used to be
+  `modsx:make component blog.alert -- --view` and anything else was refused
+  with Symfony's `The "--view" option does not exist` - a message that says
+  nothing about the separator you forgot. Which is easy to forget: `--resource`,
+  `-m`, `--view` and `--api` come up constantly.
+
+  `modsx:make` answers to one option of its own, `--dry-run`. It stops Symfony
+  rejecting what it does not recognise and sorts the raw tokens itself, so
+  everything else goes to the generator - which is also why a generator from
+  any package needs nothing declared. Writing `--` still works, and is how to
+  reach a generator option that collides with ours.
+
+  The cost, stated plainly: a misspelling of `--dry-run` is no longer caught by
+  Symfony. It is checked for by name instead, and answered with "Did you mean
+  --dry-run?" rather than forwarded to a generator that would blame itself.
+
+- **An exported archive is named after its module: `Blog-0002.zip`.** The old
+  name, `0002.zip`, said nothing once the file had been moved or mailed
+  anywhere. `modsx:prune` removes both names, so an archive written under the
+  old one is still swept along with the version it belongs to rather than left
+  behind for good.
+
+- **`modsx:backup` explains itself when a module has files but no directories.**
+  It still refuses - a module is a set of directories, and that is what the
+  unclaimed-file check rests on - but it now names the files it did find and
+  says why they are not enough, instead of reporting the module as missing.
+
+- `public/build` joins the default `exclude` list, so a compiled asset bundle
+  is not walked while looking for a module's directories.
+
+### Security
+
+- **A manifest can no longer place files outside the project.** `modsx:import`
+  takes the version number and the path list out of a manifest that somebody
+  else wrote, and neither was checked. A version of `../../..` and a path of
+  `../../escaped` were both reproduced writing outside the project root before
+  being fixed. The version is now validated in the one place it becomes a path,
+  and a manifest path is refused if it escapes with `..`, is absolute, or
+  carries a drive letter. (`ZipArchive::extractTo()` was never the way in - it
+  sanitises entry names itself, which was verified rather than assumed.)
+
+### Documentation
+
+- Named a generator from another package concretely, `modsx:make livewire
+  Blog/Alert` among them, and corrected the sentence that read as though such
+  a generator needed an entry adding. It does not: `*` is already the right
+  form for any class, and an entry is for when `*` is *wrong*.
+
+- The migration example carries a verb, `..._modsx_blog_create_posts_table.php`,
+  matching what `make:migration` actually produces.
+
+- `modsx:list` says outright that directories are what make a module, while
+  files and migrations belong to one without bringing it into being.
+
+- `--force` is documented for `modsx:restore` and `modsx:prune`.
+
+- The configuration block matches the shipped `config/modsx.php` again, `layout`,
+  `page` and `partial` included.
+
+- An example built a model with `-mfs`, two lines above the warning against
+  exactly that; it now reads `-fs`.
+
+- **An "Upgrading" section**, because a new minor of a `0.x` package does not
+  arrive with a plain `composer update`: Composer reads `^0.6.1` as
+  `>=0.6.1 <0.7.0`, so the constraint has to be asked for by name. Said once,
+  in the place where people look for it, rather than left to be rediscovered.
+
+### Continuous integration
+
+- The workflow rebuilds `docs/` and fails if the result differs from what is
+  committed, and checks that the two READMEs stay in step - same headings, same
+  number of code blocks, same number of table rows.
 
 ## [0.6.0] - 2026-09-01
 

@@ -92,3 +92,73 @@ it('fails when the requested version does not exist', function () {
 
     $this->artisan('modsx:diff Blog 9999 --json')->assertExitCode(1);
 });
+
+it('compares two backup versions with each other', function () {
+    app(BackupManager::class)->backup('Blog');
+
+    File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
+    File::put($this->root.'/resources/views/modsx-blog/show.blade.php', 'new');
+    File::delete($this->root.'/app/Http/Controllers/ModsxBlog/PostController.php');
+
+    app(BackupManager::class)->backup('Blog');
+
+    $output = json_decode(artisanOutput('modsx:diff Blog 0001 0002 --json'), true);
+
+    expect($output['from'])->toBe('0001')
+        ->and($output['to'])->toBe('0002')
+        ->and($output)->not->toHaveKey('version')
+        ->and($output['added'])->toBe(['resources/views/modsx-blog/show.blade.php'])
+        ->and($output['modified'])->toBe(['resources/views/modsx-blog/index.blade.php'])
+        ->and($output['removed'])->toBe(['app/Http/Controllers/ModsxBlog/PostController.php']);
+});
+
+it('reads the two versions in the order they were given', function () {
+    // The first version is the baseline, so naming them the other way round is
+    // the same comparison seen from the other end: what was added becomes what
+    // is gone. Without this the argument order would carry no meaning at all.
+    app(BackupManager::class)->backup('Blog');
+
+    File::put($this->root.'/resources/views/modsx-blog/show.blade.php', 'new');
+
+    app(BackupManager::class)->backup('Blog');
+
+    $forwards = json_decode(artisanOutput('modsx:diff Blog 0001 0002 --json'), true);
+    $backwards = json_decode(artisanOutput('modsx:diff Blog 0002 0001 --json'), true);
+
+    expect($forwards['added'])->toBe(['resources/views/modsx-blog/show.blade.php'])
+        ->and($forwards['removed'])->toBe([])
+        ->and($backwards['added'])->toBe([])
+        ->and($backwards['removed'])->toBe(['resources/views/modsx-blog/show.blade.php']);
+});
+
+it('ignores the working tree when two versions are given', function () {
+    app(BackupManager::class)->backup('Blog');
+    app(BackupManager::class)->backup('Blog');
+
+    File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'changed after both backups');
+
+    $versions = json_decode(artisanOutput('modsx:diff Blog 0001 0002 --json'), true);
+    $application = json_decode(artisanOutput('modsx:diff Blog 0002 --json'), true);
+
+    expect($versions['identical'])->toBeTrue()
+        ->and($application['identical'])->toBeFalse();
+});
+
+it('does not describe a version-to-version comparison as a restore', function () {
+    app(BackupManager::class)->backup('Blog');
+
+    File::put($this->root.'/resources/views/modsx-blog/show.blade.php', 'new');
+
+    app(BackupManager::class)->backup('Blog');
+
+    $output = artisanOutput('modsx:diff Blog 0001 0002');
+
+    expect($output)->toContain('Added in 0002')
+        ->and($output)->not->toContain('restore would');
+});
+
+it('fails when the second version does not exist', function () {
+    app(BackupManager::class)->backup('Blog');
+
+    $this->artisan('modsx:diff Blog 0001 9999 --json')->assertExitCode(1);
+});

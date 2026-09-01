@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 use Modsx\BackupManager;
+use Modsx\BackupRepository;
 
 beforeEach(function () {
     $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
@@ -49,4 +50,32 @@ it('reports the exported path in the human-readable output', function () {
     $output = artisanOutput('modsx:export Blog');
 
     expect($output)->toContain('Exported [Blog] version 0001');
+});
+
+it('leaves version numbering alone, zip or no zip', function () {
+    // A version is a directory; the zip beside it is a derived artefact. If
+    // listing ever picked the file up, the zip would read as a version and
+    // the next backup would be numbered over the top of a real one.
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $manager->backup('Blog');
+    $manager->export('Blog', '0002');
+
+    $backups = app(BackupRepository::class);
+
+    expect(File::exists($this->root.'/modsx-backups/Blog/Blog-0002.zip'))->toBeTrue()
+        ->and($backups->versions('Blog'))->toBe(['0001', '0002'])
+        ->and($backups->nextVersion('Blog'))->toBe('0003');
+});
+
+it('does not report the zip as a stray directory', function () {
+    // modsx:doctor lists what sits in a backup tree without being a version.
+    // The zip belongs there, so it must not be named.
+    $manager = app(BackupManager::class);
+    $manager->backup('Blog');
+    $manager->export('Blog');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['stray_backup_directories'])->toBe([]);
 });
