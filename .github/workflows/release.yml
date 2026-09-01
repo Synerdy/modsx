@@ -1,0 +1,103 @@
+name: release
+
+# Pushing a tag publishes to Packagist immediately, but a GitHub Release is a
+# separate object that has to be created on purpose - so the tag can be out in
+# the world while the Releases page still shows the previous version. This
+# closes that gap.
+#
+# It does not replace notes written by hand. Those explain why a change was
+# made; a changelog records what changed, and the two are not the same thing.
+# So a release that already exists is left exactly as it is, and this only
+# steps in when nobody has written one.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build a release for, e.g. v0.7.0
+        required: true
+      title:
+        description: Release title (defaults to the tag itself)
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      # Full history, because working out whether this tag is the newest one
+      # means comparing it against every other tag.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Leave an existing release alone
+        id: existing
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists - not touching it."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Matched on the literal heading rather than a pattern, so a version
+      # number is never read as a regular expression - "0.7.0" would otherwise
+      # match "0x7y0" as well.
+      - name: Take the notes out of the changelog
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          version="${TAG#v}"
+
+          awk -v ver="$version" '
+            index($0, "## [" ver "]") == 1 { found = 1; next }
+            found && index($0, "## [") == 1 { exit }
+            found { print }
+          ' CHANGELOG.md | sed '/./,$!d' > notes.md
+
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no '## [$version]' section. Rename the Unreleased heading to '## [$version] - $(date +%F)' and tag again."
+            exit 1
+          fi
+
+          echo "Release notes, $(wc -l < notes.md) lines:"
+          cat notes.md
+
+      # Backfilling an old tag must not steal the "Latest" badge from a newer
+      # release, so it is claimed only by the highest tag there is.
+      - name: Create the release
+        if: steps.existing.outputs.exists == 'false'
+        run: |
+          newest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+
+          if [ "$newest" = "$TAG" ]; then
+            latest="--latest"
+          else
+            latest="--latest=false"
+            echo "::notice::$newest is newer than $TAG, so this release is not marked latest."
+          fi
+
+          # A tag carrying a suffix - v1.0.0-beta.1 - is not a stable release.
+          case "$TAG" in
+            *-*) prerelease="--prerelease" ;;
+            *)   prerelease="" ;;
+          esac
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "${TITLE:-$TAG}" \
+            --notes-file notes.md \
+            $latest $prerelease
+        env:
+          TITLE: ${{ inputs.title }}
