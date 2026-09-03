@@ -33,6 +33,8 @@ class BackupManager
         private readonly ModuleLocator $locator,
         private readonly BackupRepository $backups,
         private readonly ModuleDiffer $differ,
+        private readonly ModuleState $state,
+        private readonly SnapshotRepository $snapshots,
     ) {}
 
     /**
@@ -60,6 +62,11 @@ class BackupManager
             $unchanged = $this->matchesNewestVersion($name, $paths, $files);
 
             if ($unchanged !== null) {
+                // Nothing was written, but the tree does match this version,
+                // which is exactly what the pointer records - and a run that
+                // skipped is the cheapest chance to correct a stale one.
+                $this->state->record($name, $unchanged, 'backup');
+
                 return [
                     'version' => $unchanged,
                     'paths' => $paths,
@@ -136,6 +143,8 @@ class BackupManager
 
             throw $exception;
         }
+
+        $this->state->record($name, $version, 'backup');
 
         return [
             'version' => $version,
@@ -237,6 +246,11 @@ class BackupManager
         foreach ($files as $relative) {
             File::delete(base_path($relative));
         }
+
+        // The pointer describes a working tree, and there is no longer one to
+        // describe. The versions stay where they are, so the module can be
+        // restored and will point somewhere again.
+        $this->state->forget($name);
 
         return [
             'paths' => $paths,
@@ -376,6 +390,8 @@ class BackupManager
             File::deleteDirectory($staging);
             File::deleteDirectory($previous);
         }
+
+        $this->state->record($name, $version, 'restore');
 
         return [
             'version' => $version,
@@ -584,6 +600,10 @@ class BackupManager
             throw $exception;
         }
 
+        // Deliberately no state recorded: importing adds a version to the
+        // backup tree and never touches the application, so the working tree
+        // did not come from it. Saying otherwise would be the one kind of lie
+        // the pointer must not tell. modsx:restore is what puts it to use.
         return [
             'module' => $name->studly,
             'version' => $version,
@@ -611,6 +631,18 @@ class BackupManager
 
         $removable = array_slice($versions, 0, max(0, count($versions) - $keep));
 
+        // A snapshot names versions across several modules at once, and one of
+        // them going missing is only discovered at the rollback that needed
+        // it - too late to be useful. They are held back here, the way a tag
+        // keeps a commit from being collected.
+        //
+        // Deliberately with no way to override it from here. Everywhere else
+        // in this package --force means "do not ask me", and letting it also
+        // mean "ignore a safeguard" would let a scripted prune quietly strand
+        // every snapshot that named these versions. Releasing them is
+        // modsx:snapshotprune's job: let the snapshot go, and they follow.
+        $removable = array_values(array_diff($removable, $this->heldFromPrune($name, $keep)));
+
         if (! $dryRun) {
             foreach ($removable as $version) {
                 File::deleteDirectory($this->backups->versionPath($name, $version));
@@ -625,6 +657,29 @@ class BackupManager
         }
 
         return $removable;
+    }
+
+    /**
+     * Versions old enough to prune that a snapshot is holding on to.
+     *
+     * Public because prune must not be the only thing that knows: a listing
+     * that removed fewer versions than the age rule allows has to be able to
+     * say which ones it left, and why, rather than quietly doing less than it
+     * appeared to offer.
+     *
+     * @return list<string>
+     *
+     * @throws ModsxException
+     */
+    public function heldFromPrune(ModuleName|string $name, int $keep): array
+    {
+        $name = ModuleName::make($name);
+        $versions = $this->backups->versions($name);
+
+        $removable = array_slice($versions, 0, max(0, count($versions) - max(1, $keep)));
+        $held = $this->snapshots->heldVersions()[$name->studly] ?? [];
+
+        return array_values(array_intersect($removable, $held));
     }
 
     /**

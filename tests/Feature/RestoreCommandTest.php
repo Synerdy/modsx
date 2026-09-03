@@ -68,3 +68,51 @@ it('fails when the requested version does not exist', function () {
 
     $this->artisan('modsx:restore Blog 9999 --force')->assertExitCode(1);
 });
+
+it('removes a file added inside a module directory since the version', function () {
+    app(BackupManager::class)->backup('Blog');
+
+    $this->makeFile('resources/views/modsx-blog/extra.blade.php', 'added later');
+
+    app(BackupManager::class)->restore('Blog', '0001');
+
+    expect(File::exists($this->root.'/resources/views/modsx-blog/extra.blade.php'))->toBeFalse();
+});
+
+it('removes a standalone file of the module the version never held', function () {
+    // Restore takes down everything the locator attributes to the module right
+    // now, not only what the manifest lists - otherwise a file added since
+    // would survive a restore and the result would match no version at all.
+    app(BackupManager::class)->backup('Blog');
+
+    $this->makeFile('routes/modsx-blog.php', 'added later');
+
+    app(BackupManager::class)->restore('Blog', '0001');
+
+    expect(File::exists($this->root.'/routes/modsx-blog.php'))->toBeFalse();
+});
+
+it('leaves a file belonging to no module alone', function () {
+    app(BackupManager::class)->backup('Blog');
+
+    $this->makeFile('config/unrelated.php', 'nobody owns this');
+
+    app(BackupManager::class)->restore('Blog', '0001');
+
+    expect(File::exists($this->root.'/config/unrelated.php'))->toBeTrue();
+});
+
+it('keeps what it removed in the backup the command takes first', function () {
+    // The removal is only safe because it is not the last copy: the command
+    // backs the current state up before restoring, so a file swept away by a
+    // restore is one version behind, not gone.
+    app(BackupManager::class)->backup('Blog');
+
+    $this->makeFile('resources/views/modsx-blog/extra.blade.php', 'a whole day of work');
+
+    $this->artisan('modsx:restore Blog 0001 --force')->assertExitCode(0);
+
+    expect(File::exists($this->root.'/resources/views/modsx-blog/extra.blade.php'))->toBeFalse()
+        ->and(File::get($this->root.'/modsx-backups/Blog/0002/resources/views/modsx-blog/extra.blade.php'))
+        ->toBe('a whole day of work');
+});

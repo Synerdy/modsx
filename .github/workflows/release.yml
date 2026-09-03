@@ -79,20 +79,28 @@ jobs:
       - name: Create the release
         if: steps.existing.outputs.exists == 'false'
         run: |
-          newest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
-
-          if [ "$newest" = "$TAG" ]; then
-            latest="--latest"
-          else
-            latest="--latest=false"
-            echo "::notice::$newest is newer than $TAG, so this release is not marked latest."
-          fi
-
           # A tag carrying a suffix - v1.0.0-beta.1 - is not a stable release.
           case "$TAG" in
             *-*) prerelease="--prerelease" ;;
             *)   prerelease="" ;;
           esac
+
+          # Only stable tags are candidates for "newest", for two reasons: a
+          # prerelease cannot hold the Latest badge in GitHub's model at all,
+          # and git's version sort puts v1.0.0-beta.1 above v1.0.0, so leaving
+          # prereleases in would later deny the badge to the stable release
+          # that followed them.
+          newest=$(git tag --list 'v*' --sort=-v:refname | grep -v -- '-' | head -n 1)
+
+          if [ -n "$prerelease" ]; then
+            latest="--latest=false"
+            echo "::notice::$TAG is a prerelease, so it does not claim the Latest badge."
+          elif [ "$newest" = "$TAG" ]; then
+            latest="--latest"
+          else
+            latest="--latest=false"
+            echo "::notice::$newest is newer than $TAG, so this release is not marked latest."
+          fi
 
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \

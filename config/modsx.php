@@ -112,4 +112,23 @@ return [
         'keep' => (int) env('MODSX_PRUNE_KEEP', 5),
     ],
 
+    // Extra dependencies between modules, for `modsx:deps` and `modsx:snapshot`.
+    //
+    // The graph is normally derived by reading a module's own files: a module
+    // called Media appears in other modules' code as "ModsxMedia",
+    // "modsx-media" or "modsx_media" and in no other form, so a reference to it
+    // is something that can be found rather than something you have to
+    // remember to write down here.
+    //
+    // What goes here is only what reading cannot see - a class name assembled
+    // from a string, a listener wired up somewhere else. Entries add edges;
+    // they never replace the ones found in the code, and an edge found in both
+    // places is reported as found, because that is the claim that can be
+    // pointed at.
+    //
+    //     'dependencies' => [
+    //         'Blog' => ['Search'],
+    //     ],
+    'dependencies' => [],
+
 ];

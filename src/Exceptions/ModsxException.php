@@ -233,4 +233,84 @@ class ModsxException extends RuntimeException
             $existing
         ));
     }
+
+    public static function invalidSnapshot(string $id): self
+    {
+        return new self(sprintf(
+            'Invalid snapshot [%s]. A snapshot is a number, as written by every '.
+            'modsx:snapshot run - 0001, 0002 and so on.',
+            $id
+        ));
+    }
+
+    public static function snapshotNotFound(string $id): self
+    {
+        return new self(sprintf('Snapshot [%s] does not exist.', $id));
+    }
+
+    public static function noSnapshots(): self
+    {
+        return new self('No snapshots have been taken yet. Run modsx:snapshot to take one.');
+    }
+
+    /**
+     * A module and version read out of a snapshot that could not have been
+     * written by this package.
+     *
+     * A snapshot file is as editable as any other, and both halves of an entry
+     * become a path: the module names a directory, the version names one
+     * inside it. Neither is trusted on the way back in.
+     */
+    public static function unsafeSnapshotEntry(string $module, string $version, string $id): self
+    {
+        return new self(sprintf(
+            'Snapshot [%s] names module [%s] at version [%s], which is not a module '.
+            'and version this package could have written. Refusing to read it.',
+            $id,
+            $module,
+            $version
+        ));
+    }
+
+    /**
+     * @param  list<array{module: string, version: string}>  $missing
+     */
+    public static function snapshotIncomplete(string $id, array $missing): self
+    {
+        $lines = array_map(
+            static fn (array $row): string => sprintf('%s %s', $row['module'], $row['version']),
+            $missing
+        );
+
+        return new self(sprintf(
+            'Snapshot [%s] cannot be rolled back to: %d of the versions it names are '.
+            'no longer in the backup tree (%s). Nothing has been changed. They were '.
+            'most likely removed by modsx:prune --force.',
+            $id,
+            count($missing),
+            implode(', ', $lines)
+        ));
+    }
+
+    public static function noModules(): self
+    {
+        return new self(
+            'No modules found in the application, so there is nothing to snapshot.'
+        );
+    }
+
+    /**
+     * A rollback that failed part-way and put back what it had already moved.
+     */
+    public static function rollbackReverted(string $id, string $safety, string $reason): self
+    {
+        return new self(sprintf(
+            'Rolling back to snapshot [%s] failed and was undone: %s The modules already '.
+            'restored were put back to where snapshot [%s] found them, which is also the '.
+            'snapshot to roll back to if anything still looks wrong.',
+            $id,
+            rtrim($reason, '.').'.',
+            $safety
+        ));
+    }
 }

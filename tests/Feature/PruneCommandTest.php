@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Modsx\BackupManager;
 use Modsx\BackupRepository;
+use Modsx\SnapshotManager;
 
 beforeEach(function () {
     foreach (['0001', '0002', '0003', '0004', '0005'] as $version) {
@@ -57,7 +59,7 @@ it('reports no backups found as json', function () {
 
     $output = json_decode(artisanOutput('modsx:prune --json'), true);
 
-    expect($output)->toBe(['total' => 0, 'plan' => []]);
+    expect($output)->toBe(['total' => 0, 'plan' => [], 'held' => []]);
 });
 
 it('fails as json when the named module has no backups', function () {
@@ -82,4 +84,32 @@ it('sweeps a zip left under the name exports used to carry', function () {
     $this->artisan('modsx:prune Blog --keep=2 --force')->assertExitCode(0);
 
     expect(File::exists($this->root.'/modsx-backups/Blog/0001.zip'))->toBeFalse();
+});
+
+it('says which versions a snapshot kept it from removing', function () {
+    // Without this the command silently removes fewer versions than the age
+    // rule offered, and the difference reads as a bug rather than a safeguard.
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    app(SnapshotManager::class)->take();
+
+    foreach (['v2', 'v3'] as $contents) {
+        File::put($this->root.'/resources/views/modsx-shop/index.blade.php', $contents);
+        app(BackupManager::class)->backup('Shop');
+    }
+
+    $output = json_decode(artisanOutput('modsx:prune Shop --keep=1 --force --json'), true);
+
+    expect($output['held']['Shop'])->toBe(['0001'])
+        ->and($output['removed']['Shop'] ?? [])->not->toContain('0001');
+});
+
+it('does not claim there is little to prune when a snapshot is the reason', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    app(SnapshotManager::class)->take();
+
+    File::put($this->root.'/resources/views/modsx-shop/index.blade.php', 'v2');
+    app(BackupManager::class)->backup('Shop');
+
+    expect(artisanOutput('modsx:prune Shop --keep=1 --force'))
+        ->toContain('held by a snapshot');
 });

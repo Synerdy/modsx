@@ -241,6 +241,8 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:make {generator} {Module/Name}` | Run one of Laravel's generators with the module filled in |
 | `modsx:scaffold {name} {path?*}` | Create a module's directories, configured or named |
 | `modsx:list` | Modules currently present in the application |
+| `modsx:status {name?}` | Every module: what it is, what it came from, what has moved |
+| `modsx:deps {name?}` | Which modules a module needs, worked out by reading it |
 | `modsx:path {name?}` | Everything belonging to a module |
 | `modsx:backup {name?}` | Copy a module to a new numbered version |
 | `modsx:backuplist {name?}` | Available backup versions |
@@ -251,6 +253,10 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:diff {name?} {version?} {against?}` | Compare against a backup version, or two versions with each other |
 | `modsx:info {name?}` | Show size, file count, and backup history |
 | `modsx:prune {name?}` | Remove old versions, keeping the newest |
+| `modsx:snapshot {name?}` | Record the version every module is at, as one snapshot |
+| `modsx:snapshotlist` | Snapshots that have been taken |
+| `modsx:rollback {snapshot?}` | Put the whole project back to a snapshot |
+| `modsx:snapshotprune` | Remove old snapshots, keeping the newest |
 | `modsx:doctor` | Check for naming problems and orphaned backups |
 
 ### `modsx:make`
@@ -554,6 +560,114 @@ php artisan modsx:list --json
 
 A module appears here if **any of its directories** exists — a module is a set of directories, and that is what makes one. Files and migrations named for a module belong to it, and are counted in the columns above, but they do not bring one into being: a `config/modsx-blog.php` with no `modsx-blog` directory anywhere is reported by `modsx:doctor` as naming a module that does not exist, and `modsx:backup Blog` will say the same.
 
+### `modsx:status`
+
+```bash
+php artisan modsx:status
+php artisan modsx:status Blog
+php artisan modsx:status --json
+```
+
+```
+ Module    State       Current   Latest backup   Changes
+ Blog      modified    0001      0002            1
+ Shop      clean       0001      0001            0
+ Billing   untracked   -         -               -
+ Admin     missing     -         0001            -
+```
+
+The shape is the one version control already taught you. **Current** is the version the working tree came from, so **Changes** counts what has happened since — not the distance to the newest backup, which is a different question and gets its own column.
+
+| State | Meaning |
+|---|---|
+| `clean` | In the application, identical to the version it came from |
+| `modified` | In the application, differs from it — `Changes` says by how many files |
+| `untracked` | In the application, never backed up |
+| `missing` | Backups exist, but the module is not in the application |
+
+A module can be `clean` and still be behind, and that combination is the one worth being told about:
+
+```
+ WARN  [Blog] is working from 0001, but 0002 exists. Backing up now would build the next version on the older one.
+```
+
+#### Where `Current` comes from
+
+`modsx:backup` and `modsx:restore` record the version in `modsx-backups/Blog/modsx-state.json`. `modsx:import` deliberately records nothing: it adds a version to the backup tree without touching the application, so the working tree did not come from it.
+
+This file **never decides whether a module exists**. Discovery stays what it has always been, a directory named by the convention. A module you made with `mkdir` has no record here and is reported `untracked` — the truthful answer rather than a gap. Delete every one of these files and the package behaves exactly as it did before they existed; only the `Current` column goes blank.
+
+It sits beside the versions it points at because it means nothing without them. Prune the version it names and `modsx:doctor` reports it, while `modsx:status` carries on by measuring against the newest version instead.
+
+If you commit your backup tree, keep this file out of it — which version *your* working copy came from is a local fact, not a shared one:
+
+```gitignore
+modsx-backups/*/modsx-state.json
+```
+
+### `modsx:deps`
+
+```bash
+php artisan modsx:deps          # every module
+php artisan modsx:deps Blog     # one module, and what a snapshot of it would hold
+php artisan modsx:deps --json
+```
+
+```
+ INFO  Blog
+  Media ......................... found in the code
+  User .......................... found in the code
+
+ INFO  Media
+  needs nothing else
+```
+
+The graph is **derived, not declared.** A module called `Media` appears in other modules' code as `ModsxMedia`, `modsx-media` or `modsx_media` and in no other form, so a reference to it is something that can be found rather than something you have to remember to write down.
+
+That is the whole argument for reading it rather than keeping a list. A hand-kept list of requirements is a list nothing checks: add a reference to another module, forget to update the list, and a snapshot built from it is quietly incomplete — which is worse than no snapshot, because it is trusted.
+
+| Where it looks | What counts as a reference |
+|---|---|
+| `use App\Models\ModsxMedia\Asset;` | the Studly form, anywhere in PHP |
+| `@include('modsx-media.player')` | the kebab form, in any file |
+| `config('modsx-media.disk')` | the same form, in any call |
+| `$table = 'modsx_media_assets';` | the snake form, table names included |
+
+A mention inside a comment or a string counts too. That is deliberate: the mistake it causes is a snapshot holding one module too many, which costs a directory, while the opposite mistake breaks a rollback.
+
+Name boundaries are respected, so `ModsxBlogPost` is a reference to `BlogPost` and not also to `Blog` — the same rule that decides which module owns a file. The one exception is the snake form, where a suffix is ordinary: `modsx_media_assets` is Media's table, so an underscore is allowed to follow it.
+
+Given modules `Blog`, `BlogPost`, `Media` and `MediaAssets`, this is what a line inside `Blog` resolves to:
+
+| Line found in Blog | Edge to |
+|---|---|
+| `use App\Models\ModsxMedia\Asset;` | `Media` |
+| `use App\Models\ModsxMediaAssets\Row;` | `MediaAssets` — not `Media` |
+| `@include('modsx-media.player')` | `Media` |
+| `@include('modsx-media-assets.row')` | `MediaAssets` — not `Media` |
+| `view('modsx-blog-post.comment')` | `BlogPost` — not `Blog` |
+| `config('modsx-media.disk')` | `Media` |
+| `$table = 'modsx_media_assets';` | `Media` **and** `MediaAssets` — the snake form allows a suffix |
+| `// see also ModsxMedia` | `Media` — a comment counts |
+| `use App\Models\ModsxBlog\Post;` inside Blog itself | nothing; a module never needs itself |
+| `use App\Models\ModsxGhost\Thing;` with no Ghost module | nothing; only real modules can be edges |
+
+
+#### What reading cannot see
+
+A class name assembled from a string, a listener wired up somewhere else. Those go in configuration, which **adds** edges and never replaces the ones found in the code:
+
+```php
+// config/modsx.php
+'dependencies' => [
+    'Blog' => ['Search'],
+],
+```
+
+An edge found in both places is reported as *found in the code* — of the two claims, that is the one that can be pointed at.
+
+Modules that depend on one another are listed rather than treated as a fault. A ring can be a deliberate design; the only consequence here is that a snapshot of any one of them holds all of them.
+
 ### `modsx:path`
 
 Shows exactly what Modsx considers part of a module — that is, exactly what a backup would copy. Worth running before your first `modsx:delete`.
@@ -689,6 +803,28 @@ Everything is copied out of the backup **before** the application is touched, so
 
 Anything the version did not contain is gone afterwards — moved aside and never put back. That is what restoring an exact state has to mean, and `modsx:diff` will tell you in advance what it covers.
 
+That covers **everything the module owns right now**, not just what the version's manifest lists — otherwise the result would match no version at all. Say `Blog 0001` was taken, and then you added these:
+
+| Added after the backup | After `modsx:restore Blog 0001` |
+|---|---|
+| `resources/views/modsx-blog/extra.blade.php` | gone — inside a directory the module owns |
+| `routes/modsx-blog.php` | gone — a standalone file the module owns |
+| `app/Models/ModsxBlog/Draft.php` | gone — same, in the Studly form |
+| `config/unrelated.php` | untouched — belongs to no module |
+| `config/modsx-shop.php` | untouched — belongs to `Shop`, not `Blog` |
+
+The removal is only safe because it is never the last copy. Step 1 above backs the current state up first, so a file swept away by a restore is one version behind, not lost:
+
+```bash
+php artisan modsx:restore Blog 0001 --force   # extra.blade.php disappears...
+php artisan modsx:backuplist Blog             # ...into version 0002, taken just now
+php artisan modsx:restore Blog 0002           # and here it is again
+```
+
+The same holds for `modsx:rollback`, which takes a whole safety snapshot before it moves anything.
+
+`modsx:import` is the exception that catches people out: it **never touches the application.** It only unpacks a zip into the backup tree, so nothing in your working copy changes until you restore.
+
 Archived migrations are never restored. They are not read at this step at all.
 
 If the module isn't currently in the application, steps 1 and 3 are skipped and this becomes an **install from backup** — which is how you move a module between projects: copy `modsx-backups/Blog/` across and restore it.
@@ -704,6 +840,215 @@ php artisan modsx:prune Blog --keep=3 --force    # skip the confirmation, for sc
 ```
 
 Lists exactly which versions would go, then asks. The newest version is never removed, whatever `--keep` is set to.
+
+### `modsx:snapshot`
+
+```bash
+php artisan modsx:snapshot                                  # the whole project
+php artisan modsx:snapshot --comment="before the rewrite"
+php artisan modsx:snapshot Blog                             # Blog and everything it needs
+php artisan modsx:snapshot --json
+```
+
+```
+ Module   Version
+ Blog     0002      backed up
+ Media    0001      unchanged
+ User     0001      unchanged
+
+ INFO  Snapshot 0002 taken, holding 3 module(s).
+```
+
+A snapshot records **which version of each module was current at one moment.** It answers the question a per-module backup cannot:
+
+> I can't restore Blog from three weeks ago, because back then it depended on a different User.
+
+It **copies nothing.** The versions it names are already in the backup tree, so what is written is a few hundred bytes of version numbers in `modsx-backups/_snapshots/0002.json`. Copying them would double the disk cost and give one version two places to live.
+
+A module that has not changed since its last backup gets no new version, only another reference to the one it had — so a snapshot of an untouched project writes nothing but the snapshot. That is the point: a snapshot nobody minds taking is one that will be there when it is needed.
+
+Naming a module snapshots that module and its dependency closure, worked out exactly as `modsx:deps` shows it.
+
+### `modsx:snapshotlist`
+
+```bash
+php artisan modsx:snapshotlist
+php artisan modsx:snapshotlist --limit=5
+php artisan modsx:snapshotlist --json
+```
+
+```
+ Snapshot   Created                     Scope           Modules   Comment
+ 0001       2026-09-03T20:42:51+00:00   whole project   3         before the rewrite
+ 0002       2026-09-03T20:42:52+00:00   whole project   3         -
+ 0003       2026-09-03T20:43:01+00:00   Blog            2         -
+```
+
+A snapshot shown in red names a version that is no longer in the backup tree, and can no longer be rolled back to. `modsx:prune` will not cause this — it holds those versions back — so it means the backup tree was edited by hand.
+
+### `modsx:rollback`
+
+```bash
+php artisan modsx:rollback           # the newest snapshot
+php artisan modsx:rollback 0001
+php artisan modsx:rollback 0001 --force
+```
+
+```
+ Module   Current   Snapshot
+ Blog     0002      0001        will move
+ Media    0001      0001        already there
+ User     0001      0001        already there
+```
+
+A separate verb from `modsx:restore` on purpose: restoring is one module and one version, rolling back moves everything at once, and those are not two things anyone should be able to confuse at two in the morning. The plan is shown before the prompt, because the number that matters is not how many modules the snapshot holds but how many are somewhere else right now.
+
+What it guarantees, stated exactly:
+
+| | |
+|---|---|
+| **Checked first** | Every version the snapshot names is confirmed to still exist **before anything is touched**. This is the failure that actually happens, and it is caught while the application is whole. |
+| **A way back** | A snapshot of the current state is taken first, and its number is printed at the end. |
+| **Per module** | Each module is staged and swapped on its own, so a failure inside one leaves that module untouched. |
+| **Between modules** | A failure part-way puts the modules already restored back to where the safety snapshot found them, and says so. |
+
+What it is **not** is a single filesystem transaction — there is no such thing across a dozen directory trees. The last row is compensation, not atomicity, which is why the safety snapshot is named rather than left for you to work out.
+
+It moves **only the modules the snapshot names.** A module created after the snapshot was taken was never part of that moment and is left exactly where it is; a module deleted since is brought back. So the warning above is about files inside a restored module, not about the project as a whole.
+
+`--force` is required in non-interactive use, `--json` included. Machine-readable output is not permission.
+
+**It does not touch your database.** Rolling code back does not roll a schema back, and modsx runs no migrations, in either direction. Archived migrations travel with their module's backup, so what you get back is the files; whether the schema still matches them is yours to judge.
+
+### `modsx:snapshotprune`
+
+```bash
+php artisan modsx:snapshotprune --keep=5
+php artisan modsx:snapshotprune --keep=5 --dry-run
+php artisan modsx:snapshotprune --keep=5 --force
+```
+
+Snapshots hold versions back from `modsx:prune`, so this exists to let one go. Removing a snapshot **removes no versions** — it only stops them being held, so the next `modsx:prune` can consider them again.
+
+#### Snapshots and pruning
+
+`modsx:prune` will not delete a version that a snapshot names, the way a tag keeps a commit from being collected. Without that, a rollback would only discover the loss at the moment it needed the version, which is too late to be useful. It says what it left and why:
+
+```
+ Shop 0001 ....... kept, held by a snapshot
+```
+
+There is no flag to override this. `--force` means *don't ask me* everywhere in this package, and letting it also mean *ignore a safeguard* would let a scripted prune quietly strand every snapshot naming those versions. The way to release them is to let the snapshot go with `modsx:snapshotprune` — after which the next prune considers them again.
+
+A snapshot can still end up naming a version that is gone, if the backup tree is edited by hand. `modsx:doctor` reports that, and `modsx:snapshotprune` clears it.
+
+#### A worked example
+
+Three modules, where `Blog` uses both of the others:
+
+```bash
+php artisan modsx:deps
+```
+
+```
+ INFO  Blog
+  Media ......................... found in the code
+  User .......................... found in the code
+
+ INFO  Media
+  needs nothing else
+
+ INFO  User
+  needs nothing else
+```
+
+Take a snapshot before starting anything risky:
+
+```bash
+php artisan modsx:snapshot --comment="before the payments rewrite"
+```
+
+```
+ Module   Version
+ Blog     0001      backed up
+ Media    0001      backed up
+ User     0001      backed up
+
+ INFO  Snapshot 0001 taken, holding 3 module(s).
+```
+
+Three weeks later, `Blog` and `User` have both moved on. Take another:
+
+```bash
+php artisan modsx:snapshot
+```
+
+```
+ Module   Version
+ Blog     0004      backed up
+ Media    0001      unchanged
+ User     0002      backed up
+
+ INFO  Snapshot 0002 taken, holding 3 module(s).
+```
+
+`Media` was not touched in those three weeks, so no new version was written for it — only another reference to `0001`. That is what makes snapshots cheap enough to take before every risky thing you do.
+
+Now the rewrite has to be abandoned. Restoring Blog on its own would not do it:
+
+```bash
+php artisan modsx:restore Blog 0001     # Blog 0001 beside a User 0002 it never knew
+php artisan modsx:rollback 0001         # the whole moment, as it was
+```
+
+```
+ Module   Current   Snapshot
+ Blog     0004      0001        will move
+ Media    0001      0001        already there
+ User     0002      0001        will move
+
+ WARN  Anything not in the snapshot is replaced by what was. Files added since are moved aside and not put back.
+
+ INFO  Rolled back to snapshot 0001. 3 module(s) restored.
+  The state before this is snapshot ......................................... 0003
+```
+
+Snapshot `0003` is the way back out, taken automatically before anything moved. Changed your mind again:
+
+```bash
+php artisan modsx:rollback 0003
+```
+
+Where things stand at any point:
+
+```bash
+php artisan modsx:status
+php artisan modsx:snapshotlist
+```
+
+```
+ Snapshot   Created                     Scope           Modules   Comment
+ 0001       2026-09-03T09:14:02+00:00   whole project   3         before the payments rewrite
+ 0002       2026-09-24T16:30:55+00:00   whole project   3         -
+ 0003       2026-09-24T16:41:18+00:00   whole project   3         before rolling back to snapshot 0001
+```
+
+And when the backup tree gets large, let the old moments go before pruning versions:
+
+```bash
+php artisan modsx:snapshotprune --keep=5 --dry-run   # see which would go
+php artisan modsx:snapshotprune --keep=5             # let them go
+php artisan modsx:prune --keep=3                     # now these versions are free
+```
+
+| You want | Command |
+|---|---|
+| Just this module back | `modsx:restore Blog 0004` |
+| This module and what it needed then | `modsx:snapshot Blog` first, then `modsx:rollback` |
+| The whole project as it was | `modsx:rollback 0001` |
+| To see what would move first | `modsx:rollback 0001` and read the table before answering |
+| To know what a snapshot would hold | `modsx:deps Blog` |
+
 
 ### `modsx:diff`
 
@@ -787,6 +1132,8 @@ Informational (exit code 0):
 - **Empty module directories** — left by `modsx:scaffold`, or by deleting the last file in one by hand. `--fix` removes them. The check looks for files including hidden ones, so a directory kept alive on purpose with a `.gitkeep` is never touched — only a directory with nothing in it at all, at any depth, is reported.
 - **Files naming a module that doesn't exist**, such as `config/modsx-blog-admin.php` with no `BlogAdmin` module. The file keeps working; it just belongs to nothing and is backed up with nothing, which is worth knowing.
 - **One module's name continuing another's**, such as `BlogPost` alongside `Blog`. A supported layout, listed so the rule for their migrations is stated somewhere: the longer name wins.
+- **A module recorded as coming from a version that no longer exists**, after that version was pruned. Not a fault: the record still says truthfully where the working tree came from, and `modsx:status` carries on by measuring against the newest version. Deleting the file is a complete fix.
+- **A snapshot naming a version that is no longer there**, which only editing the backup tree by hand can bring about, since `modsx:prune` holds those versions back. The snapshot is still listed and still looks usable, while the one thing it exists for — rolling back to it — is no longer possible. `modsx:snapshotprune` clears it.
 
 ---
 
@@ -846,6 +1193,12 @@ return [
 
     // Default for modsx:prune.
     'prune' => ['keep' => 5],
+
+    // Extra dependencies, for what reading a module's files cannot see.
+    // Adds edges to the graph modsx:deps derives; never replaces them.
+    'dependencies' => [
+        // 'Blog' => ['Search'],
+    ],
 
 ];
 ```

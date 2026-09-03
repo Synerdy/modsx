@@ -44,19 +44,31 @@ class PruneCommand extends Command
         }
 
         $plan = [];
+        $held = [];
 
         foreach ($modules as $module) {
             try {
                 $plan[(string) $module] = $manager->prune($module, $keep, dryRun: true);
+                $holding = $manager->heldFromPrune($module, $keep);
             } catch (ModsxException $exception) {
                 return $this->reportFailure($json, $exception->getMessage());
+            }
+
+            if ($holding !== []) {
+                $held[(string) $module] = $holding;
             }
         }
 
         $plan = array_filter($plan, static fn (array $versions): bool => $versions !== []);
 
         if ($plan === []) {
-            return $this->nothingToPrune($json, sprintf('Nothing to prune - every module has %d versions or fewer.', $keep));
+            // Two different reasons to have nothing to do, and saying the wrong
+            // one is worse than saying nothing: "every module has few enough
+            // versions" is plainly false when the old ones are simply held.
+            return $this->nothingToPrune($json, $held === []
+                ? sprintf('Nothing to prune - every module has %d versions or fewer.', $keep)
+                : sprintf('Nothing to prune - %d older version(s) are held by a snapshot.', array_sum(array_map('count', $held))),
+                held: $held);
         }
 
         $total = array_sum(array_map('count', $plan));
@@ -68,12 +80,14 @@ class PruneCommand extends Command
                     'keep' => $keep,
                     'total' => $total,
                     'plan' => $plan,
+                    'held' => $held,
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
                 return self::SUCCESS;
             }
 
             $this->renderPlan($plan);
+            $this->renderHeld($held);
             $this->components->info(sprintf('%d version(s) would be removed. Nothing was changed.', $total));
 
             return self::SUCCESS;
@@ -81,6 +95,7 @@ class PruneCommand extends Command
 
         if (! $json) {
             $this->renderPlan($plan);
+            $this->renderHeld($held);
         }
 
         if (! $this->confirmDestructive(sprintf('Permanently remove %d backup version(s)?', $total))) {
@@ -101,6 +116,7 @@ class PruneCommand extends Command
                 'keep' => $keep,
                 'total' => $total,
                 'removed' => $plan,
+                'held' => $held,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
             return self::SUCCESS;
@@ -123,17 +139,48 @@ class PruneCommand extends Command
         $this->newLine();
     }
 
-    private function nothingToPrune(bool $json, string $message, bool $warn = false): int
+    /**
+     * @param  array<string, list<string>>  $held
+     */
+    private function nothingToPrune(bool $json, string $message, bool $warn = false, array $held = []): int
     {
         if ($json) {
-            $this->line((string) json_encode(['total' => 0, 'plan' => []], JSON_PRETTY_PRINT));
+            $this->line((string) json_encode(['total' => 0, 'plan' => [], 'held' => $held], JSON_PRETTY_PRINT));
 
             return self::SUCCESS;
         }
 
         $warn ? $this->components->warn($message) : $this->components->info($message);
+        $this->renderHeld($held);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Versions old enough to go that a snapshot is keeping.
+     *
+     * Printed because otherwise this command silently does less than the age
+     * rule says it would, and the difference looks like a bug rather than a
+     * safeguard.
+     *
+     * @param  array<string, list<string>>  $held
+     */
+    private function renderHeld(array $held): void
+    {
+        if ($held === []) {
+            return;
+        }
+
+        foreach ($held as $module => $versions) {
+            $this->components->twoColumnDetail(
+                sprintf('%s %s', $module, implode(', ', $versions)),
+                '<fg=gray>kept, held by a snapshot</>',
+            );
+        }
+
+        $this->components->bulletList([
+            'modsx:snapshotprune lets those snapshots go, after which these versions can be pruned.',
+        ]);
     }
 
     private function reportFailure(bool $json, string $message): int

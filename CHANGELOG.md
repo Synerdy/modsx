@@ -5,6 +5,144 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.1] - 2026-09-03
+
+### Added
+
+- **`modsx:snapshot`, `modsx:rollback`, `modsx:snapshotlist`, `modsx:snapshotprune`
+  — the whole project at one moment.** A snapshot records which version of each
+  module was current together, which answers the question a per-module backup
+  cannot: *I cannot restore Blog from three weeks ago, because back then it
+  depended on a different User.*
+
+  A snapshot copies nothing. The versions it names are already in the backup
+  tree, so what is written is a few hundred bytes of version numbers in
+  `modsx-backups/_snapshots/0002.json`; copying them would double the disk cost
+  and give one version two places to live. A module unchanged since its last
+  backup gets no new version either, only another reference to the one it had,
+  so a snapshot of an untouched project writes nothing but the snapshot. That
+  is deliberate: a snapshot nobody minds taking is one that will be there when
+  it is needed.
+
+  What `modsx:rollback` guarantees, stated exactly, because the difference
+  matters. Every version the snapshot names is confirmed to exist before
+  anything is touched - that is the failure that actually happens, and it is
+  caught while the application is whole. A snapshot of the current state is
+  taken first and its number printed at the end. Each module is then staged and
+  swapped on its own, and a failure part-way puts the modules already restored
+  back where the safety snapshot found them. What it is not is one filesystem
+  transaction; there is no such thing across a dozen directory trees, so the
+  last step is compensation, and the safety snapshot is named rather than left
+  to be worked out.
+
+  It does not touch the database. Rolling code back does not roll a schema
+  back, and no migrations are run in either direction.
+
+- **`modsx:deps` — which modules a module needs, worked out by reading it.**
+  The graph is derived, not declared. A module called Media appears in other
+  modules' code as `ModsxMedia`, `modsx-media` or `modsx_media` and in no other
+  form, so a reference to it is something that can be found rather than
+  something someone has to remember to write down.
+
+  That is the whole argument against a `requires:` list: it is a register
+  nothing checks, and a snapshot built from a stale one is quietly incomplete -
+  worse than no snapshot, because it is trusted. A mention in a comment or a
+  string counts here too, since the mistake that causes is a snapshot holding
+  one module too many, while the opposite mistake breaks a rollback.
+
+  Name boundaries are respected, so `ModsxBlogPost` refers to BlogPost and not
+  also to Blog - the same rule that decides which module owns a file. The snake
+  form is the exception, where a suffix is ordinary: `modsx_media_assets` is
+  Media's table.
+
+  Configuration under `modsx.dependencies` adds edges for what reading cannot
+  see - a class name assembled from a string, a listener wired up elsewhere -
+  and never replaces the ones found in the code. An edge found in both is
+  reported as found, because that is the claim that can be pointed at.
+
+- **`modsx:status`** — every module in one table: what state it is in, which
+  version its working tree came from, what the newest backup is, and how many
+  files have changed since.
+
+  ```
+   Module    State       Current   Latest backup   Changes
+   Blog      modified    0001      0002            1
+   Shop      clean       0001      0001            0
+   Billing   untracked   -         -               -
+   Admin     missing     -         0001            -
+  ```
+
+  The frame is the one version control already taught everyone: `Current` is
+  where the tree came from, so `Changes` counts what has happened since rather
+  than the distance to the newest backup, which is a different question and
+  gets its own column. That makes a module able to be `clean` and behind at the
+  same time, which is the combination worth being told about - backing up from
+  an older version builds the next one on top of it, and the listing now says
+  so before that happens.
+
+- **A module's working tree records the version it came from**, in
+  `modsx-backups/<Module>/modsx-state.json`, written by `modsx:backup` and
+  `modsx:restore`. `modsx:import` deliberately records nothing: it adds a
+  version to the backup tree without touching the application, so the working
+  tree did not come from it, and saying otherwise is the one thing this record
+  must never do.
+
+  It never decides whether a module exists. Discovery stays exactly what it
+  was, a directory named by the convention, and `ModuleLocator` knows nothing
+  about this file: a module made with `mkdir` has no record and is reported
+  `untracked`, which is the truthful answer rather than a gap. Delete every one
+  of these files and the package behaves as it did before they existed - a
+  property with a test on it, because it is what keeps the convention the only
+  source of truth about what a module is.
+
+  It lives beside the versions it points at because it means nothing without
+  them: when they go, it goes. It cannot live inside the module either, or a
+  backup would copy it and version 0004 would contain a file claiming the
+  module is at 0003.
+
+- **`modsx:doctor` reports a record naming a version that has been pruned.**
+  Informational, not a problem: the record still says truthfully where the tree
+  came from, and `modsx:status` carries on by measuring against the newest
+  version instead. Deleting the file is a complete fix.
+
+
+### Changed
+
+- **`modsx:prune` no longer deletes a version that a snapshot names**, the way
+  a tag keeps a commit from being collected. Without it a rollback would
+  discover the loss at the moment it needed the version, which is too late to
+  be useful. It lists what it held back and why, since a command that silently
+  removes less than the age rule offered looks like a bug rather than a
+  safeguard.
+
+  Deliberately with no override. Everywhere else in this package `--force`
+  means *do not ask me*, and letting it also mean *ignore a safeguard* would
+  let a scripted prune quietly strand every snapshot naming those versions.
+  Releasing them is `modsx:snapshotprune`'s job: let the snapshot go, and the
+  versions follow.
+
+- **`modsx:doctor` reports a snapshot naming a version that is no longer
+  there.** Informational, and only reachable by editing the backup tree by
+  hand, since prune holds those versions back: the snapshot is still listed and
+  still looks usable while the one thing it exists for has become impossible.
+
+### Fixed
+
+- **The release workflow no longer asks GitHub to mark a prerelease as the
+  latest release.** `v1.0.0-beta.1` is the highest tag in the repository, so
+  the newest-tag check claimed the Latest badge for it while the suffix check
+  marked it a prerelease - two contradictory instructions in one call. Only
+  stable tags are candidates now, which also stops a beta denying the badge to
+  the stable release that follows it, since git's version sort puts
+  `v1.0.0-beta.1` above `v1.0.0`.
+
+### Documentation
+
+- A `.gitignore` line for anyone who commits their backup tree:
+  `modsx-backups/*/modsx-state.json`. Which version *your* working copy came
+  from is a local fact, not a shared one, and two people restoring different
+  versions would otherwise conflict over it.
+
 ## [0.7.0] - 2026-09-02
 
 ### Added

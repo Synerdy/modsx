@@ -10,6 +10,8 @@ use Illuminate\Support\Str;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\ModuleLocator;
+use Modsx\ModuleState;
+use Modsx\SnapshotRepository;
 
 class DoctorCommand extends Command
 {
@@ -21,7 +23,7 @@ class DoctorCommand extends Command
 
     protected $description = 'Check module directories and backups for problems';
 
-    public function handle(ModuleLocator $locator, BackupRepository $backups): int
+    public function handle(ModuleLocator $locator, BackupRepository $backups, ModuleState $state, SnapshotRepository $snapshots): int
     {
         $json = (bool) $this->option('json');
 
@@ -36,6 +38,8 @@ class DoctorCommand extends Command
         $strayDirectories = $this->strayBackupDirectories($backups);
         $emptyDirectories = $this->emptyDirectories($locator);
         $unclaimedFiles = $locator->unclaimedFiles();
+        $staleState = $this->staleState($backups, $state);
+        $danglingSnapshots = $snapshots->dangling();
 
         if ($this->option('fix')) {
             $emptyDirectories = $this->removeEmptyDirectories($emptyDirectories);
@@ -62,6 +66,8 @@ class DoctorCommand extends Command
                 'unclaimed_files' => $unclaimedFiles,
                 'single_form_modules' => $singleForm,
                 'orphaned_backups' => $orphaned,
+                'stale_state' => $staleState,
+                'dangling_snapshots' => $danglingSnapshots,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
             return $problems === 0 ? self::SUCCESS : self::FAILURE;
@@ -80,6 +86,8 @@ class DoctorCommand extends Command
         $this->renderUnclaimedFiles($locator, $unclaimedFiles);
         $this->renderSingleFormModules($locator, $singleForm);
         $this->renderOrphanedBackups($orphaned);
+        $this->renderStaleState($staleState, $state);
+        $this->renderDanglingSnapshots($danglingSnapshots);
 
         $this->newLine();
 
@@ -550,5 +558,81 @@ class DoctorCommand extends Command
                 sprintf('<fg=gray>%d version(s)</>', $orphan['versions'])
             );
         }
+    }
+
+    /**
+     * Modules whose recorded version has since been pruned.
+     *
+     * Not a problem: the record still says truthfully where the working tree
+     * came from, and modsx:status keeps working by measuring against the
+     * newest version instead. It is reported because a version number that
+     * cannot be looked at is worth knowing about, and deleting the file is a
+     * complete fix that costs nothing.
+     *
+     * @return list<array{module: string, version: string}>
+     */
+    private function staleState(BackupRepository $backups, ModuleState $state): array
+    {
+        $rows = [];
+
+        foreach ($backups->modules() as $module) {
+            $current = $state->current($module);
+
+            if ($current !== null && ! in_array($current, $backups->versions($module), true)) {
+                $rows[] = ['module' => $module, 'version' => $current];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{module: string, version: string}>  $stale
+     */
+    private function renderStaleState(array $stale, ModuleState $state): void
+    {
+        if ($stale === []) {
+            return;
+        }
+
+        $this->components->info('Modules recorded as coming from a version that no longer exists:');
+
+        foreach ($stale as $row) {
+            $this->components->twoColumnDetail(
+                $row['module'],
+                sprintf('<fg=gray>version %s, pruned</>', $row['version'])
+            );
+            $this->line(sprintf('    <fg=gray>⇂ Delete %s, or back the module up to record where it is now.</>', $state->path($row['module'])));
+        }
+    }
+
+    /**
+     * Snapshots naming a version that is no longer in the backup tree.
+     *
+     * A snapshot holds its versions back from modsx:prune, so this can only
+     * happen after a --force. It is reported because the snapshot is still
+     * listed and still looks usable, while the one thing it exists for -
+     * rolling back to it - is no longer possible.
+     *
+     * @param  list<array{snapshot: string, module: string, version: string}>  $dangling
+     */
+    private function renderDanglingSnapshots(array $dangling): void
+    {
+        if ($dangling === []) {
+            return;
+        }
+
+        $this->components->info('Snapshots naming a version that is no longer there:');
+
+        foreach ($dangling as $row) {
+            $this->components->twoColumnDetail(
+                sprintf('snapshot %s', $row['snapshot']),
+                sprintf('<fg=gray>wants %s %s</>', $row['module'], $row['version']),
+            );
+        }
+
+        $this->components->bulletList([
+            'Those snapshots can no longer be rolled back to. modsx:snapshotprune removes them.',
+        ]);
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Modsx\Console\BackupCommand;
 use Modsx\Console\BackupListCommand;
 use Modsx\Console\DeleteCommand;
+use Modsx\Console\DepsCommand;
 use Modsx\Console\DiffCommand;
 use Modsx\Console\DoctorCommand;
 use Modsx\Console\ExportCommand;
@@ -19,7 +20,12 @@ use Modsx\Console\MakeCommand;
 use Modsx\Console\PathCommand;
 use Modsx\Console\PruneCommand;
 use Modsx\Console\RestoreCommand;
+use Modsx\Console\RollbackCommand;
 use Modsx\Console\ScaffoldCommand;
+use Modsx\Console\SnapshotCommand;
+use Modsx\Console\SnapshotListCommand;
+use Modsx\Console\SnapshotPruneCommand;
+use Modsx\Console\StatusCommand;
 
 class ModsxServiceProvider extends ServiceProvider
 {
@@ -57,6 +63,10 @@ class ModsxServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleDiffer::class);
         $this->app->singleton(ModuleMaker::class);
         $this->app->singleton(ModuleScaffolder::class);
+        $this->app->singleton(ModuleState::class);
+        $this->app->singleton(ModuleDependencies::class);
+        $this->app->singleton(SnapshotRepository::class);
+        $this->app->singleton(SnapshotManager::class);
     }
 
     public function boot(): void
@@ -83,7 +93,13 @@ class ModsxServiceProvider extends ServiceProvider
             PathCommand::class,
             PruneCommand::class,
             RestoreCommand::class,
+            DepsCommand::class,
+            RollbackCommand::class,
             ScaffoldCommand::class,
+            SnapshotCommand::class,
+            SnapshotListCommand::class,
+            SnapshotPruneCommand::class,
+            StatusCommand::class,
         ]);
     }
 }

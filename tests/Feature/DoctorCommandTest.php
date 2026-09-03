@@ -245,3 +245,27 @@ it('does nothing with --fix when nothing is empty', function () {
 
     expect(File::isDirectory($this->root.'/resources/views/modsx-blog'))->toBeTrue();
 });
+
+it('reports a module recorded as coming from a version that was pruned', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+
+    app(BackupManager::class)->backup('Blog');
+    File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
+    app(BackupManager::class)->backup('Blog');
+
+    app(BackupManager::class)->restore('Blog', '0001');
+    app(BackupManager::class)->prune('Blog', 1);
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect($output['stale_state'])->toBe([['module' => 'Blog', 'version' => '0001']])
+        ->and($output['problems'])->toBe(0);
+});
+
+it('reports no stale state while the recorded version is still there', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+
+    app(BackupManager::class)->backup('Blog');
+
+    expect(json_decode(artisanOutput('modsx:doctor --json'), true)['stale_state'])->toBe([]);
+});
