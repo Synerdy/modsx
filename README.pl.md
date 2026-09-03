@@ -39,7 +39,7 @@ Kompromis jest uczciwy: to nie jest menedżer pakietów. Nie rozwiązuje zależn
 
 ## Wymagania
 
-| | |
+| Wymaganie | Wersja |
 |---|---|
 | PHP | 8.3+ |
 | Laravel | 12.x, 13.x |
@@ -82,6 +82,30 @@ composer require --dev synerdy/modsx:^0.7
 Composer traktuje wszystko poniżej `1.0.0` z ostrożnością należną wersjom przedpremierowym: tam `^0.6.1` znaczy `>=0.6.1 <0.7.0`, czyli minor stoi w miejscu, w którym normalnie stoi major. Dlatego `composer update` zostaje przy zainstalowanym minorze — celowo, a nie przez przypadek — a `composer why-not synerdy/modsx 0.7.0` to potwierdzi. Wymuszenie nowego minora przepisuje ograniczenie i aktualizuje za jednym razem.
 
 Warto najpierw zajrzeć do [changelogu](https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md): w `0.x` minor może nieść zmianę łamiącą i wtedy jest to tam wyraźnie zaznaczone.
+
+#### Wypróbowanie bety 1.0
+
+Komend oznaczonych **1.0** w tabeli poniżej nie ma w `0.7.0`. Są w wydaniu przedpremierowym, którego Composer nie zainstaluje, dopóki mu tego nie powiesz:
+
+```bash
+composer require --dev synerdy/modsx:1.0.0-beta.1     # dokładnie ta beta
+```
+
+Podanie wersji z sufiksem samo zdejmuje filtr stabilności dla tego pakietu — `minimum-stability` nie trzeba ruszać. Żeby zamiast przypinania jednej bety śledzić wszystkie przedpremierowe wydania 1.0, wpisz to do `composer.json` i uruchom `composer update synerdy/modsx`:
+
+```json
+"require-dev": {
+    "synerdy/modsx": "^1.0@beta"
+}
+```
+
+Zwykłe `composer require synerdy/modsx` nadal wybierze najnowsze wydanie **stabilne**, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:
+
+```bash
+composer require --dev synerdy/modsx:^0.7
+```
+
+To beta dlatego, że dwie rzeczy, które ten pakiet zapisuje — `modsx-state.json` i `_snapshots/*.json` — nie były jeszcze używane poza jego własnymi testami. Jeśli któraś okaże się potrzebować innego kształtu, zmiana teraz nic nie kosztuje; po `1.0.0` kosztuje ścieżkę migracji albo wersję major. Traktuj zapisywane drzewo backupów jak coś, o czyje skasowanie i odtworzenie możesz zostać poproszony.
 
 ---
 
@@ -241,8 +265,8 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:make {generator} {Moduł/Nazwa}` | Uruchamia generator Laravela z wpisanym modułem |
 | `modsx:scaffold {name} {path?*}` | Tworzy katalogi modułu — z konfiguracji albo wskazane |
 | `modsx:list` | Moduły obecne w aplikacji |
-| `modsx:status {name?}` | Każdy moduł: co jest, z czego się wzięło, co się ruszyło |
-| `modsx:deps {name?}` | Których modułów potrzebuje moduł — wyliczone z kodu |
+| `modsx:status {name?}` | **1.0** &nbsp; Każdy moduł: co jest, z czego się wzięło, co się ruszyło |
+| `modsx:deps {name?}` | **1.0** &nbsp; Których modułów potrzebuje moduł — wyliczone z kodu |
 | `modsx:path {name?}` | Wszystko, co należy do modułu |
 | `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
 | `modsx:backuplist {name?}` | Dostępne wersje w backupie |
@@ -253,11 +277,13 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:diff {name?} {version?} {against?}` | Porównanie z wersją w backupie albo dwóch wersji ze sobą |
 | `modsx:info {name?}` | Rozmiar, liczba plików i historia backupów |
 | `modsx:prune {name?}` | Usuwa stare wersje, zostawiając najnowsze |
-| `modsx:snapshot {name?}` | Zapis wersji każdego modułu jako jeden snapshot |
-| `modsx:snapshotlist` | Wykonane snapshoty |
-| `modsx:rollback {snapshot?}` | Cofnięcie całego projektu do snapshotu |
-| `modsx:snapshotprune` | Usunięcie starych snapshotów, zachowując najnowsze |
+| `modsx:snapshot {name?}` | **1.0** &nbsp; Zapis wersji każdego modułu jako jeden snapshot |
+| `modsx:snapshotlist` | **1.0** &nbsp; Wykonane snapshoty |
+| `modsx:rollback {snapshot?}` | **1.0** &nbsp; Cofnięcie całego projektu do snapshotu |
+| `modsx:snapshotprune` | **1.0** &nbsp; Usunięcie starych snapshotów, zachowując najnowsze |
 | `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
+
+Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.1` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
 
 ### `modsx:make`
 
@@ -340,7 +366,7 @@ Laravel używa w swoich generatorach trzech stylów nazewnictwa i powyższa tabe
 
 **Dowolny separator, przy każdym generatorze.** Tabele powyżej wybierają ten, który czyta się naturalniej, ale moduł kończy się na pierwszym `/`, `\` albo `.` — niezależnie od tego, co generujesz. To są te same wywołania:
 
-| | |
+| Z ukośnikiem | Z kropką |
 |---|---|
 | `modsx:make config Blog/services` | `modsx:make config blog.services` |
 | `modsx:make migration Blog/create_users_table` | `modsx:make migration blog.create_users_table` |
@@ -905,7 +931,7 @@ Osobny czasownik niż `modsx:restore`, i to celowo: przywracanie dotyczy jednego
 
 Co dokładnie gwarantuje:
 
-| | |
+| Etap | Co robi |
 |---|---|
 | **Sprawdzane najpierw** | Istnienie każdej wymienionej wersji jest potwierdzane, **zanim cokolwiek zostanie tknięte**. To jest awaria, która faktycznie się zdarza, i wychodzi na jaw, gdy aplikacja jest jeszcze cała. |
 | **Droga powrotna** | Snapshot stanu bieżącego powstaje przed wszystkim innym, a jego numer jest wypisywany na końcu. |

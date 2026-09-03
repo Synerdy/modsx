@@ -92,7 +92,12 @@ function buildConverter(): MarkdownConverter
     $environment = new Environment([
         'heading_permalink' => [
             'min_heading_level' => 2,
-            'max_heading_level' => 3,
+            // Down to h4, one level deeper than the sidebar shows. The
+            // navigation stays two levels for legibility, but a subsection
+            // still needs an anchor: without one, a link to "Trying the 1.0
+            // beta" works on GitHub, where anchors are generated, and lands
+            // at the top of the page here.
+            'max_heading_level' => 4,
             'insert' => 'none',
             'id_prefix' => '',
             'apply_id_to_heading' => true,

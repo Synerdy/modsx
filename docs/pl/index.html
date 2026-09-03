@@ -184,8 +184,8 @@ app/Http/Controllers/ModsxBlog/
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>Wymaganie</th>
+<th>Wersja</th>
 </tr>
 </thead>
 <tbody>
@@ -219,6 +219,19 @@ app/Http/Controllers/ModsxBlog/
 </code></pre>
 <p>Composer traktuje wszystko poniżej <code>1.0.0</code> z ostrożnością należną wersjom przedpremierowym: tam <code>^0.6.1</code> znaczy <code>&gt;=0.6.1 &lt;0.7.0</code>, czyli minor stoi w miejscu, w którym normalnie stoi major. Dlatego <code>composer update</code> zostaje przy zainstalowanym minorze — celowo, a nie przez przypadek — a <code>composer why-not synerdy/modsx 0.7.0</code> to potwierdzi. Wymuszenie nowego minora przepisuje ograniczenie i aktualizuje za jednym razem.</p>
 <p>Warto najpierw zajrzeć do <a href="https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md">changelogu</a>: w <code>0.x</code> minor może nieść zmianę łamiącą i wtedy jest to tam wyraźnie zaznaczone.</p>
+<h4 id="wypróbowanie-bety-10">Wypróbowanie bety 1.0</h4>
+<p>Komend oznaczonych <strong>1.0</strong> w tabeli poniżej nie ma w <code>0.7.0</code>. Są w wydaniu przedpremierowym, którego Composer nie zainstaluje, dopóki mu tego nie powiesz:</p>
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.1     # dokładnie ta beta
+</code></pre>
+<p>Podanie wersji z sufiksem samo zdejmuje filtr stabilności dla tego pakietu — <code>minimum-stability</code> nie trzeba ruszać. Żeby zamiast przypinania jednej bety śledzić wszystkie przedpremierowe wydania 1.0, wpisz to do <code>composer.json</code> i uruchom <code>composer update synerdy/modsx</code>:</p>
+<pre><code class="language-json">&quot;require-dev&quot;: {
+    &quot;synerdy/modsx&quot;: &quot;^1.0@beta&quot;
+}
+</code></pre>
+<p>Zwykłe <code>composer require synerdy/modsx</code> nadal wybierze najnowsze wydanie <strong>stabilne</strong>, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:</p>
+<pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
+</code></pre>
+<p>To beta dlatego, że dwie rzeczy, które ten pakiet zapisuje — <code>modsx-state.json</code> i <code>_snapshots/*.json</code> — nie były jeszcze używane poza jego własnymi testami. Jeśli któraś okaże się potrzebować innego kształtu, zmiana teraz nic nie kosztuje; po <code>1.0.0</code> kosztuje ścieżkę migracji albo wersję major. Traktuj zapisywane drzewo backupów jak coś, o czyje skasowanie i odtworzenie możesz zostać poproszony.</p>
 <hr />
 <h2 id="konwencja-nazewnictwa">Konwencja nazewnictwa</h2>
 <p><strong>To jedyna sekcja, którą naprawdę warto przeczytać uważnie.</strong> Cała reszta z niej wynika.</p>
@@ -499,11 +512,11 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:status {name?}</code></td>
-<td>Każdy moduł: co jest, z czego się wzięło, co się ruszyło</td>
+<td><strong>1.0</strong>   Każdy moduł: co jest, z czego się wzięło, co się ruszyło</td>
 </tr>
 <tr>
 <td><code>modsx:deps {name?}</code></td>
-<td>Których modułów potrzebuje moduł — wyliczone z kodu</td>
+<td><strong>1.0</strong>   Których modułów potrzebuje moduł — wyliczone z kodu</td>
 </tr>
 <tr>
 <td><code>modsx:path {name?}</code></td>
@@ -547,19 +560,19 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:snapshot {name?}</code></td>
-<td>Zapis wersji każdego modułu jako jeden snapshot</td>
+<td><strong>1.0</strong>   Zapis wersji każdego modułu jako jeden snapshot</td>
 </tr>
 <tr>
 <td><code>modsx:snapshotlist</code></td>
-<td>Wykonane snapshoty</td>
+<td><strong>1.0</strong>   Wykonane snapshoty</td>
 </tr>
 <tr>
 <td><code>modsx:rollback {snapshot?}</code></td>
-<td>Cofnięcie całego projektu do snapshotu</td>
+<td><strong>1.0</strong>   Cofnięcie całego projektu do snapshotu</td>
 </tr>
 <tr>
 <td><code>modsx:snapshotprune</code></td>
-<td>Usunięcie starych snapshotów, zachowując najnowsze</td>
+<td><strong>1.0</strong>   Usunięcie starych snapshotów, zachowując najnowsze</td>
 </tr>
 <tr>
 <td><code>modsx:doctor</code></td>
@@ -567,6 +580,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
+<p>Komendy oznaczone <strong>1.0</strong> są w wydaniu przedpremierowym <code>1.0.0-beta.1</code> i nie ma ich w bieżącym wydaniu stabilnym — patrz <a href="#wypr%C3%B3bowanie-bety-10">Wypróbowanie bety 1.0</a>.</p>
 <h3 id="modsxmake"><code>modsx:make</code></h3>
 <p>Uruchamia jeden z generatorów Laravela, wpisując moduł za Ciebie.</p>
 <pre><code class="language-bash">php artisan modsx:make controller Blog/PostController
@@ -610,7 +624,7 @@ php artisan modsx:make migration Blog/create_posts_table
 </code></pre>
 <p>Wszystko, czego nie ma na liście, dostaje <code>*</code> — co jest poprawne dla każdej klasy PHP.</p>
 <p>Wszystko, czego nie ma na liście, dostaje <code>*</code>, a dostępne generatory to te zarejestrowane w Twojej aplikacji, a nie sztywny zbiór — generator z pakietu jest obsłużony tak samo dobrze jak ten od Laravela.</p>
-<h4>Wszystkie generatory Laravela i nazwa, jaką dostają</h4>
+<h4 id="wszystkie-generatory-laravela-i-nazwa-jaką-dostają">Wszystkie generatory Laravela i nazwa, jaką dostają</h4>
 <p>Laravel używa w swoich generatorach trzech stylów nazewnictwa i powyższa tabela pokrywa wszystkie trzy. Rozpisane w całości, dla Laravela 12/13:</p>
 <p><strong>PascalCase — do katalogu przestrzeni nazw modułu.</strong> Wszystkie podpadają pod <code>*</code>:</p>
 <table>
@@ -766,8 +780,8 @@ php artisan modsx:make migration Blog/create_posts_table
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>Z ukośnikiem</th>
+<th>Z kropką</th>
 </tr>
 </thead>
 <tbody>
@@ -810,7 +824,7 @@ php artisan modsx:make migration Blog/create_posts_table
 </tbody>
 </table>
 <p>Livewire wyprowadza ścieżkę widoku z tego, gdzie trafiła klasa — dokładnie tak jak komponenty samego Laravela — więc StudlyCase to wszystko, czego od nas potrzebuje. Wpis w <code>modsx.generators</code> dopisujesz tylko wtedy, gdy <code>*</code> jest dla danego generatora <strong>niewłaściwe</strong> — gdy jego nazwa jest ścieżką albo nazwą pliku, a nie klasy.</p>
-<h4><code>layout</code>, <code>page</code>, <code>partial</code></h4>
+<h4 id="layout-page-partial"><code>layout</code>, <code>page</code>, <code>partial</code></h4>
 <p>Własne widoki modułu mieszkają w <code>resources/views/modsx-blog/</code>, ale jego layout jest wycinkiem wspólnego <code>layouts/</code> aplikacji — najpierw katalog frameworka, potem moduł, dokładnie jak w <code>resources/css/modsx-blog/</code>. Sięgają tam trzy własne nazwy Modsx:</p>
 <pre><code class="language-bash">php artisan modsx:make layout blog.app     # -&gt; resources/views/layouts/modsx-blog/app.blade.php
 php artisan modsx:make page blog.index     # -&gt; resources/views/pages/modsx-blog/index.blade.php
@@ -865,7 +879,7 @@ php artisan modsx:make controller Blog/PostController
 <pre><code class="language-bash">php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # dowolna wielkość liter, jest normalizowana
 </code></pre>
-<h4>Lista z konfiguracji</h4>
+<h4 id="lista-z-konfiguracji">Lista z konfiguracji</h4>
 <p>Które katalogi powstaną, zależy od Ciebie — <code>config/modsx.php</code>:</p>
 <pre><code class="language-php">'scaffold' =&gt; [
     'app/Http/Controllers/{Studly}',
@@ -888,7 +902,7 @@ php artisan modsx:scaffold user-profile   # dowolna wielkość liter, jest norma
 </code></pre>
 <p>Jedno i drugie żyje obok siebie: <code>layouts/app.blade.php</code> ze starter kitu nie nosi prefiksu, więc żaden moduł go nie zagarnie, a <code>layouts/modsx-blog/</code> jest Bloga i wędruje razem z nim. Moduły są znajdowane na dowolnej głębokości, więc zagnieżdżenie o poziom nic nie kosztuje.</p>
 <p>Zwróć uwagę na kolejność. <code>layouts/modsx-blog/</code> — nie <code>modsx-blog/layouts/</code>. W całej tej konwencji moduł idzie <em>do wnętrza</em> katalogu frameworka i widoki nie są wyjątkiem; odwrócenie tego akurat tutaj sprawiłoby, że <code>&lt;x-modsx-blog.card&gt;</code> przestaje się rozwiązywać.</p>
-<h4>Wskazanie katalogów wprost</h4>
+<h4 id="wskazanie-katalogów-wprost">Wskazanie katalogów wprost</h4>
 <p>Podaj katalogi po nazwie modułu, a powstaną one zamiast listy z konfiguracji — ten jeden, którego potrzebujesz teraz, bez zmieniania tego, co dostaje każdy przyszły moduł:</p>
 <pre><code class="language-bash">php artisan modsx:scaffold Blog resources/css
 # resources/css/modsx-blog/
@@ -1027,7 +1041,7 @@ php artisan modsx:status --json
 <p>Moduł może być <code>clean</code> i mimo to być w tyle — i właśnie o tym połączeniu warto wiedzieć:</p>
 <pre><code> WARN  [Blog] is working from 0001, but 0002 exists. Backing up now would build the next version on the older one.
 </code></pre>
-<h4>Skąd bierze się <code>Current</code></h4>
+<h4 id="skąd-bierze-się-current">Skąd bierze się <code>Current</code></h4>
 <p><code>modsx:backup</code> i <code>modsx:restore</code> zapisują wersję w <code>modsx-backups/Blog/modsx-state.json</code>. <code>modsx:import</code> celowo nie zapisuje nic: dokłada wersję do drzewa backupów, nie dotykając aplikacji, więc drzewo robocze się z niej nie wzięło.</p>
 <p>Ten plik <strong>nigdy nie decyduje o tym, czy moduł istnieje</strong>. Wykrywanie zostaje takie, jakie było zawsze — katalog nazwany zgodnie z konwencją. Moduł zrobiony przez <code>mkdir</code> nie ma tu żadnego wpisu i jest pokazany jako <code>untracked</code>, co jest prawdą, a nie brakiem. Skasuj wszystkie te pliki, a pakiet zachowa się dokładnie tak jak przed ich powstaniem; pusta zrobi się jedynie kolumna <code>Current</code>.</p>
 <p>Leży obok wersji, na które wskazuje, bo bez nich nic nie znaczy. Przytnij wskazywaną wersję, a <code>modsx:doctor</code> to zgłosi, natomiast <code>modsx:status</code> będzie działać dalej, mierząc względem najnowszej.</p>
@@ -1127,7 +1141,7 @@ php artisan modsx:deps --json
 </tr>
 </tbody>
 </table>
-<h4>Czego czytanie nie zobaczy</h4>
+<h4 id="czego-czytanie-nie-zobaczy">Czego czytanie nie zobaczy</h4>
 <p>Nazwy klasy sklejanej ze stringa, listenera podpiętego gdzie indziej. To trafia do konfiguracji, która krawędzie <strong>dodaje</strong> i nigdy nie zastępuje tych znalezionych w kodzie:</p>
 <pre><code class="language-php">// config/modsx.php
 'dependencies' =&gt; [
@@ -1318,8 +1332,8 @@ php artisan modsx:rollback 0001 --force
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>Etap</th>
+<th>Co robi</th>
 </tr>
 </thead>
 <tbody>
@@ -1351,13 +1365,13 @@ php artisan modsx:snapshotprune --keep=5 --dry-run
 php artisan modsx:snapshotprune --keep=5 --force
 </code></pre>
 <p>Snapshoty wstrzymują wersje przed <code>modsx:prune</code>, więc ta komenda istnieje po to, żeby móc któryś puścić. Usunięcie snapshotu <strong>nie usuwa żadnych wersji</strong> — przestaje je tylko wstrzymywać, więc następny <code>modsx:prune</code> znowu weźmie je pod uwagę.</p>
-<h4>Snapshoty a przycinanie</h4>
+<h4 id="snapshoty-a-przycinanie">Snapshoty a przycinanie</h4>
 <p><code>modsx:prune</code> nie skasuje wersji wymienionej w snapshocie — tak jak tag nie pozwala zebrać commita. Bez tego rollback dowiadywałby się o stracie dopiero w chwili, w której ta wersja była mu potrzebna, czyli o wiele za późno. Mówi przy tym wprost, co zostawił i dlaczego:</p>
 <pre><code> Shop 0001 ....... kept, held by a snapshot
 </code></pre>
 <p>Nie ma flagi, która by to obeszła. <code>--force</code> w całym pakiecie znaczy <em>nie pytaj mnie</em>, a pozwolenie, by znaczyło również <em>zignoruj zabezpieczenie</em>, sprawiłoby, że skryptowy prune po cichu unieważniałby każdy snapshot wymieniający te wersje. Żeby je zwolnić, trzeba puścić snapshot przez <code>modsx:snapshotprune</code> — wtedy następny prune znowu je uwzględni.</p>
 <p>Snapshot nadal może wskazywać wersję, której już nie ma, jeśli ktoś grzebał w drzewie backupów ręcznie. Zgłasza to <code>modsx:doctor</code>, a sprząta <code>modsx:snapshotprune</code>.</p>
-<h4>Przykład od początku do końca</h4>
+<h4 id="przykład-od-początku-do-końca">Przykład od początku do końca</h4>
 <p>Trzy moduły, gdzie <code>Blog</code> korzysta z obu pozostałych:</p>
 <pre><code class="language-bash">php artisan modsx:deps
 </code></pre>
@@ -1469,7 +1483,7 @@ php artisan modsx:diff Blog --json
 <p>Porównywana jest zawartość plików, a nie nazwy katalogów, więc moduł, w którym przepisano wszystkie pliki w miejscu, zostanie pokazany jako zmieniony, a nie jako niezmieniony.</p>
 <pre><code class="language-bash">php artisan modsx:diff Blog --summary   # same liczby, bez listy plików
 </code></pre>
-<h4>Dwie wersje względem siebie</h4>
+<h4 id="dwie-wersje-względem-siebie">Dwie wersje względem siebie</h4>
 <p>Podaj drugą wersję, a aplikacja całkowicie wypada z porównania — porównywane są obie wersje ze sobą:</p>
 <pre><code class="language-bash">php artisan modsx:diff Blog 0002 0004
 </code></pre>

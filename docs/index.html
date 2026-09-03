@@ -184,8 +184,8 @@ app/Http/Controllers/ModsxBlog/
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>Requirement</th>
+<th>Version</th>
 </tr>
 </thead>
 <tbody>
@@ -219,6 +219,19 @@ app/Http/Controllers/ModsxBlog/
 </code></pre>
 <p>Composer treats anything below <code>1.0.0</code> with pre-release caution: there, <code>^0.6.1</code> means <code>&gt;=0.6.1 &lt;0.7.0</code>, putting the minor where the major normally sits. So <code>composer update</code> stays on the minor you installed — by design, not by accident — and <code>composer why-not synerdy/modsx 0.7.0</code> will tell you as much. Requiring the new minor rewrites the constraint and updates in one step.</p>
 <p>Worth reading the <a href="https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md">changelog</a> first: on <code>0.x</code> a minor is allowed to carry a breaking change, and they are called out there when it does.</p>
+<h4 id="trying-the-10-beta">Trying the 1.0 beta</h4>
+<p>The commands marked <strong>1.0</strong> in the table below are not in <code>0.7.0</code>. They are in a prerelease, which Composer will not install unless you say so:</p>
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.1     # this exact beta
+</code></pre>
+<p>Naming a version with a suffix lifts the stability filter for that package on its own — there is no need to touch <code>minimum-stability</code>. To follow every 1.0 prerelease instead of pinning one, put this in <code>composer.json</code> and run <code>composer update synerdy/modsx</code>:</p>
+<pre><code class="language-json">&quot;require-dev&quot;: {
+    &quot;synerdy/modsx&quot;: &quot;^1.0@beta&quot;
+}
+</code></pre>
+<p>A plain <code>composer require synerdy/modsx</code> still resolves to the newest <strong>stable</strong> release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:</p>
+<pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
+</code></pre>
+<p>It is a beta because two things it writes — <code>modsx-state.json</code> and <code>_snapshots/*.json</code> — have never been used outside its own tests. If either turns out to need a different shape, changing it now costs nothing; after <code>1.0.0</code> it costs a migration path or a major version. Treat the backup tree it writes as something you may be asked to delete and recreate.</p>
 <hr />
 <h2 id="naming-convention">Naming convention</h2>
 <p><strong>This is the one section worth reading carefully.</strong> Everything else follows from it.</p>
@@ -499,11 +512,11 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:status {name?}</code></td>
-<td>Every module: what it is, what it came from, what has moved</td>
+<td><strong>1.0</strong>   Every module: what it is, what it came from, what has moved</td>
 </tr>
 <tr>
 <td><code>modsx:deps {name?}</code></td>
-<td>Which modules a module needs, worked out by reading it</td>
+<td><strong>1.0</strong>   Which modules a module needs, worked out by reading it</td>
 </tr>
 <tr>
 <td><code>modsx:path {name?}</code></td>
@@ -547,19 +560,19 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:snapshot {name?}</code></td>
-<td>Record the version every module is at, as one snapshot</td>
+<td><strong>1.0</strong>   Record the version every module is at, as one snapshot</td>
 </tr>
 <tr>
 <td><code>modsx:snapshotlist</code></td>
-<td>Snapshots that have been taken</td>
+<td><strong>1.0</strong>   Snapshots that have been taken</td>
 </tr>
 <tr>
 <td><code>modsx:rollback {snapshot?}</code></td>
-<td>Put the whole project back to a snapshot</td>
+<td><strong>1.0</strong>   Put the whole project back to a snapshot</td>
 </tr>
 <tr>
 <td><code>modsx:snapshotprune</code></td>
-<td>Remove old snapshots, keeping the newest</td>
+<td><strong>1.0</strong>   Remove old snapshots, keeping the newest</td>
 </tr>
 <tr>
 <td><code>modsx:doctor</code></td>
@@ -567,6 +580,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
+<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.1</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
 <h3 id="modsxmake"><code>modsx:make</code></h3>
 <p>Runs one of Laravel's own generators with the module written in for you.</p>
 <pre><code class="language-bash">php artisan modsx:make controller Blog/PostController
@@ -610,7 +624,7 @@ php artisan modsx:make migration Blog/create_posts_table
 </code></pre>
 <p>Anything not listed gets <code>*</code>, which is right for any PHP class.</p>
 <p>Anything not listed gets <code>*</code>, and the generators you can run are whatever your application has registered, not a fixed list — a package's own is wrapped just as well as Laravel's.</p>
-<h4>Every Laravel generator, and the name it gets</h4>
+<h4 id="every-laravel-generator-and-the-name-it-gets">Every Laravel generator, and the name it gets</h4>
 <p>Laravel ships three naming styles across its generators, and the table above covers all three. Written out in full, against Laravel 12/13:</p>
 <p><strong>PascalCase — into the module's namespace directory.</strong> These all fall under <code>*</code>:</p>
 <table>
@@ -766,8 +780,8 @@ php artisan modsx:make migration Blog/create_posts_table
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>With a slash</th>
+<th>With a dot</th>
 </tr>
 </thead>
 <tbody>
@@ -810,7 +824,7 @@ php artisan modsx:make migration Blog/create_posts_table
 </tbody>
 </table>
 <p>Livewire derives its view path from where the class went, exactly as Laravel's own components do, so StudlyCase is all it needs from us. Add a <code>modsx.generators</code> entry only when <code>*</code> is <strong>wrong</strong> for a generator — when its name is a path or a filename rather than a class.</p>
-<h4><code>layout</code>, <code>page</code>, <code>partial</code></h4>
+<h4 id="layout-page-partial"><code>layout</code>, <code>page</code>, <code>partial</code></h4>
 <p>A module's own views live in <code>resources/views/modsx-blog/</code>, but its layout is one slice of the application's <code>layouts/</code> — the framework's directory first, the module second, exactly as in <code>resources/css/modsx-blog/</code>. Three names of Modsx's own reach those:</p>
 <pre><code class="language-bash">php artisan modsx:make layout blog.app     # -&gt; resources/views/layouts/modsx-blog/app.blade.php
 php artisan modsx:make page blog.index     # -&gt; resources/views/pages/modsx-blog/index.blade.php
@@ -865,7 +879,7 @@ php artisan modsx:make controller Blog/PostController
 <pre><code class="language-bash">php artisan modsx:scaffold Blog
 php artisan modsx:scaffold user-profile   # any case; it is normalised
 </code></pre>
-<h4>The configured list</h4>
+<h4 id="the-configured-list">The configured list</h4>
 <p>Which directories it creates is up to you, in <code>config/modsx.php</code>:</p>
 <pre><code class="language-php">'scaffold' =&gt; [
     'app/Http/Controllers/{Studly}',
@@ -888,7 +902,7 @@ php artisan modsx:scaffold user-profile   # any case; it is normalised
 </code></pre>
 <p>The two live side by side: a starter kit's <code>layouts/app.blade.php</code> carries no prefix, so no module ever claims it, while <code>layouts/modsx-blog/</code> is Blog's and travels with it. Modules are found at any depth, so nesting one level in costs nothing.</p>
 <p>Note the direction. <code>layouts/modsx-blog/</code> — not <code>modsx-blog/layouts/</code>. The module goes <em>inside</em> the framework's directory everywhere else in this convention, and views are no exception; inverting it here is what would make <code>&lt;x-modsx-blog.card&gt;</code> stop resolving.</p>
-<h4>Naming the directories yourself</h4>
+<h4 id="naming-the-directories-yourself">Naming the directories yourself</h4>
 <p>Name directories after the module and it makes those instead of the configured list — for the one you want now, without changing what every future module gets:</p>
 <pre><code class="language-bash">php artisan modsx:scaffold Blog resources/css
 # resources/css/modsx-blog/
@@ -1027,7 +1041,7 @@ php artisan modsx:status --json
 <p>A module can be <code>clean</code> and still be behind, and that combination is the one worth being told about:</p>
 <pre><code> WARN  [Blog] is working from 0001, but 0002 exists. Backing up now would build the next version on the older one.
 </code></pre>
-<h4>Where <code>Current</code> comes from</h4>
+<h4 id="where-current-comes-from">Where <code>Current</code> comes from</h4>
 <p><code>modsx:backup</code> and <code>modsx:restore</code> record the version in <code>modsx-backups/Blog/modsx-state.json</code>. <code>modsx:import</code> deliberately records nothing: it adds a version to the backup tree without touching the application, so the working tree did not come from it.</p>
 <p>This file <strong>never decides whether a module exists</strong>. Discovery stays what it has always been, a directory named by the convention. A module you made with <code>mkdir</code> has no record here and is reported <code>untracked</code> — the truthful answer rather than a gap. Delete every one of these files and the package behaves exactly as it did before they existed; only the <code>Current</code> column goes blank.</p>
 <p>It sits beside the versions it points at because it means nothing without them. Prune the version it names and <code>modsx:doctor</code> reports it, while <code>modsx:status</code> carries on by measuring against the newest version instead.</p>
@@ -1127,7 +1141,7 @@ php artisan modsx:deps --json
 </tr>
 </tbody>
 </table>
-<h4>What reading cannot see</h4>
+<h4 id="what-reading-cannot-see">What reading cannot see</h4>
 <p>A class name assembled from a string, a listener wired up somewhere else. Those go in configuration, which <strong>adds</strong> edges and never replaces the ones found in the code:</p>
 <pre><code class="language-php">// config/modsx.php
 'dependencies' =&gt; [
@@ -1318,8 +1332,8 @@ php artisan modsx:rollback 0001 --force
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>Stage</th>
+<th>What it does</th>
 </tr>
 </thead>
 <tbody>
@@ -1351,13 +1365,13 @@ php artisan modsx:snapshotprune --keep=5 --dry-run
 php artisan modsx:snapshotprune --keep=5 --force
 </code></pre>
 <p>Snapshots hold versions back from <code>modsx:prune</code>, so this exists to let one go. Removing a snapshot <strong>removes no versions</strong> — it only stops them being held, so the next <code>modsx:prune</code> can consider them again.</p>
-<h4>Snapshots and pruning</h4>
+<h4 id="snapshots-and-pruning">Snapshots and pruning</h4>
 <p><code>modsx:prune</code> will not delete a version that a snapshot names, the way a tag keeps a commit from being collected. Without that, a rollback would only discover the loss at the moment it needed the version, which is too late to be useful. It says what it left and why:</p>
 <pre><code> Shop 0001 ....... kept, held by a snapshot
 </code></pre>
 <p>There is no flag to override this. <code>--force</code> means <em>don't ask me</em> everywhere in this package, and letting it also mean <em>ignore a safeguard</em> would let a scripted prune quietly strand every snapshot naming those versions. The way to release them is to let the snapshot go with <code>modsx:snapshotprune</code> — after which the next prune considers them again.</p>
 <p>A snapshot can still end up naming a version that is gone, if the backup tree is edited by hand. <code>modsx:doctor</code> reports that, and <code>modsx:snapshotprune</code> clears it.</p>
-<h4>A worked example</h4>
+<h4 id="a-worked-example">A worked example</h4>
 <p>Three modules, where <code>Blog</code> uses both of the others:</p>
 <pre><code class="language-bash">php artisan modsx:deps
 </code></pre>
@@ -1469,7 +1483,7 @@ php artisan modsx:diff Blog --json
 <p>The comparison is on file contents, not directory names, so a module whose files were all rewritten in place is reported as modified rather than unchanged.</p>
 <pre><code class="language-bash">php artisan modsx:diff Blog --summary   # counts only, no file list
 </code></pre>
-<h4>Two versions against each other</h4>
+<h4 id="two-versions-against-each-other">Two versions against each other</h4>
 <p>Give a second version and the application drops out of the comparison entirely — the two versions are compared with each other:</p>
 <pre><code class="language-bash">php artisan modsx:diff Blog 0002 0004
 </code></pre>
