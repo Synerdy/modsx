@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="../">English</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a><ul class="toc-sub"><li><a href="#windows-i-watchery-plików">Windows i watchery plików</a></li><li><a href="#aktualizacja">Aktualizacja</a></li></ul></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a><ul class="toc-sub"><li><a href="#windows-i-watchery-plików">Windows i watchery plików</a></li><li><a href="#aktualizacja">Aktualizacja</a></li></ul></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -544,7 +544,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:backup {name?}</code></td>
-<td>Kopiuje moduł do nowej numerowanej wersji</td>
+<td>Kopiuje moduł do nowej numerowanej wersji, chyba że nic się nie zmieniło</td>
 </tr>
 <tr>
 <td><code>modsx:backuplist {name?}</code></td>
@@ -576,7 +576,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:prune {name?}</code></td>
-<td>Usuwa stare wersje, zostawiając najnowsze</td>
+<td>Usuwa stare wersje według liczby albo duplikaty przez <code>--duplicates</code></td>
 </tr>
 <tr>
 <td><code>modsx:snapshot {name?}</code></td>
@@ -1396,7 +1396,7 @@ php artisan modsx:snapshotprune --keep=5 --dry-run
 php artisan modsx:snapshotprune --keep=5 --force
 </code></pre>
 <p>Snapshoty wstrzymują wersje przed <code>modsx:prune</code>, więc ta komenda istnieje po to, żeby móc któryś puścić. Usunięcie snapshotu <strong>nie usuwa żadnych wersji</strong> — przestaje je tylko wstrzymywać, więc następny <code>modsx:prune</code> znowu weźmie je pod uwagę.</p>
-<h4 id="--duplicates"><code>--duplicates</code></h4>
+<h3 id="modsxprune---duplicates"><code>modsx:prune --duplicates</code></h3>
 <p>Usuwa wersje trzymające dokładnie to, co wersja następująca po nich:</p>
 <pre><code class="language-bash">php artisan modsx:prune Blog --duplicates --dry-run
 php artisan modsx:prune Blog --duplicates

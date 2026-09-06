@@ -300,7 +300,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:status {name?}` | **1.0** &nbsp; Każdy moduł: co jest, z czego się wzięło, co się ruszyło |
 | `modsx:deps {name?}` | **1.0** &nbsp; Których modułów potrzebuje moduł — wyliczone z kodu |
 | `modsx:path {name?}` | Wszystko, co należy do modułu |
-| `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji |
+| `modsx:backup {name?}` | Kopiuje moduł do nowej numerowanej wersji, chyba że nic się nie zmieniło |
 | `modsx:backuplist {name?}` | Dostępne wersje w backupie |
 | `modsx:export {name?} {version?}` | Pakuje wersję backupu do przenośnego .zip |
 | `modsx:import {path}` | Rozpakowuje .zip stworzony przez `modsx:export` |
@@ -308,7 +308,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:restore {name?} {version?}` | Backupuje stan bieżący, po czym przywraca wersję |
 | `modsx:diff {name?} {version?} {against?}` | Porównanie z wersją w backupie albo dwóch wersji ze sobą |
 | `modsx:info {name?}` | Rozmiar, liczba plików i historia backupów |
-| `modsx:prune {name?}` | Usuwa stare wersje, zostawiając najnowsze |
+| `modsx:prune {name?}` | Usuwa stare wersje według liczby albo duplikaty przez `--duplicates` |
 | `modsx:snapshot {name?}` | **1.0** &nbsp; Zapis wersji każdego modułu jako jeden snapshot |
 | `modsx:snapshotlist` | **1.0** &nbsp; Wykonane snapshoty |
 | `modsx:rollback {snapshot?}` | **1.0** &nbsp; Cofnięcie całego projektu do snapshotu |
@@ -1009,7 +1009,7 @@ php artisan modsx:snapshotprune --keep=5 --force
 
 Snapshoty wstrzymują wersje przed `modsx:prune`, więc ta komenda istnieje po to, żeby móc któryś puścić. Usunięcie snapshotu **nie usuwa żadnych wersji** — przestaje je tylko wstrzymywać, więc następny `modsx:prune` znowu weźmie je pod uwagę.
 
-#### `--duplicates`
+### `modsx:prune --duplicates`
 
 Usuwa wersje trzymające dokładnie to, co wersja następująca po nich:
 

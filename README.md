@@ -300,7 +300,7 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:status {name?}` | **1.0** &nbsp; Every module: what it is, what it came from, what has moved |
 | `modsx:deps {name?}` | **1.0** &nbsp; Which modules a module needs, worked out by reading it |
 | `modsx:path {name?}` | Everything belonging to a module |
-| `modsx:backup {name?}` | Copy a module to a new numbered version |
+| `modsx:backup {name?}` | Copy a module to a new numbered version, unless nothing changed |
 | `modsx:backuplist {name?}` | Available backup versions |
 | `modsx:export {name?} {version?}` | Pack a backup version into a portable .zip |
 | `modsx:import {path}` | Unpack a .zip exported by `modsx:export` |
@@ -308,7 +308,7 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:restore {name?} {version?}` | Back up the current state, then restore a version |
 | `modsx:diff {name?} {version?} {against?}` | Compare against a backup version, or two versions with each other |
 | `modsx:info {name?}` | Show size, file count, and backup history |
-| `modsx:prune {name?}` | Remove old versions, keeping the newest |
+| `modsx:prune {name?}` | Remove old versions by count, or duplicates with `--duplicates` |
 | `modsx:snapshot {name?}` | **1.0** &nbsp; Record the version every module is at, as one snapshot |
 | `modsx:snapshotlist` | **1.0** &nbsp; Snapshots that have been taken |
 | `modsx:rollback {snapshot?}` | **1.0** &nbsp; Put the whole project back to a snapshot |
@@ -1009,7 +1009,7 @@ php artisan modsx:snapshotprune --keep=5 --force
 
 Snapshots hold versions back from `modsx:prune`, so this exists to let one go. Removing a snapshot **removes no versions** — it only stops them being held, so the next `modsx:prune` can consider them again.
 
-#### `--duplicates`
+### `modsx:prune --duplicates`
 
 Removes versions holding exactly what the version after them holds:
 
