@@ -37,7 +37,7 @@ it('records the newest version when a backup found nothing to do', function () {
     app(BackupManager::class)->backup('Blog');
     app(ModuleState::class)->forget('Blog');
 
-    app(BackupManager::class)->backup('Blog', skipUnchanged: true);
+    app(BackupManager::class)->backup('Blog');
 
     expect(app(ModuleState::class)->current('Blog'))->toBe('0001');
 });

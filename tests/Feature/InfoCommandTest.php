@@ -34,7 +34,7 @@ it('counts a module own files towards its size', function () {
 
 it('reports backup versions with their sizes', function () {
     app(BackupManager::class)->backup('Blog');
-    app(BackupManager::class)->backup('Blog', comment: 'before refactor');
+    app(BackupManager::class)->backup('Blog', comment: 'before refactor', evenIfUnchanged: true);
 
     $info = json_decode(artisanOutput('modsx:info Blog --json'), true);
 

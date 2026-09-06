@@ -51,12 +51,12 @@ class BackupManager
      * Copy a module into a new version.
      *
      * @param  ?string  $comment  Optional free-text note, recorded in the manifest as-is.
-     * @param  bool  $skipUnchanged  Return the newest version untouched when the module is identical to it.
+     * @param  bool  $evenIfUnchanged  Write a version even when the module is identical to the newest one.
      * @return array{version: string, paths: list<string>, files: list<string>, archived: list<string>, target: string, skipped: bool}
      *
      * @throws ModsxException
      */
-    public function backup(ModuleName|string $name, ?string $comment = null, bool $skipUnchanged = false): array
+    public function backup(ModuleName|string $name, ?string $comment = null, bool $evenIfUnchanged = false): array
     {
         $name = ModuleName::make($name);
         $paths = $this->locator->paths($name);
@@ -68,7 +68,10 @@ class BackupManager
         $files = $this->locator->files($name);
         $archived = $this->locator->migrations($name);
 
-        if ($skipUnchanged) {
+        // Taking a second copy of a module that has not moved records nothing
+        // and costs a full directory, so it is not the default. Asking for one
+        // anyway is a deliberate act and needs saying out loud.
+        if (! $evenIfUnchanged) {
             $unchanged = $this->matchesNewestVersion($name, $paths, $files);
 
             if ($unchanged !== null) {
@@ -655,18 +658,168 @@ class BackupManager
 
         if (! $dryRun) {
             foreach ($removable as $version) {
-                File::deleteDirectory($this->backups->versionPath($name, $version));
-
-                // A version's exported zip (if one was ever made) is a
-                // derived artifact of that version - it goes with it. The
-                // older name is swept too, so a tree written before exports
-                // carried the module name does not keep them for ever.
-                File::delete($this->backups->pathFor($name).'/'.$this->exportName($name, $version));
-                File::delete($this->backups->versionPath($name, $version).'.zip');
+                $this->removeVersion($name, $version);
             }
         }
 
         return $removable;
+    }
+
+    /**
+     * Delete one version and whatever was derived from it.
+     *
+     * @throws ModsxException
+     */
+    private function removeVersion(ModuleName $name, string $version): void
+    {
+        File::deleteDirectory($this->backups->versionPath($name, $version));
+
+        // A version's exported zip (if one was ever made) is a derived
+        // artifact of that version - it goes with it. The older name is swept
+        // too, so a tree written before exports carried the module name does
+        // not keep them for ever.
+        File::delete($this->backups->pathFor($name).'/'.$this->exportName($name, $version));
+        File::delete($this->backups->versionPath($name, $version).'.zip');
+    }
+
+    /**
+     * Runs of consecutive versions holding the same content.
+     *
+     * Only consecutive ones, and the distinction matters. Two identical
+     * versions with a different one between them are not a mistake anybody
+     * made twice - they are a return: the module was changed and changed back,
+     * and the later version is the newest statement of what the module is.
+     * Removing it would leave latest() naming a state the application is not
+     * in, which every other command reads.
+     *
+     * Consecutive ones say nothing of the sort. They are what a second
+     * modsx:backup used to write when nothing had moved, and what restoring
+     * twice in a row used to leave behind.
+     *
+     * The newest of each run is the one kept, for the same reason: it is what
+     * latest() must go on describing.
+     *
+     * Archived migrations count towards being identical here, unlike in the
+     * check that skips an unchanged backup. That check asks whether a restore
+     * would do anything; this one is about deleting, and a version holding the
+     * only copy of a migration must not look disposable.
+     *
+     * @return list<array{keep: string, remove: list<string>}>
+     *
+     * @throws ModsxException
+     */
+    public function duplicateRuns(ModuleName|string $name): array
+    {
+        $name = ModuleName::make($name);
+        $versions = $this->backups->versions($name);
+
+        $runs = [];
+        $current = [];
+        $previousId = null;
+
+        foreach ($versions as $version) {
+            $id = $this->contentId($name, $version);
+
+            if ($id === $previousId) {
+                $current[] = $version;
+            } else {
+                $runs = $this->closeRun($runs, $current);
+                $current = [$version];
+                $previousId = $id;
+            }
+        }
+
+        return $this->closeRun($runs, $current);
+    }
+
+    /**
+     * @param  list<array{keep: string, remove: list<string>}>  $runs
+     * @param  list<string>  $run
+     * @return list<array{keep: string, remove: list<string>}>
+     */
+    private function closeRun(array $runs, array $run): array
+    {
+        if (count($run) > 1) {
+            $keep = array_pop($run);
+            // array_pop() takes from the end, so what is left is still a list.
+            $runs[] = ['keep' => $keep, 'remove' => $run];
+        }
+
+        return $runs;
+    }
+
+    /**
+     * One value standing for everything a version holds.
+     *
+     * @throws ModsxException
+     */
+    private function contentId(ModuleName $name, string $version): string
+    {
+        $root = $this->backups->versionPath($name, $version);
+
+        $map = $this->differ->fingerprint(
+            $root,
+            $this->pathsInBackup($name, $version),
+            $this->filesInBackup($name, $version),
+        );
+
+        $map['_archive'] = $this->differ->fingerprint(
+            $root.'/'.self::ARCHIVE_DIRECTORY,
+            [],
+            $this->archivedInBackup($name, $version),
+        );
+
+        return md5(serialize($map));
+    }
+
+    /**
+     * Versions nothing may delete, whatever it was asked to.
+     *
+     * A snapshot names versions across modules and only finds out at the
+     * rollback that one has gone. The state pointer names one per module, and
+     * losing it leaves modsx:status unable to say where the working tree came
+     * from. Both are cheap to check and expensive to get wrong.
+     *
+     * @return list<string>
+     *
+     * @throws ModsxException
+     */
+    private function heldFromRemoval(ModuleName $name): array
+    {
+        $held = $this->snapshots->heldVersions()[$name->studly] ?? [];
+        $current = $this->state->current($name);
+
+        if ($current !== null) {
+            $held[] = $current;
+        }
+
+        return array_values(array_unique($held));
+    }
+
+    /**
+     * Remove the versions named, refusing any that is spoken for.
+     *
+     * @param  list<string>  $versions
+     * @return list<string> the ones actually removed
+     *
+     * @throws ModsxException
+     */
+    public function forgetVersions(ModuleName|string $name, array $versions): array
+    {
+        $name = ModuleName::make($name);
+        $held = $this->heldFromRemoval($name);
+        $removed = [];
+
+        foreach ($versions as $version) {
+            if (in_array($version, $held, true) || ! $this->backups->has($name, $version)) {
+                continue;
+            }
+
+            $this->removeVersion($name, $version);
+            $removed[] = $version;
+        }
+
+        return $removed;
     }
 
     /**

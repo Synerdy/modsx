@@ -62,10 +62,11 @@ class SnapshotManager
         $graph = [];
 
         foreach ($scope as $module) {
-            // skipUnchanged is what makes a snapshot cheap enough to take
-            // often: an unchanged project writes no version directories at all,
-            // and every module still gets a version number to be recorded at.
-            $result = $this->manager->backup($module, $comment, skipUnchanged: true);
+            // Skipping an unchanged module is what makes a snapshot cheap
+            // enough to take often: an unchanged project writes no version
+            // directories at all, and every module still gets a version number
+            // to be recorded at.
+            $result = $this->manager->backup($module, $comment);
 
             $modules[$module] = $result['version'];
 

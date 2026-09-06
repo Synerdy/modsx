@@ -113,3 +113,108 @@ it('does not claim there is little to prune when a snapshot is the reason', func
     expect(artisanOutput('modsx:prune Shop --keep=1 --force'))
         ->toContain('held by a snapshot');
 });
+
+it('removes a version identical to the one after it', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    $manager->backup('Shop', evenIfUnchanged: true);
+    $manager->backup('Shop', evenIfUnchanged: true);
+
+    $output = json_decode(artisanOutput('modsx:prune Shop --duplicates --force --json'), true);
+
+    expect($output['removed']['Shop'])->toBe(['0001', '0002'])
+        ->and(app(BackupRepository::class)->versions('Shop'))->toBe(['0003']);
+});
+
+it('leaves a return alone, because it is the newest word on the module', function () {
+    // 0001 and 0003 hold the same content with 0002 between them. That is not
+    // a repeat, it is a change and a change back - and removing 0003 would
+    // leave latest() naming 0002, a state the application is not in.
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'A');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    File::put($this->root.'/resources/views/modsx-shop/index.blade.php', 'B');
+    $manager->backup('Shop');
+    File::put($this->root.'/resources/views/modsx-shop/index.blade.php', 'A');
+    $manager->backup('Shop');
+
+    artisanOutput('modsx:prune Shop --duplicates --force --json');
+
+    expect(app(BackupRepository::class)->versions('Shop'))->toBe(['0001', '0002', '0003']);
+});
+
+it('keeps a commented duplicate when there is nobody to ask', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    $manager->backup('Shop', comment: 'before the refactor', evenIfUnchanged: true);
+    $manager->backup('Shop', evenIfUnchanged: true);
+
+    $output = json_decode(artisanOutput('modsx:prune Shop --duplicates --force --json'), true);
+
+    expect($output['removed']['Shop'])->toBe(['0001'])
+        ->and(app(BackupRepository::class)->versions('Shop'))->toContain('0002');
+});
+
+it('removes a commented duplicate when told to', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    $manager->backup('Shop', comment: 'before the refactor', evenIfUnchanged: true);
+    $manager->backup('Shop', evenIfUnchanged: true);
+
+    $output = json_decode(artisanOutput('modsx:prune Shop --duplicates --with-comments --force --json'), true);
+
+    expect($output['removed']['Shop'])->toBe(['0001', '0002']);
+});
+
+it('shows what a comment says before offering to remove it', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    $manager->backup('Shop', comment: 'before the refactor', evenIfUnchanged: true);
+    $manager->backup('Shop', evenIfUnchanged: true);
+
+    expect(artisanOutput('modsx:prune Shop --duplicates --dry-run'))
+        ->toContain('before the refactor');
+});
+
+it('removes nothing on a duplicates dry run', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    $manager->backup('Shop', evenIfUnchanged: true);
+
+    $output = json_decode(artisanOutput('modsx:prune Shop --duplicates --dry-run --json'), true);
+
+    expect($output['plan']['Shop']['remove'])->toBe(['0001'])
+        ->and(app(BackupRepository::class)->versions('Shop'))->toBe(['0001', '0002']);
+});
+
+it('will not remove a duplicate a snapshot is holding', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    $manager = app(BackupManager::class);
+
+    $manager->backup('Shop');
+    app(SnapshotManager::class)->take();
+    $manager->backup('Shop', evenIfUnchanged: true);
+
+    artisanOutput('modsx:prune Shop --duplicates --force --json');
+
+    expect(app(BackupRepository::class)->versions('Shop'))->toContain('0001');
+});
+
+it('says so when nothing is duplicated', function () {
+    $this->makeModuleDirectory('resources/views/modsx-shop', 'index.blade.php', 'v1');
+    app(BackupManager::class)->backup('Shop');
+
+    expect(artisanOutput('modsx:prune Shop --duplicates --force'))
+        ->toContain('No duplicates');
+});

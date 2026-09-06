@@ -12,7 +12,7 @@ beforeEach(function () {
 
 it('exports the newest version by default', function () {
     app(BackupManager::class)->backup('Blog');
-    app(BackupManager::class)->backup('Blog');
+    app(BackupManager::class)->backup('Blog', evenIfUnchanged: true);
 
     $output = json_decode(artisanOutput('modsx:export Blog --json'), true);
 
@@ -58,7 +58,7 @@ it('leaves version numbering alone, zip or no zip', function () {
     // the next backup would be numbered over the top of a real one.
     $manager = app(BackupManager::class);
     $manager->backup('Blog');
-    $manager->backup('Blog');
+    $manager->backup('Blog', evenIfUnchanged: true);
     $manager->export('Blog', '0002');
 
     $backups = app(BackupRepository::class);

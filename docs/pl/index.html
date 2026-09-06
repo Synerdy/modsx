@@ -1182,7 +1182,7 @@ php artisan modsx:path --json
 <pre><code class="language-bash">php artisan modsx:backup Blog
 php artisan modsx:backup Blog -m &quot;przed przejściem na repository pattern&quot;
 php artisan modsx:backup --all                  # wszystkie moduły naraz
-php artisan modsx:backup Blog --skip-unchanged  # nic nie rób, jeśli nic się nie zmieniło
+php artisan modsx:backup Blog --even-if-unchanged   # zapisz wersję mimo to
 php artisan modsx:backup Blog --json
 </code></pre>
 <pre><code>modsx-backups/
@@ -1199,7 +1199,18 @@ php artisan modsx:backup Blog --json
 <p>Numer wersji bierze się z najwyższego istniejącego numeru, a nie z tego, co system plików wypisze jako ostatnie, a komenda odmawia zapisu do ścieżki, która już istnieje. Wersje nigdy nie są nadpisywane ani używane ponownie.</p>
 <p>Zarchiwizowane migracje leżą w <code>_archive/</code>, z dala od reszty. To nie jest etykieta — przywracanie czyta listę ścieżek i plików z manifestu i nigdzie indziej nie zagląda, więc nie ma tu flagi, którą dałoby się źle ustawić.</p>
 <p><code>-m</code>/<code>--comment</code> dopina do wersji opcjonalną, dowolną notatkę tekstową — całkowicie opt-in, nie ma o to promptu. Widać ją w <code>modsx:backuplist</code> i <code>modsx:info</code>.</p>
-<p><code>--skip-unchanged</code> porównuje moduł z jego najnowszą wersją plik po pliku i nie robi nic, jeśli są identyczne — dzięki temu backup przy każdym wdrożeniu nie zapycha dysku identycznymi kopiami. Zmieniona migracja nie liczy się tu jako zmiana, bo nie jest częścią tego, co przywracanie odtwarza.</p>
+<p><strong>Moduł, który się nie zmienił, nie jest kopiowany drugi raz.</strong> Każdy backup najpierw porównuje moduł z jego najnowszą wersją plik po pliku, a gdy są zgodne — mówi o tym i nic nie zapisuje:</p>
+<pre><code> INFO  Nothing to back up: [Blog] is identical to version 0004.
+</code></pre>
+<p>Druga kopia modułu, który się nie ruszył, nie zapisuje żadnego faktu, a kosztuje pełny katalog — dlatego nie jest zachowaniem domyślnym. Zmieniona migracja nie liczy się tu jako zmiana, bo nie jest częścią tego, co przywracanie odtwarza.</p>
+<p><code>--even-if-unchanged</code> zapisze wersję mimo to — na wypadek, gdy druga kopia tego samego jest właśnie sensem: oznaczenie momentu, który ma znaczenie, choć kod się nie zmienił:</p>
+<pre><code class="language-bash">php artisan modsx:backup Blog --even-if-unchanged -m &quot;wdrożone na produkcję&quot;
+</code></pre>
+<p>Sam komentarz tego nie wymusza. Jeśli nic się nie zmieniło, wersja, do której miał trafić, nie powstaje — a komenda mówi wprost, że komentarz przepadł, zamiast gubić go po cichu:</p>
+<pre><code> INFO  Nothing to back up: [Blog] is identical to version 0004.
+  ⇂ The comment was not recorded. Pass --even-if-unchanged to write a version for it
+</code></pre>
+<p>Ta sama reguła dotyczy kopii zabezpieczających, które <code>modsx:restore</code> i <code>modsx:delete</code> robią, zanim cokolwiek zmienią: gdy jakaś wersja już trzyma bieżący stan, to jest dokładnie to, po co te kopie istnieją, i druga identyczna nie powstaje.</p>
 <p>Każda wersja ma manifest <code>modsx.json</code> z nazwą modułu, czasem utworzenia, dokładną listą ścieżek i plików źródłowych, zarchiwizowanymi migracjami, opcjonalnym komentarzem oraz wersjami PHP, Laravela i pakietu. Przywracanie go czyta, dzięki czemu odkłada rzeczy tam, skąd zostały wzięte, zamiast zgadywać ich położenie.</p>
 <p>Całość kopiowana jest najpierw do katalogu tymczasowego i dopiero na końcu przenoszona na miejsce, więc przerwany backup nie zostawia po sobie wersji zapisanej w połowie.</p>
 <p>Backup dwóch modułów, których nazwy różnią się wyłącznie wielkością liter, jest odrzucany. Na Windows i macOS <code>UserProfile</code> i <code>Userprofile</code> to ten sam katalog, więc dzieliłyby jedną sekwencję wersji, a przywracanie mogłoby zwrócić nie ten moduł. Odmowa obowiązuje na każdej platformie: zachowanie zależne od systemu plików jest gorsze niż konsekwentne „nie&quot;.</p>
@@ -1385,6 +1396,52 @@ php artisan modsx:snapshotprune --keep=5 --dry-run
 php artisan modsx:snapshotprune --keep=5 --force
 </code></pre>
 <p>Snapshoty wstrzymują wersje przed <code>modsx:prune</code>, więc ta komenda istnieje po to, żeby móc któryś puścić. Usunięcie snapshotu <strong>nie usuwa żadnych wersji</strong> — przestaje je tylko wstrzymywać, więc następny <code>modsx:prune</code> znowu weźmie je pod uwagę.</p>
+<h4 id="--duplicates"><code>--duplicates</code></h4>
+<p>Usuwa wersje trzymające dokładnie to, co wersja następująca po nich:</p>
+<pre><code class="language-bash">php artisan modsx:prune Blog --duplicates --dry-run
+php artisan modsx:prune Blog --duplicates
+php artisan modsx:prune --duplicates --force        # wszystkie moduły, bez pytania
+</code></pre>
+<pre><code> INFO  Blog
+
+  0001 ................................................. identical to 0003
+  0002 before the refactor ...... identical to 0003, will ask
+
+ INFO  1 version(s) would be removed and 1 asked about. Nothing was changed.
+</code></pre>
+<p>Ignoruje <code>--keep</code>. Te dwa tryby zadają wersji różne pytania: <code>--keep</code> dotyczy tego, ile historii zachować, a to — historii, która niczego nie zapisuje.</p>
+<p><strong>Liczą się wyłącznie wersje sąsiadujące.</strong> Dwie identyczne wersje z inną pomiędzy nimi to nie powtórka, tylko powrót: moduł został zmieniony i zmieniony z powrotem. Usunięcie tej późniejszej sprawiłoby, że <code>modsx:backuplist</code> i <code>modsx:status</code> wskazywałyby stan, w którym Twoja aplikacja nie jest — więc zostaje nietknięta:</p>
+<table>
+<thead>
+<tr>
+<th>Wersje</th>
+<th>Co się dzieje</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0001</code> A, <code>0002</code> A, <code>0003</code> A</td>
+<td>znikają <code>0001</code> i <code>0002</code>, zostaje <code>0003</code></td>
+</tr>
+<tr>
+<td><code>0001</code> A, <code>0002</code> B, <code>0003</code> A</td>
+<td>nic nie znika — <code>0003</code> to powrót, nie powtórka</td>
+</tr>
+<tr>
+<td><code>0001</code> A, <code>0002</code> A, <code>0003</code> B</td>
+<td>znika <code>0001</code>, zostają <code>0002</code> i <code>0003</code></td>
+</tr>
+</tbody>
+</table>
+<p>Z każdego ciągu zostaje najnowsza wersja, z tego samego powodu: to ona musi dalej znaczyć „najnowsza wersja&quot;.</p>
+<p><strong>O komentarz zawsze się pyta, nigdy nie zakłada.</strong> Treść przetrwa w wersji, z którą dana jest identyczna, ale notatka o momencie to nie treść — i tylko ten, kto ją napisał, wie, czy nadal ma znaczenie. Tekst jest pokazany wprost:</p>
+<pre><code> [Blog]: which of these commented duplicates should go?
+ ◻ 0002  before the refactor
+ ◻ 0006  shipped to production
+</code></pre>
+<p>Na początku nic nie jest zaznaczone. Przy <code>--force</code>, <code>--json</code> albo bez terminala, w którym dałoby się zapytać, wersje z komentarzem zostają, a odpowiedź to odnotowuje — <code>--with-comments</code> to sposób, w jaki skrypt mówi, że już zdecydował.</p>
+<p>Zarchiwizowane migracje liczą się tu do bycia identycznym, inaczej niż w sprawdzeniu pomijającym niezmieniony backup. Tamto pyta, czy przywracanie cokolwiek zrobi; to dotyczy kasowania, a wersja trzymająca jedyną kopię migracji nie może wyglądać na zbędną.</p>
+<p>Wersje wskazywane przez snapshot albo przez wskaźnik stanu nie są usuwane nigdy, tak samo jak przy <code>--keep</code>.</p>
 <h4 id="snapshoty-a-przycinanie">Snapshoty a przycinanie</h4>
 <p><code>modsx:prune</code> nie skasuje wersji wymienionej w snapshocie — tak jak tag nie pozwala zebrać commita. Bez tego rollback dowiadywałby się o stracie dopiero w chwili, w której ta wersja była mu potrzebna, czyli o wiele za późno. Mówi przy tym wprost, co zostawił i dlaczego:</p>
 <pre><code> Shop 0001 ....... kept, held by a snapshot
@@ -1627,7 +1684,7 @@ php artisan modsx:doctor --fix     # usuwa puste katalogi modułu
 <li><strong>Migracja pasująca do dwóch modułów trafia do dłuższej nazwy.</strong> <code>Blog</code> i <code>BlogPost</code> współistnieją bez problemu — pliki nazywają po jednym module — ale <code>modsx_blog_post_create_comments_table</code> pasuje do obu i wygrywa dłuższa nazwa. Dla migracji BlogPosta to poprawne; jeśli Blog kiedyś potrzebuje migracji, której nazwa zaczyna się jak nazwa BlogPosta, musi ją nazwać inaczej. To jedyna reguła, której nie odczytasz z samej nazwy pliku.</li>
 <li><strong>Bez rozwiązywania zależności.</strong> Modsx nie wie, że <code>Blog</code> potrzebuje <code>Users</code>. Przywrócenie jednego nie przywróci drugiego.</li>
 <li><strong>Bez integracji z Composerem.</strong> Zewnętrzne pakiety, od których zależy moduł, pozostają problemem Twojego <code>composer.json</code>.</li>
-<li><strong>Backupy to zwykłe kopie katalogów.</strong> Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd <code>modsx:prune</code> i <code>--skip-unchanged</code>.</li>
+<li><strong>Backupy to zwykłe kopie katalogów.</strong> Bez kompresji, bez deduplikacji. Duży moduł zbackupowany pięćdziesiąt razy zajmuje pięćdziesiąt kopii — stąd <code>modsx:prune</code> i pomijanie niezmienionych modułów.</li>
 <li><strong>Przywracanie jest odwracalne, ale nie atomowe.</strong> Bieżący stan jest odsuwany w całości, zanim wejdzie przywracany, więc awaria w połowie jest automatycznie cofana. Maszyna, która padnie dokładnie w złym momencie, wciąż może zostawić moduł w kawałkach — ale wszystko, co miał, leży w jednym miejscu, a backup sprzed przywracania nadal tam jest.</li>
 </ul>
 <hr />

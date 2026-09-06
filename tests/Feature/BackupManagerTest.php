@@ -383,7 +383,7 @@ it('exports a version to a zip next to it, containing the manifest and every bac
 it('exports the newest version by default', function () {
     $manager = app(BackupManager::class);
     $manager->backup('Blog');
-    $manager->backup('Blog');
+    $manager->backup('Blog', evenIfUnchanged: true);
 
     expect($manager->export('Blog')['version'])->toBe('0002');
 });

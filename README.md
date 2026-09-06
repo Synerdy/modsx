@@ -746,7 +746,7 @@ Copies every directory belonging to the module into a new sequential version.
 php artisan modsx:backup Blog
 php artisan modsx:backup Blog -m "before switching to repository pattern"
 php artisan modsx:backup --all                  # every module at once
-php artisan modsx:backup Blog --skip-unchanged  # do nothing if nothing changed
+php artisan modsx:backup Blog --even-if-unchanged   # write a version anyway
 php artisan modsx:backup Blog --json
 ```
 
@@ -769,7 +769,28 @@ Archived migrations sit in `_archive/`, apart from everything else. That is not 
 
 `-m`/`--comment` attaches an optional free-text note to the version — entirely opt-in, there is no prompt for it. It shows up in `modsx:backuplist` and `modsx:info`.
 
-`--skip-unchanged` compares the module against its newest version file by file and does nothing if they match, so a backup on every deploy doesn't fill the disk with identical copies. A changed migration doesn't count as a change here, since it isn't part of what a restore would put back.
+**A module that has not changed is not copied again.** Every backup compares the module against its newest version file by file first, and when they match it says so and writes nothing:
+
+```
+ INFO  Nothing to back up: [Blog] is identical to version 0004.
+```
+
+A second copy of a module that has not moved records nothing and costs a full directory, so it is not what happens by default. A changed migration doesn't count as a change here, since it isn't part of what a restore would put back.
+
+`--even-if-unchanged` writes one anyway, for the case where a second copy of the same thing is the point — marking a moment that matters even though the code has not moved:
+
+```bash
+php artisan modsx:backup Blog --even-if-unchanged -m "shipped to production"
+```
+
+A comment on its own does not force one. If nothing changed, the version it was meant for is never written, and the command says the comment went nowhere rather than losing it quietly:
+
+```
+ INFO  Nothing to back up: [Blog] is identical to version 0004.
+  ⇂ The comment was not recorded. Pass --even-if-unchanged to write a version for it
+```
+
+The same rule applies to the safety copies `modsx:restore` and `modsx:delete` take before they change anything: when a version already holds the current state, that is what those copies exist for, and a second identical one is not written.
 
 Each version carries a `modsx.json` manifest recording the module name, creation time, the exact source paths and files, the archived migrations, the optional comment, and the PHP, Laravel and package versions in use. Restore reads it, so it puts things back where they came from rather than inferring their location.
 
@@ -987,6 +1008,51 @@ php artisan modsx:snapshotprune --keep=5 --force
 ```
 
 Snapshots hold versions back from `modsx:prune`, so this exists to let one go. Removing a snapshot **removes no versions** — it only stops them being held, so the next `modsx:prune` can consider them again.
+
+#### `--duplicates`
+
+Removes versions holding exactly what the version after them holds:
+
+```bash
+php artisan modsx:prune Blog --duplicates --dry-run
+php artisan modsx:prune Blog --duplicates
+php artisan modsx:prune --duplicates --force        # every module, no prompt
+```
+
+```
+ INFO  Blog
+
+  0001 ................................................. identical to 0003
+  0002 before the refactor ...... identical to 0003, will ask
+
+ INFO  1 version(s) would be removed and 1 asked about. Nothing was changed.
+```
+
+It ignores `--keep`. The two ask different questions of a version: `--keep` is about how much history to hold on to, this is about history that records nothing.
+
+**Only versions next to each other count.** Two identical versions with a different one between them are not a repeat — they are a return: the module was changed and changed back. Removing the later one would leave `modsx:backuplist` and `modsx:status` naming a state your application is not in, so it is left alone:
+
+| Versions | What happens |
+|---|---|
+| `0001` A, `0002` A, `0003` A | `0001` and `0002` go, `0003` stays |
+| `0001` A, `0002` B, `0003` A | nothing goes — `0003` is a return, not a repeat |
+| `0001` A, `0002` A, `0003` B | `0001` goes, `0002` and `0003` stay |
+
+The newest of each run is the one kept, for the same reason: it is what "the newest version" has to go on meaning.
+
+**A comment is always asked about, never assumed.** The content survives in the version it is identical to, but a note about a moment is not content, and only the person who wrote it can say whether it still matters. The text is put in front of you:
+
+```
+ [Blog]: which of these commented duplicates should go?
+ ◻ 0002  before the refactor
+ ◻ 0006  shipped to production
+```
+
+Nothing is selected to begin with. With `--force`, `--json` or no terminal to ask in, commented versions are kept and the answer says so — `--with-comments` is how a script says it has already decided.
+
+Archived migrations count towards being identical here, unlike in the check that skips an unchanged backup. That check asks whether a restore would do anything; this one is about deleting, and a version holding the only copy of a migration must not look disposable.
+
+Versions a snapshot or the state pointer names are never removed, the same as with `--keep`.
 
 #### Snapshots and pruning
 
@@ -1276,7 +1342,7 @@ Deliberate, and worth knowing before you rely on this:
 - **A migration matching two modules goes to the longer name.** `Blog` and `BlogPost` coexist happily — files name one module each — but `modsx_blog_post_create_comments_table` matches both, and the longer name wins. That is right for a migration of BlogPost's; if Blog ever needs one whose name begins with BlogPost's, it has to be named differently. This is the only rule you cannot read off a single filename.
 - **No dependency resolution.** Modsx doesn't know that `Blog` needs `Users`. Restoring one won't restore the other.
 - **No Composer integration.** Third-party packages a module depends on remain your `composer.json`'s problem.
-- **Backups are plain directory copies.** No compression, no deduplication. A large module backed up fifty times occupies fifty copies — hence `modsx:prune` and `--skip-unchanged`.
+- **Backups are plain directory copies.** No compression, no deduplication. A large module backed up fifty times occupies fifty copies — hence `modsx:prune` and skipping a module that has not changed.
 - **Restore is recoverable, not atomic.** The current state is moved aside whole before the restored state goes in, so a failure partway through is rolled back automatically. A machine that dies at exactly the wrong moment can still leave the module in pieces — but everything it had is in one place, and the pre-restore backup is still there.
 
 ---

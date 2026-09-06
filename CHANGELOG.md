@@ -5,6 +5,71 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.3] - 2026-09-06
+
+### Added
+
+- **`modsx:prune --duplicates` removes versions that record nothing**, meaning
+  a version holding exactly what the version after it holds. It ignores
+  `--keep`: the two ask different questions of a version, one about how much
+  history to hold on to and one about history that says nothing, and the
+  answers do not combine.
+
+  Only versions next to each other count, and the distinction is the whole
+  design. Two identical versions with a different one between them are not a
+  repeat but a return - the module was changed and changed back - and removing
+  the later one would leave `latest()` naming a state the application is not
+  in, which `modsx:status`, `modsx:backuplist` and a bare `modsx:restore` all
+  read. So `0001 A, 0002 A, 0003 A` collapses to `0003`, while
+  `0001 A, 0002 B, 0003 A` is left exactly as it is.
+
+  The newest of each run is what stays, for the same reason.
+
+  A version carrying a comment is always asked about, never assumed, and the
+  comment is shown while asking. The content survives in the version it
+  duplicates, but a note about a moment is not content and only its author can
+  say whether it still matters. Where there is nobody to ask - `--force`,
+  `--json`, no terminal - those versions are kept and the answer says so;
+  `--with-comments` is how a script says it has already decided.
+
+  Archived migrations count towards being identical here, unlike in the check
+  that skips an unchanged backup. That check asks whether a restore would do
+  anything; this one is about deleting, and a version holding the only copy of
+  a migration must not look disposable.
+
+  Versions a snapshot or the state pointer names are never removed, as with
+  `--keep`.
+
+### Changed
+
+- **`modsx:backup` no longer copies a module that has not changed.** It
+  compares against the newest version first and says what it found:
+
+  ```
+   INFO  Nothing to back up: [Blog] is identical to version 0004.
+  ```
+
+  A second copy of a module that has not moved records no fact and costs a
+  full directory, so it was never what anyone wanted - but it was the default,
+  and `--skip-unchanged` had to be remembered to avoid it. The flag is now the
+  other way round: `--even-if-unchanged` writes a version anyway, for the one
+  case where a second copy of the same thing is the point, marking a moment
+  that matters even though the code has not.
+
+  The safety copies `modsx:restore` and `modsx:delete` take before they change
+  anything follow the same rule, and that is where most duplicate versions were
+  coming from: restoring twice in a row wrote the same state twice. When a
+  version already holds the current state, that is what those copies exist for.
+
+  A comment does not force a version on its own. If nothing changed, the
+  version it was meant for is never written, and the command says the comment
+  went nowhere rather than losing it quietly.
+
+  Breaking, and deliberately so while this is a prerelease: `--skip-unchanged`
+  is gone, and `BackupManager::backup()` takes `$evenIfUnchanged` where it took
+  `$skipUnchanged`. Scripts passing the old flag will be told it does not exist
+  rather than quietly doing something else.
+
 ## [1.0.0-beta.2] - 2026-09-06
 
 ### Fixed

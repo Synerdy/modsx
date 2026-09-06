@@ -36,9 +36,24 @@ it('restores a specific version', function () {
 it('backs up the current state before overwriting it', function () {
     app(BackupManager::class)->backup('Blog');
 
+    File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'work since the backup');
+
     $this->artisan('modsx:restore Blog 0001 --force')->assertExitCode(0);
 
-    expect(app(BackupRepository::class)->versions('Blog'))->toBe(['0001', '0002']);
+    expect(app(BackupRepository::class)->versions('Blog'))->toBe(['0001', '0002'])
+        ->and(File::get($this->root.'/modsx-backups/Blog/0002/resources/views/modsx-blog/index.blade.php'))
+        ->toBe('work since the backup');
+});
+
+it('writes no safety copy when the state is already in a version', function () {
+    // The safety backup exists so the current state is not lost. When a
+    // version already holds it, that is satisfied - and taking a second
+    // identical copy was where most duplicates came from.
+    app(BackupManager::class)->backup('Blog');
+
+    $this->artisan('modsx:restore Blog 0001 --force')->assertExitCode(0);
+
+    expect(app(BackupRepository::class)->versions('Blog'))->toBe(['0001']);
 });
 
 it('installs a module from backup when it is absent from the application', function () {

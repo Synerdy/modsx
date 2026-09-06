@@ -64,10 +64,10 @@ it('backs up every module with --all', function () {
         ->and(File::isDirectory($this->root.'/modsx-backups/Shop/0001'))->toBeTrue();
 });
 
-it('takes no second copy when nothing changed', function () {
+it('takes no second copy when nothing changed, without being asked to skip', function () {
     $this->artisan('modsx:backup Blog')->assertExitCode(0);
 
-    $output = json_decode(artisanOutput('modsx:backup Blog --skip-unchanged --json'), true);
+    $output = json_decode(artisanOutput('modsx:backup Blog --json'), true);
 
     expect($output['Blog']['skipped'])->toBeTrue()
         ->and($output['Blog']['version'])->toBe('0001')
@@ -79,7 +79,7 @@ it('still copies when something did change', function () {
 
     File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
 
-    $output = json_decode(artisanOutput('modsx:backup Blog --skip-unchanged --json'), true);
+    $output = json_decode(artisanOutput('modsx:backup Blog --json'), true);
 
     expect($output['Blog']['skipped'])->toBeFalse()
         ->and($output['Blog']['version'])->toBe('0002');
@@ -93,7 +93,27 @@ it('does not count an archived migration as a change', function () {
 
     File::put($this->root.'/database/migrations/2026_01_01_000000_modsx_blog_posts_table.php', 'schema v2');
 
-    $output = json_decode(artisanOutput('modsx:backup Blog --skip-unchanged --json'), true);
+    $output = json_decode(artisanOutput('modsx:backup Blog --json'), true);
 
     expect($output['Blog']['skipped'])->toBeTrue();
+});
+
+it('writes a version anyway when asked to', function () {
+    // The escape hatch for the one case where a second copy of the same thing
+    // is the point: marking a moment that matters even though the code has
+    // not moved.
+    $this->artisan('modsx:backup Blog')->assertExitCode(0);
+
+    $output = json_decode(artisanOutput('modsx:backup Blog --even-if-unchanged --json'), true);
+
+    expect($output['Blog']['skipped'])->toBeFalse()
+        ->and($output['Blog']['version'])->toBe('0002')
+        ->and(app(BackupRepository::class)->versions('Blog'))->toBe(['0001', '0002']);
+});
+
+it('says a comment went nowhere when there was nothing to record it against', function () {
+    $this->artisan('modsx:backup Blog')->assertExitCode(0);
+
+    expect(artisanOutput('modsx:backup Blog --comment="before deploy"'))
+        ->toContain('The comment was not recorded');
 });

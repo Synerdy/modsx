@@ -11,7 +11,7 @@ it('fails when no backups exist', function () {
 it('lists the backup versions of a module', function () {
     $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
     app(BackupManager::class)->backup('Blog');
-    app(BackupManager::class)->backup('Blog', comment: 'before refactor');
+    app(BackupManager::class)->backup('Blog', comment: 'before refactor', evenIfUnchanged: true);
 
     $output = json_decode(artisanOutput('modsx:backuplist Blog --json'), true);
 

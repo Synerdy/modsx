@@ -18,7 +18,7 @@ class BackupCommand extends Command
                             {name? : Module name; omit to pick from a list}
                             {--all : Back up every module in the application}
                             {--m|comment= : Optional note describing this backup}
-                            {--skip-unchanged : Do nothing when the module is identical to its newest version}
+                            {--even-if-unchanged : Write a version even when the module is identical to its newest one}
                             {--json : Output machine-readable JSON}
                             {--quiet-banner : Suppress the banner, for use from other commands}';
 
@@ -45,7 +45,7 @@ class BackupCommand extends Command
                 $results[$name] = $manager->backup(
                     $name,
                     $this->option('comment'),
-                    (bool) $this->option('skip-unchanged'),
+                    (bool) $this->option('even-if-unchanged'),
                 );
             } catch (ModsxException $exception) {
                 return $this->reportFailure($json, $exception->getMessage());
@@ -94,10 +94,19 @@ class BackupCommand extends Command
     {
         if ($result['skipped']) {
             $this->components->info(sprintf(
-                'Skipped [%s]: identical to version %s.',
+                'Nothing to back up: [%s] is identical to version %s.',
                 $name,
                 $result['version'],
             ));
+
+            // A comment is a deliberate note about a moment, so losing one
+            // without a word would be the surprise here - the version it was
+            // meant for was never written.
+            if ($this->option('comment') !== null) {
+                $this->components->bulletList([
+                    'The comment was not recorded. Pass --even-if-unchanged to write a version for it.',
+                ]);
+            }
 
             return;
         }

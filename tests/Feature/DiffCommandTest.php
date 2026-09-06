@@ -133,7 +133,7 @@ it('reads the two versions in the order they were given', function () {
 
 it('ignores the working tree when two versions are given', function () {
     app(BackupManager::class)->backup('Blog');
-    app(BackupManager::class)->backup('Blog');
+    app(BackupManager::class)->backup('Blog', evenIfUnchanged: true);
 
     File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'changed after both backups');
 
