@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\File;
 use Modsx\Exceptions\ModsxException;
 
 /**
- * Creates the directory skeleton for a new module.
+ * Creates the skeleton for a new module: directories, and a file wherever an
+ * entry names one.
  *
  * This is the one place in the package that puts something into the
  * application rather than reading or copying it, and it stays deliberately
@@ -31,7 +32,7 @@ class ModuleScaffolder
 
     /**
      * @param  list<string>  $paths  directories to create; the configured list when empty
-     * @return array{created: list<string>, skipped: list<string>}
+     * @return array{created: list<string>, skipped: list<string>, files: list<string>}
      *
      * @throws ModsxException
      */
@@ -41,24 +42,57 @@ class ModuleScaffolder
 
         $created = [];
         $skipped = [];
+        $files = [];
 
         $templates = $paths === [] ? $this->templates() : $this->templatesFor($paths);
 
         foreach ($templates as $template) {
             $relative = $this->fill($template, $name);
             $path = base_path($relative);
+            $isFile = self::namesAFile($relative);
 
-            if (File::isDirectory($path)) {
+            if ($isFile) {
+                $files[] = $relative;
+            }
+
+            // Never File::exists() for a directory: a file sitting where a
+            // directory should go is a different problem, and reporting it as
+            // "already existed" would hide it.
+            if ($isFile ? File::exists($path) : File::isDirectory($path)) {
                 $skipped[] = $relative;
 
                 continue;
             }
 
-            File::ensureDirectoryExists($path);
+            if ($isFile) {
+                File::ensureDirectoryExists(dirname($path));
+                File::put($path, '');
+            } else {
+                File::ensureDirectoryExists($path);
+            }
+
             $created[] = $relative;
         }
 
-        return ['created' => $created, 'skipped' => $skipped];
+        return ['created' => $created, 'skipped' => $skipped, 'files' => $files];
+    }
+
+    /**
+     * Does this path name a file rather than a directory?
+     *
+     * Read off the last segment having a dot in it, which is what tells
+     * "docs/modsx-blog.md" from "docs/modsx-blog". The rule is the filename's
+     * own shape rather than a list of blessed extensions, because the entries
+     * are yours to write and any list would be somebody else's guess at what
+     * you keep in a module.
+     *
+     * A directory deliberately named with a dot - "modsx-blog.v2" - would be
+     * read as a file. Rare enough to accept, and the answer is to write the
+     * entry without one.
+     */
+    private static function namesAFile(string $relative): bool
+    {
+        return str_contains(basename($relative), '.');
     }
 
     /**

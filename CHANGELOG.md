@@ -5,6 +5,88 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.4] - 2026-09-07
+
+### Added
+
+- **`modsx:scaffold` creates files, not only directories.** An entry whose last
+  segment has a dot in it names a file:
+
+  ```php
+  'scaffold' => [
+      'app/Http/Controllers/{Studly}',
+      'resources/views/{kebab}',
+      'docs/{kebab}.md',
+      'config/{kebab}.php',
+  ],
+  ```
+
+  It closes the last place where the prefix still had to be typed by hand.
+  Directories were covered - `modsx:scaffold Blog docs` works out
+  `docs/modsx-blog` for you - but a single file at `docs/modsx-blog.md`,
+  `config/modsx-blog.php` or `routes/modsx-blog.php` had to be made in an
+  editor, spelling the prefixed name yourself. That is the one mistake this
+  package exists to prevent, and it was the one it left you to make.
+
+  The file is created empty, and an existing one is never written over. Nothing
+  is put inside on purpose: the same entry shape makes a Markdown page and a
+  PHP config file, and a heading that helps in the first is a syntax error in
+  the second. An empty `config/modsx-blog.php` reads back as `1` rather than an
+  array until you fill it in - measured rather than assumed, and it does not
+  stop the application booting.
+
+  A file is told from a directory by the last segment having a dot, rather than
+  by a list of blessed extensions, because what a module keeps is yours to
+  decide. A directory deliberately named `modsx-blog.v2` would be read as a
+  file; rare enough to accept, and the answer is to write the entry without a
+  dot.
+
+- **A module can keep its documentation, in `docs/`.** `docs/modsx-blog.md` for
+  one page, `docs/modsx-blog/` for a directory of them - the same two shapes
+  configuration already had, and for the same reason.
+
+  Almost nothing was needed to support it. The name has always identified the
+  module in a file as much as in a directory, and the rule cuts at the first
+  dot, so `.md` behaved like `.php` and `.css` already did. What was missing
+  was that `docs` was not in `scan_paths`, which made the whole directory
+  invisible. It is there by default now.
+
+  Everything else follows without a line of special handling: documentation is
+  copied by `modsx:backup`, brought back by `modsx:restore`, counted as a
+  change by `modsx:diff`, removed by `modsx:delete`, and listed by
+  `modsx:path`. That is the point of keeping it here rather than beside the
+  project's own - restoring a module from three weeks ago gives you the
+  documentation it had three weeks ago, not today's description of code that
+  no longer exists.
+
+  `modsx:info` names it, since that is where somebody goes to find out what a
+  module is and "there is a page about this" answers it better than one row in
+  a list of twenty. Recognised by sitting under the scanned `docs` directory
+  rather than by a setting of its own: a second setting could disagree with
+  `scan_paths`, and documentation would then stop being part of the module
+  while still being labelled as its documentation.
+
+  A directory of pages makes a module, a lone page does not - the rule
+  everywhere else, applied here too. So `docs/modsx-shop/` brings Shop into
+  being before any of its code exists, while `docs/modsx-shop.md` alone is
+  reported by `modsx:doctor` as a page naming a module that is not there.
+
+  Adding a scan path is a breaking change for anyone who already keeps a
+  `docs/modsx-*.md`: it becomes module content, which means `modsx:delete`
+  removes it. Cheap while this is a prerelease.
+
+### Fixed
+
+- **The check that the README names the current prerelease was asking the wrong
+  question.** It demanded the newest tag by name, which is false during exactly
+  the moment it matters: preparing a release writes the new version, commits
+  it, and only then tags it, so the README is briefly ahead of every tag. The
+  first release after adding the check would have been blocked by it.
+
+  It now asks only that the README has not fallen behind - that it names no
+  prerelease an existing tag has superseded. That is the failure it was written
+  for, and being ahead is no longer mistaken for it.
+
 ## [1.0.0-beta.3] - 2026-09-06
 
 ### Added

@@ -16,7 +16,7 @@ return [
     // discovery fast and prevents Modsx from ever walking into storage/framework,
     // .git, or other places it has no business looking.
     'scan_paths' => [
-        'app', 'resources', 'routes', 'database', 'config', 'lang', 'public', 'tests',
+        'app', 'resources', 'routes', 'database', 'config', 'lang', 'public', 'tests', 'docs',
     ],
 
     // Never descended into, wherever they appear under a scan path. A bare
@@ -57,6 +57,17 @@ return [
         //
         // 'resources/css/{kebab}',
         // 'resources/js/{kebab}',
+        //
+        // An entry whose last segment has a dot in it makes a file rather than
+        // a directory, empty and never written over if one is already there.
+        // Nothing is put inside it: the same shape makes config/modsx-blog.php
+        // and routes/modsx-blog.php, and a heading that helps in Markdown is a
+        // syntax error in either of those.
+        //
+        // 'docs/{kebab}.md',       // one page
+        // 'docs/{kebab}',          // a directory of them instead
+        // 'config/{kebab}.php',
+        // 'routes/{kebab}.php',
         //
         // Views follow the same shape as everything else: the framework's
         // directory first, the module inside it. That is what makes

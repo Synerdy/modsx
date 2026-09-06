@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="pl/">Polski</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a><ul class="toc-sub"><li><a href="#windows-and-file-watchers">Windows and file watchers</a></li><li><a href="#upgrading">Upgrading</a></li></ul></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#which-names-belong-to-a-module">Which names belong to a module</a></li><li><a href="#what-belongs-to-a-module">What belongs to a module</a></li><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#options-every-command-shares">Options every command shares</a></li><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a><ul class="toc-sub"><li><a href="#windows-and-file-watchers">Windows and file watchers</a></li><li><a href="#upgrading">Upgrading</a></li></ul></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#which-names-belong-to-a-module">Which names belong to a module</a></li><li><a href="#what-belongs-to-a-module">What belongs to a module</a></li><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#options-every-command-shares">Options every command shares</a></li><li><a href="#where-a-module-keeps-its-documentation">Where a module keeps its documentation</a></li><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -245,9 +245,9 @@ export default defineConfig({
 </code></pre>
 <p><code>@beta</code> lifts the stability filter for this package alone — there is no need to touch <code>minimum-stability</code> — and <code>^1.0</code> keeps you on the newest prerelease as they come out, so a later <code>composer update synerdy/modsx</code> picks up the next one.</p>
 <p>Pin an exact prerelease instead if you want to stay on the one you tested against:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.3     # this exact beta
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.4     # this exact beta
 </code></pre>
-<p>The newest prerelease is <strong><code>1.0.0-beta.3</code></strong>. Every one is listed on the <a href="https://github.com/Synerdy/modsx/releases">releases page</a>, with what changed in each.</p>
+<p>The newest prerelease is <strong><code>1.0.0-beta.4</code></strong>. Every one is listed on the <a href="https://github.com/Synerdy/modsx/releases">releases page</a>, with what changed in each.</p>
 <p>A plain <code>composer require synerdy/modsx</code> still resolves to the newest <strong>stable</strong> release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
 </code></pre>
@@ -524,7 +524,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:scaffold {name} {path?*}</code></td>
-<td>Create a module's directories, configured or named</td>
+<td>Create a module's skeleton — directories, and files where named</td>
 </tr>
 <tr>
 <td><code>modsx:list</code></td>
@@ -600,7 +600,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
-<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.3</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
+<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.4</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
 <h3 id="options-every-command-shares">Options every command shares</h3>
 <p>Three options mean the same thing wherever they appear.</p>
 <table>
@@ -661,6 +661,113 @@ php artisan modsx:doctor --json     # exit code 1 if problems were found
 php artisan modsx:deps --json
 </code></pre>
 <p>Asking for JSON is not permission. A command that would prompt still needs <code>--force</code>; machine-readable output says how you want to read the answer, not that you have already agreed to it.</p>
+<h3 id="where-a-module-keeps-its-documentation">Where a module keeps its documentation</h3>
+<p>In <code>docs/</code>, named for the module like everything else:</p>
+<pre><code>docs/modsx-blog.md              one page
+docs/modsx-blog/                a directory, when one page is not enough
+    installation.md
+    api.md
+</code></pre>
+<p>There is no new rule here. <code>docs/modsx-blog.md</code> belongs to Blog for exactly the reason <code>config/modsx-blog.php</code> does — the name identifies the module, in a documentation file as much as anywhere. Which means it comes for free:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsx:backup Blog</code></td>
+<td>copies the documentation with the code</td>
+</tr>
+<tr>
+<td><code>modsx:restore Blog 0004</code></td>
+<td>brings back the documentation that version had</td>
+</tr>
+<tr>
+<td><code>modsx:diff Blog 0004</code></td>
+<td>counts a rewritten page as a change</td>
+</tr>
+<tr>
+<td><code>modsx:delete Blog</code></td>
+<td>removes it along with everything else of Blog's</td>
+</tr>
+<tr>
+<td><code>modsx:path Blog</code></td>
+<td>lists it</td>
+</tr>
+<tr>
+<td><code>modsx:info Blog</code></td>
+<td>points at it</td>
+</tr>
+</tbody>
+</table>
+<p>That first pair is the reason to keep documentation here rather than beside the project's own. Restoring a module from three weeks ago gives you the documentation it had three weeks ago, not today's description of code that no longer exists.</p>
+<pre><code> INFO  Module [Blog]
+
+  Status ........................... present in the application
+  Directories ...................... 4
+  Files ............................ 2
+  Size ............................. 18 KB
+  Documentation .................... docs/modsx-blog.md
+</code></pre>
+<p>The usual boundary applies, so a page cannot be claimed by two modules:</p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Belongs to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/modsx-blog.md</code></td>
+<td><code>Blog</code></td>
+</tr>
+<tr>
+<td><code>docs/modsx-blog-post.md</code></td>
+<td><code>BlogPost</code> — not <code>Blog</code></td>
+</tr>
+<tr>
+<td><code>docs/architecture.md</code></td>
+<td>nobody; it is about the application, not a module</td>
+</tr>
+</tbody>
+</table>
+<p><strong>One difference between the two forms is worth knowing.</strong> A directory makes a module, a file does not — the same rule as everywhere else. So <code>docs/modsx-shop/</code> brings Shop into being before a line of its code exists, which is useful if you write the plan first; a lone <code>docs/modsx-shop.md</code> does not, and <code>modsx:doctor</code> reports it as a page naming a module that is not there.</p>
+<p><code>docs</code> is scanned by default. Take it out of <code>scan_paths</code> and pages stop being module content — they are then just files, backed up by nothing and removed by nothing.</p>
+<h4 id="creating-it">Creating it</h4>
+<p><code>modsx:scaffold</code> makes either shape, and works out the prefixed name for you — which is the whole reason to use it rather than <code>mkdir</code> or the editor's &quot;new file&quot;:</p>
+<pre><code class="language-bash">php artisan modsx:scaffold Blog docs                 # docs/modsx-blog/
+php artisan modsx:scaffold Blog &quot;docs/{kebab}.md&quot;    # docs/modsx-blog.md
+</code></pre>
+<p><strong>An entry whose last segment has a dot in it makes a file.</strong> Everything else makes a directory. That is the only rule, and it is read off the name rather than a list of blessed extensions, because what a module keeps is yours to decide.</p>
+<p>The file is created <strong>empty</strong>, and an existing one is never written over. Nothing is put inside on purpose: the same entry shape makes <code>config/modsx-blog.php</code> and <code>routes/modsx-blog.php</code>, and a heading that helps in Markdown would be a syntax error in either of those.</p>
+<p>To give every new module the same starting point, put it in <code>config/modsx.php</code> and plain <code>modsx:scaffold Blog</code> creates it with the rest:</p>
+<pre><code class="language-php">'scaffold' =&gt; [
+    'app/Http/Controllers/{Studly}',
+    'resources/views/{kebab}',
+    'docs/{kebab}.md',
+],
+</code></pre>
+<pre><code>  app/Http/Controllers/ModsxBlog ................................. created
+  resources/views/modsx-blog ..................................... created
+  docs/modsx-blog.md ............................................. created
+
+ INFO  Created 3 path(s) for [Blog].
+</code></pre>
+<p>The same works for anything else the convention names — <code>config/{kebab}.php</code>, <code>routes/{kebab}.php</code> — which until now could only be created by typing the prefix by hand.</p>
+<p>Inside a documentation <em>directory</em> the filenames are yours: <code>panel.md</code>, <code>api.md</code>, whatever the module needs. A file there belongs to the module by where it sits, not by what it is called.</p>
+<p><code>modsx:path Blog</code> confirms modsx has picked it up:</p>
+<pre><code class="language-bash">php artisan modsx:path Blog
+</code></pre>
+<pre><code> INFO  Blog
+
+  resources/views/modsx-blog ..................................... directory
+  docs/modsx-blog.md .................................................. file
+</code></pre>
+<p>If it does not appear there, the name is wrong somewhere — check it against the table above rather than guessing.</p>
 <h3 id="modsxmake"><code>modsx:make</code></h3>
 <p>Runs one of Laravel's own generators with the module written in for you.</p>
 <pre><code class="language-bash">php artisan modsx:make controller Blog/PostController

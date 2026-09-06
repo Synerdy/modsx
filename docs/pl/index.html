@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="../">English</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a><ul class="toc-sub"><li><a href="#windows-i-watchery-plików">Windows i watchery plików</a></li><li><a href="#aktualizacja">Aktualizacja</a></li></ul></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#opcje-wspólne-dla-komend">Opcje wspólne dla komend</a></li><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a><ul class="toc-sub"><li><a href="#windows-i-watchery-plików">Windows i watchery plików</a></li><li><a href="#aktualizacja">Aktualizacja</a></li></ul></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#opcje-wspólne-dla-komend">Opcje wspólne dla komend</a></li><li><a href="#gdzie-moduł-trzyma-swoją-dokumentację">Gdzie moduł trzyma swoją dokumentację</a></li><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -245,9 +245,9 @@ export default defineConfig({
 </code></pre>
 <p><code>@beta</code> zdejmuje filtr stabilności wyłącznie dla tego pakietu — <code>minimum-stability</code> nie trzeba ruszać — a <code>^1.0</code> trzyma Cię na najnowszej przedpremierze w miarę, jak się pojawiają, więc kolejne <code>composer update synerdy/modsx</code> pobierze następną.</p>
 <p>Przypnij konkretne wydanie, jeśli wolisz zostać przy tym, na którym testowałeś:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.3     # dokładnie ta beta
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.4     # dokładnie ta beta
 </code></pre>
-<p>Najnowsza przedpremiera to <strong><code>1.0.0-beta.3</code></strong>. Wszystkie są wypisane na <a href="https://github.com/Synerdy/modsx/releases">stronie wydań</a>, razem z tym, co się w każdej zmieniło.</p>
+<p>Najnowsza przedpremiera to <strong><code>1.0.0-beta.4</code></strong>. Wszystkie są wypisane na <a href="https://github.com/Synerdy/modsx/releases">stronie wydań</a>, razem z tym, co się w każdej zmieniło.</p>
 <p>Zwykłe <code>composer require synerdy/modsx</code> nadal wybierze najnowsze wydanie <strong>stabilne</strong>, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
 </code></pre>
@@ -524,7 +524,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 <tr>
 <td><code>modsx:scaffold {name} {path?*}</code></td>
-<td>Tworzy katalogi modułu — z konfiguracji albo wskazane</td>
+<td>Tworzy szkielet modułu — katalogi, a gdzie wskazane, pliki</td>
 </tr>
 <tr>
 <td><code>modsx:list</code></td>
@@ -600,7 +600,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
-<p>Komendy oznaczone <strong>1.0</strong> są w wydaniu przedpremierowym <code>1.0.0-beta.3</code> i nie ma ich w bieżącym wydaniu stabilnym — patrz <a href="#wypr%C3%B3bowanie-bety-10">Wypróbowanie bety 1.0</a>.</p>
+<p>Komendy oznaczone <strong>1.0</strong> są w wydaniu przedpremierowym <code>1.0.0-beta.4</code> i nie ma ich w bieżącym wydaniu stabilnym — patrz <a href="#wypr%C3%B3bowanie-bety-10">Wypróbowanie bety 1.0</a>.</p>
 <h3 id="opcje-wspólne-dla-komend">Opcje wspólne dla komend</h3>
 <p>Trzy opcje znaczą to samo wszędzie tam, gdzie występują.</p>
 <table>
@@ -661,6 +661,113 @@ php artisan modsx:doctor --json     # kod wyjścia 1, gdy znaleziono problemy
 php artisan modsx:deps --json
 </code></pre>
 <p>Poproszenie o JSON to nie zgoda. Komenda, która by zapytała, nadal potrzebuje <code>--force</code>; format odczytywalny maszynowo mówi, jak chcesz przeczytać odpowiedź, a nie że już się zgodziłeś.</p>
+<h3 id="gdzie-moduł-trzyma-swoją-dokumentację">Gdzie moduł trzyma swoją dokumentację</h3>
+<p>W <code>docs/</code>, nazwaną po module jak wszystko inne:</p>
+<pre><code>docs/modsx-blog.md              jedna strona
+docs/modsx-blog/                katalog, gdy jedna nie wystarcza
+    installation.md
+    api.md
+</code></pre>
+<p>Nie ma tu nowej reguły. <code>docs/modsx-blog.md</code> należy do Bloga dokładnie z tego samego powodu co <code>config/modsx-blog.php</code> — nazwa identyfikuje moduł, w pliku dokumentacji tak samo jak wszędzie indziej. A to znaczy, że reszta przychodzi za darmo:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsx:backup Blog</code></td>
+<td>kopiuje dokumentację razem z kodem</td>
+</tr>
+<tr>
+<td><code>modsx:restore Blog 0004</code></td>
+<td>przywraca dokumentację, którą tamta wersja miała</td>
+</tr>
+<tr>
+<td><code>modsx:diff Blog 0004</code></td>
+<td>liczy przepisaną stronę jako zmianę</td>
+</tr>
+<tr>
+<td><code>modsx:delete Blog</code></td>
+<td>usuwa ją razem z całą resztą Bloga</td>
+</tr>
+<tr>
+<td><code>modsx:path Blog</code></td>
+<td>wypisuje ją</td>
+</tr>
+<tr>
+<td><code>modsx:info Blog</code></td>
+<td>wskazuje na nią</td>
+</tr>
+</tbody>
+</table>
+<p>Pierwsza para to powód, żeby trzymać dokumentację właśnie tutaj, a nie obok dokumentacji samego projektu. Przywrócenie modułu sprzed trzech tygodni daje dokumentację sprzed trzech tygodni, a nie dzisiejszy opis kodu, którego już nie ma.</p>
+<pre><code> INFO  Module [Blog]
+
+  Status ........................... present in the application
+  Directories ...................... 4
+  Files ............................ 2
+  Size ............................. 18 KB
+  Documentation .................... docs/modsx-blog.md
+</code></pre>
+<p>Obowiązuje zwykła granica nazw, więc strony nie mogą przypaść dwóm modułom naraz:</p>
+<table>
+<thead>
+<tr>
+<th>Strona</th>
+<th>Należy do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/modsx-blog.md</code></td>
+<td><code>Blog</code></td>
+</tr>
+<tr>
+<td><code>docs/modsx-blog-post.md</code></td>
+<td><code>BlogPost</code> — nie <code>Blog</code></td>
+</tr>
+<tr>
+<td><code>docs/architecture.md</code></td>
+<td>nikogo; dotyczy aplikacji, nie modułu</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Jedna różnica między tymi formami jest warta zapamiętania.</strong> Katalog tworzy moduł, plik nie — ta sama reguła co wszędzie. Więc <code>docs/modsx-shop/</code> powołuje Shop do istnienia, zanim powstanie linijka jego kodu, co bywa wygodne, gdy najpierw pisze się plan; samo <code>docs/modsx-shop.md</code> nie powołuje, a <code>modsx:doctor</code> zgłosi je jako stronę nazywającą moduł, którego nie ma.</p>
+<p><code>docs</code> jest skanowany domyślnie. Usuń go ze <code>scan_paths</code>, a strony przestaną być zawartością modułu — będą wtedy zwykłymi plikami, których nic nie backupuje i nic nie usuwa.</p>
+<h4 id="jak-to-utworzyć">Jak to utworzyć</h4>
+<p><code>modsx:scaffold</code> tworzy obie formy i sam wylicza nazwę z prefiksem — a to jest cały powód, żeby użyć komendy zamiast <code>mkdir</code> albo „nowego pliku&quot; w edytorze:</p>
+<pre><code class="language-bash">php artisan modsx:scaffold Blog docs                 # docs/modsx-blog/
+php artisan modsx:scaffold Blog &quot;docs/{kebab}.md&quot;    # docs/modsx-blog.md
+</code></pre>
+<p><strong>Wpis, którego ostatni segment ma kropkę, tworzy plik.</strong> Każdy inny tworzy katalog. To jedyna reguła i wynika z samej nazwy, a nie z listy uznanych rozszerzeń — bo to, co moduł trzyma, jest Twoją decyzją.</p>
+<p>Plik powstaje <strong>pusty</strong>, a istniejący nigdy nie jest nadpisywany. Nic nie jest do niego wpisywane, i to celowo: ten sam kształt wpisu tworzy <code>config/modsx-blog.php</code> i <code>routes/modsx-blog.php</code>, a nagłówek pomocny w Markdownie byłby w obu tych plikach błędem składni.</p>
+<p>Żeby każdy nowy moduł dostawał ten sam punkt wyjścia, wpisz to do <code>config/modsx.php</code> — wtedy samo <code>modsx:scaffold Blog</code> utworzy to razem z resztą:</p>
+<pre><code class="language-php">'scaffold' =&gt; [
+    'app/Http/Controllers/{Studly}',
+    'resources/views/{kebab}',
+    'docs/{kebab}.md',
+],
+</code></pre>
+<pre><code>  app/Http/Controllers/ModsxBlog ................................. created
+  resources/views/modsx-blog ..................................... created
+  docs/modsx-blog.md ............................................. created
+
+ INFO  Created 3 path(s) for [Blog].
+</code></pre>
+<p>Tak samo działa to dla wszystkiego innego, co nazywa konwencja — <code>config/{kebab}.php</code>, <code>routes/{kebab}.php</code> — czego do tej pory nie dało się utworzyć inaczej niż wpisując prefiks ręcznie.</p>
+<p>Wewnątrz <em>katalogu</em> z dokumentacją nazwy plików są już Twoje: <code>panel.md</code>, <code>api.md</code>, cokolwiek moduł potrzebuje. Plik należy tam do modułu przez położenie, a nie przez to, jak się nazywa.</p>
+<p><code>modsx:path Blog</code> potwierdzi, że modsx to widzi:</p>
+<pre><code class="language-bash">php artisan modsx:path Blog
+</code></pre>
+<pre><code> INFO  Blog
+
+  resources/views/modsx-blog ..................................... directory
+  docs/modsx-blog.md .................................................. file
+</code></pre>
+<p>Jeśli się tam nie pojawia, gdzieś jest zła nazwa — sprawdź ją w tabeli powyżej, zamiast zgadywać.</p>
 <h3 id="modsxmake"><code>modsx:make</code></h3>
 <p>Uruchamia jeden z generatorów Laravela, wpisując moduł za Ciebie.</p>
 <pre><code class="language-bash">php artisan modsx:make controller Blog/PostController

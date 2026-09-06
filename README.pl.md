@@ -128,10 +128,10 @@ composer require --dev synerdy/modsx:^1.0@beta        # najnowsza przedpremiera 
 Przypnij konkretne wydanie, jeśli wolisz zostać przy tym, na którym testowałeś:
 
 ```bash
-composer require --dev synerdy/modsx:1.0.0-beta.3     # dokładnie ta beta
+composer require --dev synerdy/modsx:1.0.0-beta.4     # dokładnie ta beta
 ```
 
-Najnowsza przedpremiera to **`1.0.0-beta.3`**. Wszystkie są wypisane na [stronie wydań](https://github.com/Synerdy/modsx/releases), razem z tym, co się w każdej zmieniło.
+Najnowsza przedpremiera to **`1.0.0-beta.4`**. Wszystkie są wypisane na [stronie wydań](https://github.com/Synerdy/modsx/releases), razem z tym, co się w każdej zmieniło.
 
 Zwykłe `composer require synerdy/modsx` nadal wybierze najnowsze wydanie **stabilne**, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:
 
@@ -297,7 +297,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | Komenda | Do czego |
 |---|---|
 | `modsx:make {generator} {Moduł/Nazwa}` | Uruchamia generator Laravela z wpisanym modułem |
-| `modsx:scaffold {name} {path?*}` | Tworzy katalogi modułu — z konfiguracji albo wskazane |
+| `modsx:scaffold {name} {path?*}` | Tworzy szkielet modułu — katalogi, a gdzie wskazane, pliki |
 | `modsx:list` | Moduły obecne w aplikacji |
 | `modsx:status {name?}` | **1.0** &nbsp; Każdy moduł: co jest, z czego się wzięło, co się ruszyło |
 | `modsx:deps {name?}` | **1.0** &nbsp; Których modułów potrzebuje moduł — wyliczone z kodu |
@@ -317,7 +317,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:snapshotprune` | **1.0** &nbsp; Usunięcie starych snapshotów, zachowując najnowsze |
 | `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
 
-Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.3` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
+Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.4` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
 
 ### Opcje wspólne dla komend
 
@@ -388,6 +388,102 @@ php artisan modsx:deps --json
 ```
 
 Poproszenie o JSON to nie zgoda. Komenda, która by zapytała, nadal potrzebuje `--force`; format odczytywalny maszynowo mówi, jak chcesz przeczytać odpowiedź, a nie że już się zgodziłeś.
+
+### Gdzie moduł trzyma swoją dokumentację
+
+W `docs/`, nazwaną po module jak wszystko inne:
+
+```
+docs/modsx-blog.md              jedna strona
+docs/modsx-blog/                katalog, gdy jedna nie wystarcza
+    installation.md
+    api.md
+```
+
+Nie ma tu nowej reguły. `docs/modsx-blog.md` należy do Bloga dokładnie z tego samego powodu co `config/modsx-blog.php` — nazwa identyfikuje moduł, w pliku dokumentacji tak samo jak wszędzie indziej. A to znaczy, że reszta przychodzi za darmo:
+
+| | |
+|---|---|
+| `modsx:backup Blog` | kopiuje dokumentację razem z kodem |
+| `modsx:restore Blog 0004` | przywraca dokumentację, którą tamta wersja miała |
+| `modsx:diff Blog 0004` | liczy przepisaną stronę jako zmianę |
+| `modsx:delete Blog` | usuwa ją razem z całą resztą Bloga |
+| `modsx:path Blog` | wypisuje ją |
+| `modsx:info Blog` | wskazuje na nią |
+
+Pierwsza para to powód, żeby trzymać dokumentację właśnie tutaj, a nie obok dokumentacji samego projektu. Przywrócenie modułu sprzed trzech tygodni daje dokumentację sprzed trzech tygodni, a nie dzisiejszy opis kodu, którego już nie ma.
+
+```
+ INFO  Module [Blog]
+
+  Status ........................... present in the application
+  Directories ...................... 4
+  Files ............................ 2
+  Size ............................. 18 KB
+  Documentation .................... docs/modsx-blog.md
+```
+
+Obowiązuje zwykła granica nazw, więc strony nie mogą przypaść dwóm modułom naraz:
+
+| Strona | Należy do |
+|---|---|
+| `docs/modsx-blog.md` | `Blog` |
+| `docs/modsx-blog-post.md` | `BlogPost` — nie `Blog` |
+| `docs/architecture.md` | nikogo; dotyczy aplikacji, nie modułu |
+
+**Jedna różnica między tymi formami jest warta zapamiętania.** Katalog tworzy moduł, plik nie — ta sama reguła co wszędzie. Więc `docs/modsx-shop/` powołuje Shop do istnienia, zanim powstanie linijka jego kodu, co bywa wygodne, gdy najpierw pisze się plan; samo `docs/modsx-shop.md` nie powołuje, a `modsx:doctor` zgłosi je jako stronę nazywającą moduł, którego nie ma.
+
+`docs` jest skanowany domyślnie. Usuń go ze `scan_paths`, a strony przestaną być zawartością modułu — będą wtedy zwykłymi plikami, których nic nie backupuje i nic nie usuwa.
+
+#### Jak to utworzyć
+
+`modsx:scaffold` tworzy obie formy i sam wylicza nazwę z prefiksem — a to jest cały powód, żeby użyć komendy zamiast `mkdir` albo „nowego pliku" w edytorze:
+
+```bash
+php artisan modsx:scaffold Blog docs                 # docs/modsx-blog/
+php artisan modsx:scaffold Blog "docs/{kebab}.md"    # docs/modsx-blog.md
+```
+
+**Wpis, którego ostatni segment ma kropkę, tworzy plik.** Każdy inny tworzy katalog. To jedyna reguła i wynika z samej nazwy, a nie z listy uznanych rozszerzeń — bo to, co moduł trzyma, jest Twoją decyzją.
+
+Plik powstaje **pusty**, a istniejący nigdy nie jest nadpisywany. Nic nie jest do niego wpisywane, i to celowo: ten sam kształt wpisu tworzy `config/modsx-blog.php` i `routes/modsx-blog.php`, a nagłówek pomocny w Markdownie byłby w obu tych plikach błędem składni.
+
+Żeby każdy nowy moduł dostawał ten sam punkt wyjścia, wpisz to do `config/modsx.php` — wtedy samo `modsx:scaffold Blog` utworzy to razem z resztą:
+
+```php
+'scaffold' => [
+    'app/Http/Controllers/{Studly}',
+    'resources/views/{kebab}',
+    'docs/{kebab}.md',
+],
+```
+
+```
+  app/Http/Controllers/ModsxBlog ................................. created
+  resources/views/modsx-blog ..................................... created
+  docs/modsx-blog.md ............................................. created
+
+ INFO  Created 3 path(s) for [Blog].
+```
+
+Tak samo działa to dla wszystkiego innego, co nazywa konwencja — `config/{kebab}.php`, `routes/{kebab}.php` — czego do tej pory nie dało się utworzyć inaczej niż wpisując prefiks ręcznie.
+
+Wewnątrz *katalogu* z dokumentacją nazwy plików są już Twoje: `panel.md`, `api.md`, cokolwiek moduł potrzebuje. Plik należy tam do modułu przez położenie, a nie przez to, jak się nazywa.
+
+`modsx:path Blog` potwierdzi, że modsx to widzi:
+
+```bash
+php artisan modsx:path Blog
+```
+
+```
+ INFO  Blog
+
+  resources/views/modsx-blog ..................................... directory
+  docs/modsx-blog.md .................................................. file
+```
+
+Jeśli się tam nie pojawia, gdzieś jest zła nazwa — sprawdź ją w tabeli powyżej, zamiast zgadywać.
 
 ### `modsx:make`
 

@@ -366,7 +366,7 @@ class MakeCommand extends Command
         // module name: one message, at the one moment it can be recognised.
         if ($typedName === null && ModuleName::tryMake($generator) !== null) {
             $this->components->warn(sprintf(
-                'To create the directory skeleton for a module, that command is now '.
+                'To create the skeleton for a module, that command is now '.
                 '"php artisan modsx:scaffold %s".',
                 $generator
             ));

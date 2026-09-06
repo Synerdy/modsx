@@ -67,7 +67,13 @@ jobs:
       # the kind of thing that goes out of date the moment the next one ships -
       # it has already happened twice. Nobody notices reading their own words,
       # so this notices instead.
-      - name: The README names the newest prerelease
+      #
+      # It asks only that the README has not fallen behind. Being ahead of the
+      # tags is not a fault but the normal state while a release is being
+      # prepared: the version is written, committed, and only then tagged. An
+      # earlier version of this check demanded the newest tag by name and would
+      # have blocked exactly that.
+      - name: The README has not fallen behind the prereleases
         run: |
           newest=$(git tag --list 'v*-*' --sort=-v:refname | head -n 1 | sed 's/^v//')
 
@@ -78,21 +84,18 @@ jobs:
 
           failed=0
 
-          for file in README.md README.pl.md; do
-            grep -qF "$newest" "$file" || {
-              echo "::error file=$file::does not mention the newest prerelease, $newest"
-              failed=1
-            }
-          done
-
           for old in $(git tag --list 'v*-*' --sort=-v:refname | tail -n +2 | sed 's/^v//'); do
             for file in README.md README.pl.md; do
               grep -qF "$old" "$file" && {
-                echo "::error file=$file::still points at $old, superseded by $newest"
+                echo "::error file=$file::names $old, which $newest has superseded"
                 failed=1
               }
             done
           done
+
+          if [ $failed -eq 0 ]; then
+            echo "No superseded prerelease is named. Newest tag: $newest"
+          fi
 
           exit $failed
 

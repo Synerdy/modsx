@@ -10,7 +10,10 @@ use Modsx\Exceptions\ModsxException;
 use Modsx\ModuleScaffolder;
 
 /**
- * Create the directory skeleton for a new module.
+ * Create the skeleton for a new module.
+ *
+ * Directories, and a file wherever an entry names one - the last segment
+ * having a dot is the whole of that rule.
  *
  * The convention works without this command - that is the whole point of the
  * package - but typing both directory forms by hand is the one way to get it
@@ -25,7 +28,7 @@ class ScaffoldCommand extends Command
                             {path?* : Directories to create; omit for the configured list}
                             {--json : Output machine-readable JSON}';
 
-    protected $description = 'Create the directory skeleton for a new module';
+    protected $description = 'Create the skeleton for a new module: directories, and files where an entry names one';
 
     public function handle(ModuleScaffolder $scaffolder): int
     {
@@ -63,7 +66,7 @@ class ScaffoldCommand extends Command
         }
 
         $this->components->info(sprintf(
-            'Created %d directory(s) for [%s].',
+            'Created %d path(s) for [%s].',
             count($result['created']),
             $this->argument('name'),
         ));
@@ -75,8 +78,12 @@ class ScaffoldCommand extends Command
         // Empty directories are invisible to git, so a skeleton nobody fills in
         // quietly disappears at the next commit. That is the intended
         // behaviour, but it surprises people who expect to see it in a diff.
-        $this->components->info('Directories are empty, so git will not track them until you put files in.');
-        $this->newLine();
+        // Files do not have the problem, so the note is only worth making when
+        // a directory was actually created.
+        if (array_diff($result['created'], $result['files']) !== []) {
+            $this->components->info('Directories are empty, so git will not track them until you put files in.');
+            $this->newLine();
+        }
 
         return self::SUCCESS;
     }

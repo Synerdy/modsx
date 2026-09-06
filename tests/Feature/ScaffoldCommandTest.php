@@ -129,3 +129,76 @@ it('says so when nothing is configured', function () {
 
     expect(artisanOutput('modsx:scaffold Blog'))->toContain('modsx.scaffold is empty');
 });
+
+it('creates a file when the entry names one', function () {
+    config()->set('modsx.scaffold', ['docs/{kebab}.md']);
+
+    $this->artisan('modsx:scaffold Blog')->assertExitCode(0);
+
+    expect(File::isFile($this->root.'/docs/modsx-blog.md'))->toBeTrue()
+        ->and(File::isDirectory($this->root.'/docs/modsx-blog.md'))->toBeFalse();
+});
+
+it('leaves a created file empty', function () {
+    // Nothing is written into it on purpose. The same entry shape makes
+    // config/modsx-blog.php and routes/modsx-blog.php, and a heading helpful
+    // in Markdown would be a syntax error in either of those.
+    config()->set('modsx.scaffold', ['docs/{kebab}.md']);
+
+    $this->artisan('modsx:scaffold Blog')->assertExitCode(0);
+
+    expect(File::get($this->root.'/docs/modsx-blog.md'))->toBe('');
+});
+
+it('makes the directories a file needs to sit in', function () {
+    config()->set('modsx.scaffold', ['docs/deep/nested/{kebab}.md']);
+
+    $this->artisan('modsx:scaffold Blog')->assertExitCode(0);
+
+    expect(File::isFile($this->root.'/docs/deep/nested/modsx-blog.md'))->toBeTrue();
+});
+
+it('never writes over a file that is already there', function () {
+    // The one thing this must not do: a scaffold run is not a reason to lose
+    // what somebody wrote.
+    $this->makeFile('docs/modsx-blog.md', '# Everything I have written so far');
+
+    config()->set('modsx.scaffold', ['docs/{kebab}.md']);
+
+    $this->artisan('modsx:scaffold Blog')->assertExitCode(0);
+
+    expect(File::get($this->root.'/docs/modsx-blog.md'))->toBe('# Everything I have written so far');
+});
+
+it('takes a file path typed on the command line', function () {
+    $this->artisan('modsx:scaffold Blog docs/{kebab}.md')->assertExitCode(0);
+
+    expect(File::isFile($this->root.'/docs/modsx-blog.md'))->toBeTrue();
+});
+
+it('makes the same shape work for config and routes', function () {
+    // The reason not to special-case documentation: these two paths are in the
+    // convention as well, and until now there was no way to create either
+    // without typing the prefix by hand.
+    config()->set('modsx.scaffold', ['config/{kebab}.php', 'routes/{kebab}.php']);
+
+    $this->artisan('modsx:scaffold Blog')->assertExitCode(0);
+
+    expect(File::isFile($this->root.'/config/modsx-blog.php'))->toBeTrue()
+        ->and(File::isFile($this->root.'/routes/modsx-blog.php'))->toBeTrue();
+});
+
+it('still makes directories for an entry without an extension', function () {
+    config()->set('modsx.scaffold', ['docs/{kebab}']);
+
+    $this->artisan('modsx:scaffold Blog')->assertExitCode(0);
+
+    expect(File::isDirectory($this->root.'/docs/modsx-blog'))->toBeTrue();
+});
+
+it('does not mention empty directories when it only made files', function () {
+    config()->set('modsx.scaffold', ['docs/{kebab}.md']);
+
+    expect(artisanOutput('modsx:scaffold Blog'))
+        ->not->toContain('git will not track them');
+});

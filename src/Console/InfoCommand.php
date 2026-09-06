@@ -63,6 +63,7 @@ class InfoCommand extends Command
 
         $info = [
             'module' => (string) $name,
+            'documentation' => $this->documentation($paths, $files),
             'application' => $this->applicationInfo($paths, $files),
             'backups' => $this->backupInfo($backups, (string) $name, $versions),
         ];
@@ -224,6 +225,7 @@ class InfoCommand extends Command
             $this->components->twoColumnDetail('Directories', (string) count($application['directories']));
             $this->components->twoColumnDetail('Files', (string) $application['file_count']);
             $this->components->twoColumnDetail('Size', $application['size']);
+            $this->renderDocumentation($info['documentation']);
 
             $this->newLine();
 
@@ -272,5 +274,55 @@ class InfoCommand extends Command
                 $row['comment'] ?? '-',
             ], $backups['versions']),
         );
+    }
+
+    /**
+     * The module's documentation, if it keeps any.
+     *
+     * Documentation is not a special kind of content here - docs/modsx-blog.md
+     * belongs to Blog for exactly the reason config/modsx-blog.php does, and
+     * it is listed among the files either way. It is pulled out separately
+     * only because this is where somebody goes to find out what a module is,
+     * and "there is a page about this" answers that better than one row in a
+     * list of twenty.
+     *
+     * Recognised by sitting under the scanned "docs" directory rather than by
+     * a setting of its own. A second setting could disagree with scan_paths,
+     * and then documentation would quietly stop being part of the module while
+     * still being labelled as its documentation.
+     *
+     * @param  list<string>  $paths
+     * @param  list<string>  $files
+     * @return list<string>
+     */
+    private function documentation(array $paths, array $files): array
+    {
+        $scanned = (array) config('modsx.scan_paths', []);
+
+        if (! in_array('docs', $scanned, true)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_merge($paths, $files),
+            static fn (string $relative): bool => str_starts_with($relative, 'docs/'),
+        ));
+    }
+
+    /**
+     * @param  list<string>  $documentation
+     */
+    private function renderDocumentation(array $documentation): void
+    {
+        if ($documentation === []) {
+            return;
+        }
+
+        foreach ($documentation as $relative) {
+            $this->components->twoColumnDetail(
+                'Documentation',
+                sprintf('<fg=gray>%s</>', $relative),
+            );
+        }
     }
 }
