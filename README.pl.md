@@ -120,16 +120,18 @@ Warto najpierw zajrzeć do [changelogu](https://github.com/Synerdy/modsx/blob/ma
 Komend oznaczonych **1.0** w tabeli poniżej nie ma w `0.7.0`. Są w wydaniu przedpremierowym, którego Composer nie zainstaluje, dopóki mu tego nie powiesz:
 
 ```bash
-composer require --dev synerdy/modsx:1.0.0-beta.1     # dokładnie ta beta
+composer require --dev synerdy/modsx:^1.0@beta        # najnowsza przedpremiera 1.0
 ```
 
-Podanie wersji z sufiksem samo zdejmuje filtr stabilności dla tego pakietu — `minimum-stability` nie trzeba ruszać. Żeby zamiast przypinania jednej bety śledzić wszystkie przedpremierowe wydania 1.0, wpisz to do `composer.json` i uruchom `composer update synerdy/modsx`:
+`@beta` zdejmuje filtr stabilności wyłącznie dla tego pakietu — `minimum-stability` nie trzeba ruszać — a `^1.0` trzyma Cię na najnowszej przedpremierze w miarę, jak się pojawiają, więc kolejne `composer update synerdy/modsx` pobierze następną.
 
-```json
-"require-dev": {
-    "synerdy/modsx": "^1.0@beta"
-}
+Przypnij konkretne wydanie, jeśli wolisz zostać przy tym, na którym testowałeś:
+
+```bash
+composer require --dev synerdy/modsx:1.0.0-beta.3     # dokładnie ta beta
 ```
+
+Najnowsza przedpremiera to **`1.0.0-beta.3`**. Wszystkie są wypisane na [stronie wydań](https://github.com/Synerdy/modsx/releases), razem z tym, co się w każdej zmieniło.
 
 Zwykłe `composer require synerdy/modsx` nadal wybierze najnowsze wydanie **stabilne**, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:
 
@@ -315,7 +317,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:snapshotprune` | **1.0** &nbsp; Usunięcie starych snapshotów, zachowując najnowsze |
 | `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
 
-Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.1` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
+Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.3` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
 
 ### Opcje wspólne dla komend
 

@@ -241,13 +241,13 @@ export default defineConfig({
 <p>Worth reading the <a href="https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md">changelog</a> first: on <code>0.x</code> a minor is allowed to carry a breaking change, and they are called out there when it does.</p>
 <h4 id="trying-the-10-beta">Trying the 1.0 beta</h4>
 <p>The commands marked <strong>1.0</strong> in the table below are not in <code>0.7.0</code>. They are in a prerelease, which Composer will not install unless you say so:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.1     # this exact beta
+<pre><code class="language-bash">composer require --dev synerdy/modsx:^1.0@beta        # the newest 1.0 prerelease
 </code></pre>
-<p>Naming a version with a suffix lifts the stability filter for that package on its own — there is no need to touch <code>minimum-stability</code>. To follow every 1.0 prerelease instead of pinning one, put this in <code>composer.json</code> and run <code>composer update synerdy/modsx</code>:</p>
-<pre><code class="language-json">&quot;require-dev&quot;: {
-    &quot;synerdy/modsx&quot;: &quot;^1.0@beta&quot;
-}
+<p><code>@beta</code> lifts the stability filter for this package alone — there is no need to touch <code>minimum-stability</code> — and <code>^1.0</code> keeps you on the newest prerelease as they come out, so a later <code>composer update synerdy/modsx</code> picks up the next one.</p>
+<p>Pin an exact prerelease instead if you want to stay on the one you tested against:</p>
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.3     # this exact beta
 </code></pre>
+<p>The newest prerelease is <strong><code>1.0.0-beta.3</code></strong>. Every one is listed on the <a href="https://github.com/Synerdy/modsx/releases">releases page</a>, with what changed in each.</p>
 <p>A plain <code>composer require synerdy/modsx</code> still resolves to the newest <strong>stable</strong> release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
 </code></pre>
@@ -600,7 +600,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
-<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.1</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
+<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.3</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
 <h3 id="options-every-command-shares">Options every command shares</h3>
 <p>Three options mean the same thing wherever they appear.</p>
 <table>

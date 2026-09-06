@@ -241,13 +241,13 @@ export default defineConfig({
 <p>Warto najpierw zajrzeć do <a href="https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md">changelogu</a>: w <code>0.x</code> minor może nieść zmianę łamiącą i wtedy jest to tam wyraźnie zaznaczone.</p>
 <h4 id="wypróbowanie-bety-10">Wypróbowanie bety 1.0</h4>
 <p>Komend oznaczonych <strong>1.0</strong> w tabeli poniżej nie ma w <code>0.7.0</code>. Są w wydaniu przedpremierowym, którego Composer nie zainstaluje, dopóki mu tego nie powiesz:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.1     # dokładnie ta beta
+<pre><code class="language-bash">composer require --dev synerdy/modsx:^1.0@beta        # najnowsza przedpremiera 1.0
 </code></pre>
-<p>Podanie wersji z sufiksem samo zdejmuje filtr stabilności dla tego pakietu — <code>minimum-stability</code> nie trzeba ruszać. Żeby zamiast przypinania jednej bety śledzić wszystkie przedpremierowe wydania 1.0, wpisz to do <code>composer.json</code> i uruchom <code>composer update synerdy/modsx</code>:</p>
-<pre><code class="language-json">&quot;require-dev&quot;: {
-    &quot;synerdy/modsx&quot;: &quot;^1.0@beta&quot;
-}
+<p><code>@beta</code> zdejmuje filtr stabilności wyłącznie dla tego pakietu — <code>minimum-stability</code> nie trzeba ruszać — a <code>^1.0</code> trzyma Cię na najnowszej przedpremierze w miarę, jak się pojawiają, więc kolejne <code>composer update synerdy/modsx</code> pobierze następną.</p>
+<p>Przypnij konkretne wydanie, jeśli wolisz zostać przy tym, na którym testowałeś:</p>
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.3     # dokładnie ta beta
 </code></pre>
+<p>Najnowsza przedpremiera to <strong><code>1.0.0-beta.3</code></strong>. Wszystkie są wypisane na <a href="https://github.com/Synerdy/modsx/releases">stronie wydań</a>, razem z tym, co się w każdej zmieniło.</p>
 <p>Zwykłe <code>composer require synerdy/modsx</code> nadal wybierze najnowsze wydanie <strong>stabilne</strong>, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
 </code></pre>
@@ -600,7 +600,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
-<p>Komendy oznaczone <strong>1.0</strong> są w wydaniu przedpremierowym <code>1.0.0-beta.1</code> i nie ma ich w bieżącym wydaniu stabilnym — patrz <a href="#wypr%C3%B3bowanie-bety-10">Wypróbowanie bety 1.0</a>.</p>
+<p>Komendy oznaczone <strong>1.0</strong> są w wydaniu przedpremierowym <code>1.0.0-beta.3</code> i nie ma ich w bieżącym wydaniu stabilnym — patrz <a href="#wypr%C3%B3bowanie-bety-10">Wypróbowanie bety 1.0</a>.</p>
 <h3 id="opcje-wspólne-dla-komend">Opcje wspólne dla komend</h3>
 <p>Trzy opcje znaczą to samo wszędzie tam, gdzie występują.</p>
 <table>

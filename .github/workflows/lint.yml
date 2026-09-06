@@ -47,7 +47,11 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
+      # Full history, because the prerelease check below compares what the
+      # README says against the tags that exist.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -58,6 +62,39 @@ jobs:
 
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
+
+      # The install instructions name a prerelease, and a prerelease is exactly
+      # the kind of thing that goes out of date the moment the next one ships -
+      # it has already happened twice. Nobody notices reading their own words,
+      # so this notices instead.
+      - name: The README names the newest prerelease
+        run: |
+          newest=$(git tag --list 'v*-*' --sort=-v:refname | head -n 1 | sed 's/^v//')
+
+          if [ -z "$newest" ]; then
+            echo "No prerelease tags; nothing to check."
+            exit 0
+          fi
+
+          failed=0
+
+          for file in README.md README.pl.md; do
+            grep -qF "$newest" "$file" || {
+              echo "::error file=$file::does not mention the newest prerelease, $newest"
+              failed=1
+            }
+          done
+
+          for old in $(git tag --list 'v*-*' --sort=-v:refname | tail -n +2 | sed 's/^v//'); do
+            for file in README.md README.pl.md; do
+              grep -qF "$old" "$file" && {
+                echo "::error file=$file::still points at $old, superseded by $newest"
+                failed=1
+              }
+            done
+          done
+
+          exit $failed
 
       # docs/ is generated HTML that is committed, so the site and the README
       # can drift apart without anything saying so. Rebuilding and diffing is

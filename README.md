@@ -120,16 +120,18 @@ Worth reading the [changelog](https://github.com/Synerdy/modsx/blob/master/CHANG
 The commands marked **1.0** in the table below are not in `0.7.0`. They are in a prerelease, which Composer will not install unless you say so:
 
 ```bash
-composer require --dev synerdy/modsx:1.0.0-beta.1     # this exact beta
+composer require --dev synerdy/modsx:^1.0@beta        # the newest 1.0 prerelease
 ```
 
-Naming a version with a suffix lifts the stability filter for that package on its own — there is no need to touch `minimum-stability`. To follow every 1.0 prerelease instead of pinning one, put this in `composer.json` and run `composer update synerdy/modsx`:
+`@beta` lifts the stability filter for this package alone — there is no need to touch `minimum-stability` — and `^1.0` keeps you on the newest prerelease as they come out, so a later `composer update synerdy/modsx` picks up the next one.
 
-```json
-"require-dev": {
-    "synerdy/modsx": "^1.0@beta"
-}
+Pin an exact prerelease instead if you want to stay on the one you tested against:
+
+```bash
+composer require --dev synerdy/modsx:1.0.0-beta.3     # this exact beta
 ```
+
+The newest prerelease is **`1.0.0-beta.3`**. Every one is listed on the [releases page](https://github.com/Synerdy/modsx/releases), with what changed in each.
 
 A plain `composer require synerdy/modsx` still resolves to the newest **stable** release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:
 
@@ -315,7 +317,7 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:snapshotprune` | **1.0** &nbsp; Remove old snapshots, keeping the newest |
 | `modsx:doctor` | Check for naming problems and orphaned backups |
 
-Commands marked **1.0** are in the `1.0.0-beta.1` prerelease and not in the current stable release — see [Trying the 1.0 beta](#trying-the-10-beta).
+Commands marked **1.0** are in the `1.0.0-beta.3` prerelease and not in the current stable release — see [Trying the 1.0 beta](#trying-the-10-beta).
 
 ### Options every command shares
 
