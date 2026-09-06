@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="../">English</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a><ul class="toc-sub"><li><a href="#windows-i-watchery-plików">Windows i watchery plików</a></li><li><a href="#aktualizacja">Aktualizacja</a></li></ul></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#idea">Idea</a></li><li><a href="#wymagania">Wymagania</a></li><li><a href="#instalacja">Instalacja</a><ul class="toc-sub"><li><a href="#windows-i-watchery-plików">Windows i watchery plików</a></li><li><a href="#aktualizacja">Aktualizacja</a></li></ul></li><li><a href="#konwencja-nazewnictwa">Konwencja nazewnictwa</a><ul class="toc-sub"><li><a href="#które-nazwy-należą-do-modułu">Które nazwy należą do modułu</a></li><li><a href="#co-należy-do-modułu">Co należy do modułu</a></li><li><a href="#przykładowy-układ">Przykładowy układ</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#komendy">Komendy</a><ul class="toc-sub"><li><a href="#opcje-wspólne-dla-komend">Opcje wspólne dla komend</a></li><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxprune---duplicates">modsx:prune --duplicates</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#konfiguracja">Konfiguracja</a></li><li><a href="#ograniczenia">Ograniczenia</a></li><li><a href="#faq">FAQ</a></li><li><a href="#plany">Plany</a></li><li><a href="#współpraca">Współpraca</a></li><li><a href="#licencja">Licencja</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -601,6 +601,66 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tbody>
 </table>
 <p>Komendy oznaczone <strong>1.0</strong> są w wydaniu przedpremierowym <code>1.0.0-beta.1</code> i nie ma ich w bieżącym wydaniu stabilnym — patrz <a href="#wypr%C3%B3bowanie-bety-10">Wypróbowanie bety 1.0</a>.</p>
+<h3 id="opcje-wspólne-dla-komend">Opcje wspólne dla komend</h3>
+<p>Trzy opcje znaczą to samo wszędzie tam, gdzie występują.</p>
+<table>
+<thead>
+<tr>
+<th>Opcja</th>
+<th>Co robi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--dry-run</code></td>
+<td>Ustala, co by się stało, wypisuje to i niczego nie zmienia</td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>Nie pyta przed zmianą — i nic ponadto</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>Wyjście odczytywalne maszynowo i nic więcej na standardowym wyjściu</td>
+</tr>
+</tbody>
+</table>
+<h4 id="--dry-run"><code>--dry-run</code></h4>
+<p>Przeprowadza całą decyzję i zatrzymuje się przed jej wykonaniem, żeby dało się przeczytać plan, zanim się na niego zgodzisz. Przyjmują ją trzy komendy — <code>modsx:prune</code>, <code>modsx:snapshotprune</code> oraz <code>modsx:make</code>, która wypisuje wywołanie generatora, jakie by uruchomiła:</p>
+<pre><code class="language-bash">php artisan modsx:prune Blog --keep=3 --dry-run
+php artisan modsx:prune Blog --duplicates --dry-run
+php artisan modsx:snapshotprune --keep=5 --dry-run
+php artisan modsx:make migration Blog/create_posts_table --dry-run
+</code></pre>
+<p>Dostajesz to samo zestawienie, które pokazałby prawdziwy przebieg, zakończone zdaniem mówiącym, że nic się nie wydarzyło:</p>
+<pre><code> INFO  Blog
+
+  0001 ......................................... identical to 0003
+  0002 before the refactor ....... identical to 0003, will ask
+
+ INFO  1 version(s) would be removed and 1 asked about. Nothing was changed.
+</code></pre>
+<p>Żeby wykonać, uruchom tę samą komendę bez <code>--dry-run</code>. Nic nie jest zapamiętywane pomiędzy jednym a drugim — plan liczy się od nowa, więc zmiana zrobiona w międzyczasie zostanie uwzględniona.</p>
+<p><code>--dry-run</code> i <code>--json</code> łączą się ze sobą, i tak właśnie pipeline ogląda plan, nie wykonując go:</p>
+<pre><code class="language-bash">php artisan modsx:prune --duplicates --dry-run --json
+</code></pre>
+<p><code>modsx:restore</code>, <code>modsx:rollback</code> i <code>modsx:delete</code> nie mają <code>--dry-run</code> i nie potrzebują go: każda pokazuje, co zamierza ruszyć, i dopiero pyta — czyli to samo w jednym kroku. Żeby zobaczyć to bez uruchamiania komendy w ogóle, <code>modsx:diff</code> odpowiada dokładnie na pytanie, na które odpowiadałby dry run przywracania:</p>
+<pre><code class="language-bash">php artisan modsx:diff Blog 0003        # co zmieniłoby przywrócenie 0003
+php artisan modsx:diff Blog 0003 0007   # co dzieli dwie wersje
+</code></pre>
+<h4 id="--force"><code>--force</code></h4>
+<p>Znaczy <em>nie pytaj mnie</em> i tylko tyle. Pomija pytanie potwierdzające w komendach, które coś zmieniają albo usuwają, a przy braku terminala jest wymagana, nie opcjonalna — komenda, która nie może zapytać i nie dostała odpowiedzi, zatrzymuje się i mówi o tym, zamiast zgadywać.</p>
+<pre><code class="language-bash">php artisan modsx:prune Blog --keep=3 --force
+php artisan modsx:rollback 0004 --force
+</code></pre>
+<p>Nigdy nie przełamuje zabezpieczenia. Wersji trzymanej przez snapshot nie usunie <code>modsx:prune --force</code>, a pliku otwartego przez inny proces nie zastąpi <code>modsx:restore --force</code>. Te odmowy są odpowiedziami, nie pytaniami, a <code>--force</code> odpowiada wyłącznie na pytania.</p>
+<h4 id="--json"><code>--json</code></h4>
+<p>Wypisuje jeden dokument JSON i nic poza tym: bez banera, bez tabeli, bez postępu. To właśnie czyni go parsowalnym — i dlatego ostrzeżenie, które inaczej poszłoby obok, staje się polem w tym dokumencie.</p>
+<pre><code class="language-bash">php artisan modsx:status --json
+php artisan modsx:doctor --json     # kod wyjścia 1, gdy znaleziono problemy
+php artisan modsx:deps --json
+</code></pre>
+<p>Poproszenie o JSON to nie zgoda. Komenda, która by zapytała, nadal potrzebuje <code>--force</code>; format odczytywalny maszynowo mówi, jak chcesz przeczytać odpowiedź, a nie że już się zgodziłeś.</p>
 <h3 id="modsxmake"><code>modsx:make</code></h3>
 <p>Uruchamia jeden z generatorów Laravela, wpisując moduł za Ciebie.</p>
 <pre><code class="language-bash">php artisan modsx:make controller Blog/PostController

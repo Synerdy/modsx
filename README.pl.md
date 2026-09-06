@@ -317,6 +317,76 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 
 Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.1` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
 
+### Opcje wspólne dla komend
+
+Trzy opcje znaczą to samo wszędzie tam, gdzie występują.
+
+| Opcja | Co robi |
+|---|---|
+| `--dry-run` | Ustala, co by się stało, wypisuje to i niczego nie zmienia |
+| `--force` | Nie pyta przed zmianą — i nic ponadto |
+| `--json` | Wyjście odczytywalne maszynowo i nic więcej na standardowym wyjściu |
+
+#### `--dry-run`
+
+Przeprowadza całą decyzję i zatrzymuje się przed jej wykonaniem, żeby dało się przeczytać plan, zanim się na niego zgodzisz. Przyjmują ją trzy komendy — `modsx:prune`, `modsx:snapshotprune` oraz `modsx:make`, która wypisuje wywołanie generatora, jakie by uruchomiła:
+
+```bash
+php artisan modsx:prune Blog --keep=3 --dry-run
+php artisan modsx:prune Blog --duplicates --dry-run
+php artisan modsx:snapshotprune --keep=5 --dry-run
+php artisan modsx:make migration Blog/create_posts_table --dry-run
+```
+
+Dostajesz to samo zestawienie, które pokazałby prawdziwy przebieg, zakończone zdaniem mówiącym, że nic się nie wydarzyło:
+
+```
+ INFO  Blog
+
+  0001 ......................................... identical to 0003
+  0002 before the refactor ....... identical to 0003, will ask
+
+ INFO  1 version(s) would be removed and 1 asked about. Nothing was changed.
+```
+
+Żeby wykonać, uruchom tę samą komendę bez `--dry-run`. Nic nie jest zapamiętywane pomiędzy jednym a drugim — plan liczy się od nowa, więc zmiana zrobiona w międzyczasie zostanie uwzględniona.
+
+`--dry-run` i `--json` łączą się ze sobą, i tak właśnie pipeline ogląda plan, nie wykonując go:
+
+```bash
+php artisan modsx:prune --duplicates --dry-run --json
+```
+
+`modsx:restore`, `modsx:rollback` i `modsx:delete` nie mają `--dry-run` i nie potrzebują go: każda pokazuje, co zamierza ruszyć, i dopiero pyta — czyli to samo w jednym kroku. Żeby zobaczyć to bez uruchamiania komendy w ogóle, `modsx:diff` odpowiada dokładnie na pytanie, na które odpowiadałby dry run przywracania:
+
+```bash
+php artisan modsx:diff Blog 0003        # co zmieniłoby przywrócenie 0003
+php artisan modsx:diff Blog 0003 0007   # co dzieli dwie wersje
+```
+
+#### `--force`
+
+Znaczy *nie pytaj mnie* i tylko tyle. Pomija pytanie potwierdzające w komendach, które coś zmieniają albo usuwają, a przy braku terminala jest wymagana, nie opcjonalna — komenda, która nie może zapytać i nie dostała odpowiedzi, zatrzymuje się i mówi o tym, zamiast zgadywać.
+
+```bash
+php artisan modsx:prune Blog --keep=3 --force
+php artisan modsx:rollback 0004 --force
+```
+
+Nigdy nie przełamuje zabezpieczenia. Wersji trzymanej przez snapshot nie usunie `modsx:prune --force`, a pliku otwartego przez inny proces nie zastąpi `modsx:restore --force`. Te odmowy są odpowiedziami, nie pytaniami, a `--force` odpowiada wyłącznie na pytania.
+
+#### `--json`
+
+Wypisuje jeden dokument JSON i nic poza tym: bez banera, bez tabeli, bez postępu. To właśnie czyni go parsowalnym — i dlatego ostrzeżenie, które inaczej poszłoby obok, staje się polem w tym dokumencie.
+
+```bash
+php artisan modsx:status --json
+php artisan modsx:doctor --json     # kod wyjścia 1, gdy znaleziono problemy
+php artisan modsx:deps --json
+```
+
+Poproszenie o JSON to nie zgoda. Komenda, która by zapytała, nadal potrzebuje `--force`; format odczytywalny maszynowo mówi, jak chcesz przeczytać odpowiedź, a nie że już się zgodziłeś.
+
 ### `modsx:make`
 
 Uruchamia jeden z generatorów Laravela, wpisując moduł za Ciebie.

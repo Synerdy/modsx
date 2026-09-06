@@ -317,6 +317,76 @@ Run any command without arguments and it will prompt you, with a picker for exis
 
 Commands marked **1.0** are in the `1.0.0-beta.1` prerelease and not in the current stable release — see [Trying the 1.0 beta](#trying-the-10-beta).
 
+### Options every command shares
+
+Three options mean the same thing wherever they appear.
+
+| Option | What it does |
+|---|---|
+| `--dry-run` | Work out what would happen, print it, change nothing |
+| `--force` | Do not ask before changing something — nothing more than that |
+| `--json` | Machine-readable output and nothing else on standard output |
+
+#### `--dry-run`
+
+Runs the whole decision and stops before acting on it, so you can read the plan before agreeing to it. Three commands take it — `modsx:prune`, `modsx:snapshotprune` and `modsx:make`, which prints the generator call it would have run:
+
+```bash
+php artisan modsx:prune Blog --keep=3 --dry-run
+php artisan modsx:prune Blog --duplicates --dry-run
+php artisan modsx:snapshotprune --keep=5 --dry-run
+php artisan modsx:make migration Blog/create_posts_table --dry-run
+```
+
+What you get back is the same listing the real run would show, ending in a line that says nothing happened:
+
+```
+ INFO  Blog
+
+  0001 ......................................... identical to 0003
+  0002 before the refactor ....... identical to 0003, will ask
+
+ INFO  1 version(s) would be removed and 1 asked about. Nothing was changed.
+```
+
+Run the same command again without `--dry-run` to go ahead. Nothing is remembered between the two — the plan is worked out fresh, so a change you make in between is taken into account.
+
+`--dry-run` and `--json` combine, which is how a pipeline inspects a plan without acting on it:
+
+```bash
+php artisan modsx:prune --duplicates --dry-run --json
+```
+
+`modsx:restore`, `modsx:rollback` and `modsx:delete` have no `--dry-run`, and do not need one: each shows what it is about to move and then asks, which is the same thing in one step. To see it without starting the command at all, `modsx:diff` answers exactly the question a dry run of a restore would:
+
+```bash
+php artisan modsx:diff Blog 0003        # what restoring 0003 would change
+php artisan modsx:diff Blog 0003 0007   # what separates two versions
+```
+
+#### `--force`
+
+Means *do not ask me*, and only that. It skips the confirmation prompt on the commands that change or remove things, and it is required rather than optional when there is no terminal to prompt in — a command that cannot ask and was not told stops and says so, instead of guessing.
+
+```bash
+php artisan modsx:prune Blog --keep=3 --force
+php artisan modsx:rollback 0004 --force
+```
+
+It never overrides a safeguard. A version a snapshot is holding is not removed by `modsx:prune --force`, and a file another process has open is not replaced by `modsx:restore --force`. Those refusals are answers, not questions, and `--force` only answers questions.
+
+#### `--json`
+
+Prints one JSON document and nothing else: no banner, no table, no progress. That is what makes it parseable, and it is why a warning that would otherwise be printed alongside becomes a field in the document instead.
+
+```bash
+php artisan modsx:status --json
+php artisan modsx:doctor --json     # exit code 1 if problems were found
+php artisan modsx:deps --json
+```
+
+Asking for JSON is not permission. A command that would prompt still needs `--force`; machine-readable output says how you want to read the answer, not that you have already agreed to it.
+
 ### `modsx:make`
 
 Runs one of Laravel's own generators with the module written in for you.
