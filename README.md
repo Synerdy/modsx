@@ -71,6 +71,38 @@ Backups are written to `modsx-backups/` in your project root. You almost certain
 
 Committing them instead is a legitimate choice if you want module versions to travel with the repository — just be aware that a backup is a full directory copy, so the repo will grow with every one.
 
+### Windows and file watchers
+
+On Windows, `rename()` is refused while another process holds a file open — and every write this package makes ends in a `rename()`, because the result is assembled in a staging directory and moved into place only once it is complete. A running `npm run dev` is enough: Vite's watcher notices the new files, opens the directory to watch it, and the move that would have finished the backup fails.
+
+Modsx handles this itself. When a rename is refused it copies instead, which needs no exclusive handle, so a backup, an export and an import all still finish. Nothing here is required for correctness — but two things are worth doing anyway:
+
+**Keep the backup tree out of the watcher.** Every backup writes a full copy of a module, and a watcher that sees it will trigger a page reload for files that are not part of your application:
+
+```js
+// vite.config.js
+export default defineConfig({
+    server: {
+        watch: {
+            ignored: ['**/modsx-backups/**'],
+        },
+    },
+});
+```
+
+Restart the dev server afterwards. The same idea applies to any watcher — a VS Code `files.watcherExclude` entry, an antivirus exclusion, or a folder-sync ignore rule.
+
+**Restoring over a file something has open cannot work**, on Windows, by anybody. An open file cannot be replaced or removed, and copying around it would leave the module emptied of everything except the one file nobody could touch. Modsx checks before it moves anything and stops with the reason:
+
+```
+ ERROR  Could not move [resources/views/modsx-blog] out of the way: another process is
+        holding it open. Nothing was changed.
+```
+
+Close the file or stop the process and run it again. `modsx:backup` is unaffected — it only reads.
+
+If a run was interrupted before it could tidy up, `modsx:doctor` lists the staging directories left behind and `modsx:doctor --fix` removes them. They are named `.modsx-tmp-*` and hold nothing you need.
+
 ### Upgrading
 
 While Modsx is on `0.x`, a new minor does **not** arrive with a plain `composer update`. Ask for it by name:

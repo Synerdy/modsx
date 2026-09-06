@@ -313,4 +313,24 @@ class ModsxException extends RuntimeException
             $safety
         ));
     }
+
+    /**
+     * A path that could not be moved out of the way because it is held open.
+     *
+     * Named apart from copyFailed() because the cause is not a broken disk or
+     * a missing permission, and the fix is not one either: something has the
+     * file open, and on Windows an open file cannot be replaced or removed at
+     * all. Saying so is the whole value of this message - "failed to copy"
+     * sends people looking at permissions.
+     */
+    public static function pathLocked(string $path): self
+    {
+        return new self(sprintf(
+            'Could not move [%s] out of the way: another process is holding it open. '.
+            'Nothing was changed. On Windows an open file cannot be replaced or removed - '.
+            'a running dev server (npm run dev), an editor, antivirus or a folder sync are '.
+            'the usual causes. Stop it or close the file and run this again.',
+            $path
+        ));
+    }
 }

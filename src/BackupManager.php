@@ -29,12 +29,22 @@ class BackupManager
      */
     public const ARCHIVE_DIRECTORY = '_archive';
 
+    /**
+     * What a staging directory is called while it is being assembled.
+     *
+     * Public because modsx:doctor has to recognise one that was left behind:
+     * a move that fell back to copying cannot always delete its source, so a
+     * locked run can leave one of these in place.
+     */
+    public const STAGING_PREFIX = '.modsx-tmp-';
+
     public function __construct(
         private readonly ModuleLocator $locator,
         private readonly BackupRepository $backups,
         private readonly ModuleDiffer $differ,
         private readonly ModuleState $state,
         private readonly SnapshotRepository $snapshots,
+        private readonly PathMover $mover,
     ) {}
 
     /**
@@ -135,7 +145,7 @@ class BackupManager
                 'comment' => $comment,
             ]);
 
-            if (! File::moveDirectory($staging, $target)) {
+            if (! $this->mover->placeDirectory($staging, $target)) {
                 throw ModsxException::copyFailed($staging, $target);
             }
         } catch (Throwable $exception) {
@@ -361,7 +371,7 @@ class BackupManager
 
                     File::ensureDirectoryExists(dirname($live));
 
-                    if (! File::moveDirectory($staging.'/'.$relative, $live)) {
+                    if (! $this->mover->placeDirectory($staging.'/'.$relative, $live)) {
                         throw ModsxException::restoreFailed($relative, $version, $this->backups->pathFor($name));
                     }
                 }
@@ -371,7 +381,7 @@ class BackupManager
 
                     File::ensureDirectoryExists(dirname($live));
 
-                    if (! File::move($staging.'/'.$relative, $live)) {
+                    if (! $this->mover->placeFile($staging.'/'.$relative, $live)) {
                         throw ModsxException::restoreFailed($relative, $version, $this->backups->pathFor($name));
                     }
                 }
@@ -413,11 +423,11 @@ class BackupManager
         File::ensureDirectoryExists(dirname($aside));
 
         $moved = $directory
-            ? File::moveDirectory($live, $aside)
-            : File::move($live, $aside);
+            ? $this->mover->moveDirectory($live, $aside)
+            : $this->mover->moveFile($live, $aside);
 
         if (! $moved) {
-            throw ModsxException::copyFailed($live, $aside);
+            throw ModsxException::pathLocked($relative);
         }
     }
 
@@ -436,14 +446,14 @@ class BackupManager
             if ($directory) {
                 File::deleteDirectory($live);
                 File::ensureDirectoryExists(dirname($live));
-                File::moveDirectory($aside, $live);
+                $this->mover->placeDirectory($aside, $live);
 
                 continue;
             }
 
             File::delete($live);
             File::ensureDirectoryExists(dirname($live));
-            File::move($aside, $live);
+            $this->mover->placeFile($aside, $live);
         }
     }
 
@@ -506,7 +516,7 @@ class BackupManager
                 $zip->close();
             }
 
-            if (! File::move($staging, $target)) {
+            if (! $this->mover->placeFile($staging, $target)) {
                 throw ModsxException::copyFailed($staging, $target);
             }
         } catch (Throwable $exception) {
@@ -591,7 +601,7 @@ class BackupManager
                 $zip->close();
             }
 
-            if (! File::moveDirectory($staging, $target)) {
+            if (! $this->mover->placeDirectory($staging, $target)) {
                 throw ModsxException::copyFailed($staging, $target);
             }
         } catch (Throwable $exception) {
@@ -827,6 +837,6 @@ class BackupManager
 
     private function stagingPath(string $parent): string
     {
-        return rtrim(str_replace('\\', '/', $parent), '/').'/.modsx-tmp-'.bin2hex(random_bytes(6));
+        return rtrim(str_replace('\\', '/', $parent), '/').'/'.self::STAGING_PREFIX.bin2hex(random_bytes(6));
     }
 }

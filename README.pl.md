@@ -71,6 +71,38 @@ Backupy trafiają do `modsx-backups/` w katalogu głównym projektu. Prawie na p
 
 Zostawienie ich w Gicie też jest sensownym wyborem, jeśli chcesz, żeby wersje modułów podróżowały razem z repozytorium — pamiętaj tylko, że backup to pełna kopia katalogów, więc repo urośnie przy każdym.
 
+### Windows i watchery plików
+
+Na Windows `rename()` jest odrzucane, dopóki inny proces trzyma plik otwarty — a każdy zapis tego pakietu kończy się właśnie `rename()`, bo wynik powstaje w katalogu tymczasowym i trafia na miejsce dopiero jako całość. Wystarczy działający `npm run dev`: watcher Vite zauważa nowe pliki, otwiera katalog, żeby go obserwować, i przeniesienie kończące backup się nie udaje.
+
+Modsx radzi sobie z tym sam. Gdy `rename()` zostanie odrzucone, kopiuje zamiast przenosić — a kopiowanie nie wymaga wyłącznego uchwytu, więc backup, eksport i import i tak dochodzą do skutku. Nic poniżej nie jest więc konieczne, ale dwie rzeczy warto zrobić mimo to:
+
+**Trzymaj drzewo backupów poza watcherem.** Każdy backup zapisuje pełną kopię modułu, a watcher, który to zobaczy, przeładuje stronę z powodu plików niebędących częścią aplikacji:
+
+```js
+// vite.config.js
+export default defineConfig({
+    server: {
+        watch: {
+            ignored: ['**/modsx-backups/**'],
+        },
+    },
+});
+```
+
+Po zmianie trzeba zrestartować dev server. Ta sama myśl dotyczy dowolnego watchera — wpisu `files.watcherExclude` w VS Code, wykluczenia w antywirusie czy reguły ignorowania w synchronizacji folderów.
+
+**Przywracanie na plik, który ktoś trzyma otwarty, nie zadziała** — na Windows, nikomu. Otwartego pliku nie da się zastąpić ani usunąć, a kopiowanie dookoła niego zostawiłoby moduł opróżniony ze wszystkiego poza tym jednym plikiem, którego nikt nie mógł ruszyć. Modsx sprawdza to, zanim cokolwiek przeniesie, i zatrzymuje się z podaniem powodu:
+
+```
+ ERROR  Could not move [resources/views/modsx-blog] out of the way: another process is
+        holding it open. Nothing was changed.
+```
+
+Zamknij plik albo zatrzymaj proces i uruchom ponownie. `modsx:backup` to nie dotyczy — on tylko czyta.
+
+Jeśli jakiś przebieg został przerwany, zanim zdążył posprzątać, `modsx:doctor` wypisze pozostawione katalogi tymczasowe, a `modsx:doctor --fix` je usunie. Nazywają się `.modsx-tmp-*` i nie ma w nich niczego, co byłoby Ci potrzebne.
+
 ### Aktualizacja
 
 Dopóki Modsx jest w `0.x`, nowy minor **nie** przyjdzie zwykłym `composer update`. Trzeba go wskazać wprost:

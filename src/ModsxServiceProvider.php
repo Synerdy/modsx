@@ -64,6 +64,7 @@ class ModsxServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleMaker::class);
         $this->app->singleton(ModuleScaffolder::class);
         $this->app->singleton(ModuleState::class);
+        $this->app->singleton(PathMover::class);
         $this->app->singleton(ModuleDependencies::class);
         $this->app->singleton(SnapshotRepository::class);
         $this->app->singleton(SnapshotManager::class);

@@ -152,7 +152,7 @@ a { color: var(--link); }
 <span class="brand">Modsx</span>
 <a class="lang-switch" href="pl/">Polski</a>
 </div>
-<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a><ul class="toc-sub"><li><a href="#upgrading">Upgrading</a></li></ul></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#which-names-belong-to-a-module">Which names belong to a module</a></li><li><a href="#what-belongs-to-a-module">What belongs to a module</a></li><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
+<nav class="toc" aria-label="Table of contents"><ul><li><a href="#the-idea">The idea</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#installation">Installation</a><ul class="toc-sub"><li><a href="#windows-and-file-watchers">Windows and file watchers</a></li><li><a href="#upgrading">Upgrading</a></li></ul></li><li><a href="#naming-convention">Naming convention</a><ul class="toc-sub"><li><a href="#which-names-belong-to-a-module">Which names belong to a module</a></li><li><a href="#what-belongs-to-a-module">What belongs to a module</a></li><li><a href="#example-layout">Example layout</a></li><li><a href="#livewire">Livewire</a></li></ul></li><li><a href="#commands">Commands</a><ul class="toc-sub"><li><a href="#modsxmake">modsx:make</a></li><li><a href="#modsxscaffold">modsx:scaffold</a></li><li><a href="#modsxlist">modsx:list</a></li><li><a href="#modsxstatus">modsx:status</a></li><li><a href="#modsxdeps">modsx:deps</a></li><li><a href="#modsxpath">modsx:path</a></li><li><a href="#modsxbackup">modsx:backup</a></li><li><a href="#modsxbackuplist">modsx:backuplist</a></li><li><a href="#modsxexport">modsx:export</a></li><li><a href="#modsximport">modsx:import</a></li><li><a href="#modsxdelete">modsx:delete</a></li><li><a href="#modsxrestore">modsx:restore</a></li><li><a href="#modsxprune">modsx:prune</a></li><li><a href="#modsxsnapshot">modsx:snapshot</a></li><li><a href="#modsxsnapshotlist">modsx:snapshotlist</a></li><li><a href="#modsxrollback">modsx:rollback</a></li><li><a href="#modsxsnapshotprune">modsx:snapshotprune</a></li><li><a href="#modsxdiff">modsx:diff</a></li><li><a href="#modsxinfo">modsx:info</a></li><li><a href="#modsxdoctor">modsx:doctor</a></li></ul></li><li><a href="#configuration">Configuration</a></li><li><a href="#limitations">Limitations</a></li><li><a href="#faq">FAQ</a></li><li><a href="#roadmap">Roadmap</a></li><li><a href="#contributing">Contributing</a></li><li><a href="#license">License</a></li></ul></nav>
 <a class="github-link" href="https://github.com/Synerdy/modsx">GitHub ↗</a>
 </aside>
 <main class="content">
@@ -213,6 +213,26 @@ app/Http/Controllers/ModsxBlog/
 /modsx-backups
 </code></pre>
 <p>Committing them instead is a legitimate choice if you want module versions to travel with the repository — just be aware that a backup is a full directory copy, so the repo will grow with every one.</p>
+<h3 id="windows-and-file-watchers">Windows and file watchers</h3>
+<p>On Windows, <code>rename()</code> is refused while another process holds a file open — and every write this package makes ends in a <code>rename()</code>, because the result is assembled in a staging directory and moved into place only once it is complete. A running <code>npm run dev</code> is enough: Vite's watcher notices the new files, opens the directory to watch it, and the move that would have finished the backup fails.</p>
+<p>Modsx handles this itself. When a rename is refused it copies instead, which needs no exclusive handle, so a backup, an export and an import all still finish. Nothing here is required for correctness — but two things are worth doing anyway:</p>
+<p><strong>Keep the backup tree out of the watcher.</strong> Every backup writes a full copy of a module, and a watcher that sees it will trigger a page reload for files that are not part of your application:</p>
+<pre><code class="language-js">// vite.config.js
+export default defineConfig({
+    server: {
+        watch: {
+            ignored: ['**/modsx-backups/**'],
+        },
+    },
+});
+</code></pre>
+<p>Restart the dev server afterwards. The same idea applies to any watcher — a VS Code <code>files.watcherExclude</code> entry, an antivirus exclusion, or a folder-sync ignore rule.</p>
+<p><strong>Restoring over a file something has open cannot work</strong>, on Windows, by anybody. An open file cannot be replaced or removed, and copying around it would leave the module emptied of everything except the one file nobody could touch. Modsx checks before it moves anything and stops with the reason:</p>
+<pre><code> ERROR  Could not move [resources/views/modsx-blog] out of the way: another process is
+        holding it open. Nothing was changed.
+</code></pre>
+<p>Close the file or stop the process and run it again. <code>modsx:backup</code> is unaffected — it only reads.</p>
+<p>If a run was interrupted before it could tidy up, <code>modsx:doctor</code> lists the staging directories left behind and <code>modsx:doctor --fix</code> removes them. They are named <code>.modsx-tmp-*</code> and hold nothing you need.</p>
 <h3 id="upgrading">Upgrading</h3>
 <p>While Modsx is on <code>0.x</code>, a new minor does <strong>not</strong> arrive with a plain <code>composer update</code>. Ask for it by name:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7

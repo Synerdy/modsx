@@ -5,6 +5,60 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.2] - 2026-09-06
+
+### Fixed
+
+- **A backup no longer fails while a file watcher is running.** On Windows
+  `rename()` is refused for as long as another process holds a handle inside
+  the directory, and every write here ends in a `rename()`: the result is
+  assembled in a staging directory and moved into place only once complete. A
+  running `npm run dev` was enough - Vite's watcher notices the new files,
+  opens the directory to watch it, and the move that would have finished the
+  backup failed with nothing but `Failed to copy [...]` to explain it.
+
+  Reported against 1.0.0-beta.1 with the diagnosis already done, including the
+  detail that decided the fix: a rename immediately after the copy succeeds,
+  one 250ms later does not. The watcher's handle is not transient, it holds for
+  as long as the watch does, so retrying alone would only have made the failure
+  slower. What rescues it is copying, which needs no exclusive handle.
+
+  Moves now go through PathMover, which separates two guarantees that a single
+  "move" was quietly conflating:
+
+  - *place* cares that the destination ends up whole. Its source is a staging
+    directory nobody else refers to, so renaming, and copying when that is
+    refused, are equally good. Used by backup, export, import and restore.
+  - *move* cares that the source is gone, because something else is about to
+    stand where it did. Copying cannot promise that - deleting the original can
+    fail halfway, which on Windows is exactly what a held file does - so it
+    renames or it fails. Used only where the application's own files are moved
+    aside.
+
+  The second is why restoring over a file something has open now stops before
+  touching anything and says so, rather than emptying the module of everything
+  except the file nobody could overwrite. That case cannot be engineered away:
+  on Windows an open file cannot be replaced. It can be refused honestly.
+
+- **`modsx:doctor` finds staging directories a run left behind**, and
+  `--fix` removes them. A move that fell back to copying cannot always delete
+  its source, so an interrupted run can leave one. They were invisible to every
+  other check, since their names begin with a dot and `File::directories()`
+  does not return those.
+
+### Documentation
+
+- **A "Windows and file watchers" section**, saying what to exclude from a
+  watcher and why it is worth doing even now that backups survive without it:
+  a watcher that sees a backup being written reloads the page over files that
+  are not part of the application.
+
+  Deliberately advice rather than automation. Editing somebody's
+  `vite.config.js` on install would mean rewriting arbitrary JavaScript from
+  PHP with no parser, in a file that may not exist, may be TypeScript, and may
+  configure `watch.ignored` as a function - and it would fix one watcher out of
+  a class that also includes editors, antivirus and folder sync.
+
 ## [1.0.0-beta.1] - 2026-09-03
 
 ### Added

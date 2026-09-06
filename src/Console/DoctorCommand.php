@@ -7,6 +7,7 @@ namespace Modsx\Console;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Modsx\BackupManager;
 use Modsx\BackupRepository;
 use Modsx\Console\Concerns\InteractsWithModules;
 use Modsx\ModuleLocator;
@@ -19,7 +20,7 @@ class DoctorCommand extends Command
 
     protected $signature = 'modsx:doctor
                             {--json : Output machine-readable JSON}
-                            {--fix : Remove empty module directories}';
+                            {--fix : Remove empty module directories and leftover staging directories}';
 
     protected $description = 'Check module directories and backups for problems';
 
@@ -40,9 +41,11 @@ class DoctorCommand extends Command
         $unclaimedFiles = $locator->unclaimedFiles();
         $staleState = $this->staleState($backups, $state);
         $danglingSnapshots = $snapshots->dangling();
+        $strayStaging = $this->strayStaging($backups);
 
         if ($this->option('fix')) {
             $emptyDirectories = $this->removeEmptyDirectories($emptyDirectories);
+            $strayStaging = $this->removeStrayStaging($strayStaging);
         }
 
         // Prefix collisions are no longer counted: Blog next to BlogPost is a
@@ -68,6 +71,7 @@ class DoctorCommand extends Command
                 'orphaned_backups' => $orphaned,
                 'stale_state' => $staleState,
                 'dangling_snapshots' => $danglingSnapshots,
+                'stray_staging' => $strayStaging,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
             return $problems === 0 ? self::SUCCESS : self::FAILURE;
@@ -88,6 +92,7 @@ class DoctorCommand extends Command
         $this->renderOrphanedBackups($orphaned);
         $this->renderStaleState($staleState, $state);
         $this->renderDanglingSnapshots($danglingSnapshots);
+        $this->renderStrayStaging($strayStaging, (bool) $this->option('fix'));
 
         $this->newLine();
 
@@ -634,5 +639,84 @@ class DoctorCommand extends Command
         $this->components->bulletList([
             'Those snapshots can no longer be rolled back to. modsx:snapshotprune removes them.',
         ]);
+    }
+
+    /**
+     * Staging directories a run left behind.
+     *
+     * Every write is assembled in one of these and moved into place at the
+     * end. When that move has to fall back to copying - which is what happens
+     * on Windows while a file watcher holds the directory open - deleting the
+     * original can be refused too, and the staging directory stays.
+     *
+     * Invisible to every other check: their names begin with a dot, and
+     * File::directories() does not return those, so nothing else would ever
+     * mention them.
+     *
+     * @return list<array{path: string, removed: bool}>
+     */
+    private function strayStaging(BackupRepository $backups): array
+    {
+        // Both places one can appear: backup and import stage inside the
+        // module's own backup directory, restore stages in the project root.
+        // Read with glob() rather than a module listing, so a directory with
+        // no versions in it yet is searched too.
+        $roots = [base_path(), $backups->root()];
+
+        foreach (glob($backups->root().'/*', GLOB_ONLYDIR) ?: [] as $directory) {
+            $roots[] = $directory;
+        }
+
+        $rows = [];
+
+        foreach (array_unique($roots) as $root) {
+            $pattern = rtrim(str_replace(chr(92), '/', $root), '/').'/'.BackupManager::STAGING_PREFIX.'*';
+
+            foreach (glob($pattern, GLOB_ONLYDIR) ?: [] as $path) {
+                $rows[] = ['path' => str_replace(chr(92), '/', $path), 'removed' => false];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array{path: string, removed: bool}>  $rows
+     * @return list<array{path: string, removed: bool}>
+     */
+    private function removeStrayStaging(array $rows): array
+    {
+        return array_map(static function (array $row): array {
+            File::deleteDirectory($row['path']);
+
+            $row['removed'] = ! File::isDirectory($row['path']);
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * @param  list<array{path: string, removed: bool}>  $rows
+     */
+    private function renderStrayStaging(array $rows, bool $fixing): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->components->info('Staging directories left behind by an interrupted run:');
+
+        foreach ($rows as $row) {
+            $this->components->twoColumnDetail(
+                $row['path'],
+                $row['removed'] ? '<fg=green>removed</>' : '<fg=gray>safe to delete</>',
+            );
+        }
+
+        if (! $fixing) {
+            $this->components->bulletList([
+                'They hold nothing you need - modsx:doctor --fix removes them.',
+            ]);
+        }
     }
 }

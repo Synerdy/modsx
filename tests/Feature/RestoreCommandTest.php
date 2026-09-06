@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\File;
 use Modsx\BackupManager;
 use Modsx\BackupRepository;
+use Modsx\Exceptions\ModsxException;
 use Modsx\ModuleLocator;
 
 beforeEach(function () {
@@ -115,4 +116,38 @@ it('keeps what it removed in the backup the command takes first', function () {
     expect(File::exists($this->root.'/resources/views/modsx-blog/extra.blade.php'))->toBeFalse()
         ->and(File::get($this->root.'/modsx-backups/Blog/0002/resources/views/modsx-blog/extra.blade.php'))
         ->toBe('a whole day of work');
+});
+
+it('refuses to restore over a file something has open, and changes nothing', function () {
+    // Not a limitation this package can engineer away: on Windows an open file
+    // cannot be replaced. What it can do is stop before touching anything and
+    // say why, rather than emptying the module of everything except the file
+    // nobody could overwrite.
+    app(BackupManager::class)->backup('Blog');
+
+    File::put($this->root.'/resources/views/modsx-blog/index.blade.php', 'v2');
+
+    $handle = fopen($this->root.'/resources/views/modsx-blog/index.blade.php', 'r');
+
+    try {
+        expect(fn () => app(BackupManager::class)->restore('Blog', '0001'))
+            ->toThrow(ModsxException::class, 'holding it open');
+    } finally {
+        fclose($handle);
+    }
+
+    expect(File::get($this->root.'/resources/views/modsx-blog/index.blade.php'))->toBe('v2')
+        ->and(File::get($this->root.'/app/Http/Controllers/ModsxBlog/PostController.php'))->toBe('v1');
+})->skip(PHP_OS_FAMILY !== 'Windows', 'Only Windows refuses to rename a directory something has open.');
+
+it('backs a module up while something has one of its files open', function () {
+    $handle = fopen($this->root.'/resources/views/modsx-blog/index.blade.php', 'r');
+
+    try {
+        app(BackupManager::class)->backup('Blog');
+    } finally {
+        fclose($handle);
+    }
+
+    expect(File::get($this->root.'/modsx-backups/Blog/0001/resources/views/modsx-blog/index.blade.php'))->toBe('v1');
 });

@@ -269,3 +269,38 @@ it('reports no stale state while the recorded version is still there', function 
 
     expect(json_decode(artisanOutput('modsx:doctor --json'), true)['stale_state'])->toBe([]);
 });
+
+it('finds a staging directory an interrupted run left behind', function () {
+    // Invisible to every other check: the name starts with a dot, and
+    // File::directories() does not return those.
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+    app(BackupManager::class)->backup('Blog');
+
+    File::ensureDirectoryExists($this->root.'/modsx-backups/Blog/'.BackupManager::STAGING_PREFIX.'abc123');
+    File::ensureDirectoryExists($this->root.'/'.BackupManager::STAGING_PREFIX.'def456');
+
+    $output = json_decode(artisanOutput('modsx:doctor --json'), true);
+
+    expect(array_column($output['stray_staging'], 'path'))
+        ->toHaveCount(2)
+        ->and($output['problems'])->toBe(0);
+});
+
+it('removes a leftover staging directory with --fix', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+    app(BackupManager::class)->backup('Blog');
+
+    $stray = $this->root.'/modsx-backups/Blog/'.BackupManager::STAGING_PREFIX.'abc123';
+    File::ensureDirectoryExists($stray);
+
+    artisanOutput('modsx:doctor --fix --json');
+
+    expect(File::isDirectory($stray))->toBeFalse();
+});
+
+it('reports no staging leftovers when a run finished cleanly', function () {
+    $this->makeModuleDirectory('resources/views/modsx-blog', 'index.blade.php', 'v1');
+    app(BackupManager::class)->backup('Blog');
+
+    expect(json_decode(artisanOutput('modsx:doctor --json'), true)['stray_staging'])->toBe([]);
+});
