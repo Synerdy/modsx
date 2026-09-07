@@ -108,10 +108,10 @@ If a run was interrupted before it could tidy up, `modsx:doctor` lists the stagi
 While Modsx is on `0.x`, a new minor does **not** arrive with a plain `composer update`. Ask for it by name:
 
 ```bash
-composer require --dev synerdy/modsx:^0.7
+composer require --dev synerdy/modsx:~0.7.0
 ```
 
-Composer treats anything below `1.0.0` with pre-release caution: there, `^0.6.1` means `>=0.6.1 <0.7.0`, putting the minor where the major normally sits. So `composer update` stays on the minor you installed — by design, not by accident — and `composer why-not synerdy/modsx 0.7.0` will tell you as much. Requiring the new minor rewrites the constraint and updates in one step.
+Composer treats anything below `1.0.0` with pre-release caution: `^0.6.1` means `>=0.6.1 <0.7.0`, putting the minor where the major normally sits. `~0.7.0` says the same thing without a character PowerShell eats — see the note below. So `composer update` stays on the minor you installed — by design, not by accident — and `composer why-not synerdy/modsx 0.7.0` will tell you as much. Requiring the new minor rewrites the constraint and updates in one step.
 
 Worth reading the [changelog](https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md) first: on `0.x` a minor is allowed to carry a breaking change, and they are called out there when it does.
 
@@ -120,10 +120,21 @@ Worth reading the [changelog](https://github.com/Synerdy/modsx/blob/master/CHANG
 The commands marked **1.0** in the table below are not in `0.7.0`. They are in a prerelease, which Composer will not install unless you say so:
 
 ```bash
-composer require --dev synerdy/modsx:^1.0@beta        # the newest 1.0 prerelease
+composer require --dev "synerdy/modsx:~1.0@beta"      # the newest 1.0 prerelease
 ```
 
-`@beta` lifts the stability filter for this package alone — there is no need to touch `minimum-stability` — and `^1.0` keeps you on the newest prerelease as they come out, so a later `composer update synerdy/modsx` picks up the next one.
+`@beta` lifts the stability filter for this package alone — there is no need to touch `minimum-stability` — and `~1.0` means `>=1.0 <2.0`, so it keeps you on the newest prerelease as they come out and a later `composer update synerdy/modsx` picks up the next one.
+
+**Written with a tilde on purpose, here and everywhere else on this page.** `^1.0@beta` means exactly the same thing to Composer, but PowerShell removes a `^` from an argument whether it is quoted or not, and Composer then sees `1.0@beta` and refuses it:
+
+```
+Root composer.json requires synerdy/modsx 1.0@beta (exact version match) ...
+but it does not match the constraint.
+```
+
+The tilde has no such problem in any shell.
+
+Worse is what a caret does when the result still resolves: `composer require --dev synerdy/modsx:^0.7` writes **`0.7`** into `composer.json`, an exact pin rather than a range, and nothing says so. `~0.7.0` means what `^0.7` meant and survives the shell. If you want a caret on Windows, put the constraint in `composer.json` by hand, where no shell touches it.
 
 Pin an exact prerelease instead if you want to stay on the one you tested against:
 
@@ -136,7 +147,7 @@ The newest prerelease is **`1.0.0-beta.4`**. Every one is listed on the [release
 A plain `composer require synerdy/modsx` still resolves to the newest **stable** release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:
 
 ```bash
-composer require --dev synerdy/modsx:^0.7
+composer require --dev synerdy/modsx:~0.7.0
 ```
 
 It is a beta because two things it writes — `modsx-state.json` and `_snapshots/*.json` — have never been used outside its own tests. If either turns out to need a different shape, changing it now costs nothing; after `1.0.0` it costs a migration path or a major version. Treat the backup tree it writes as something you may be asked to delete and recreate.

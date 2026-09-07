@@ -5,6 +5,27 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The documented install command did not work on Windows.** PowerShell strips
+  a `^` from an argument whether it is quoted or not, so
+  `composer require --dev synerdy/modsx:^1.0@beta` reached Composer as
+  `1.0@beta` and was refused as an exact version that does not exist. Reported
+  from a real terminal, having been written into the README by someone who had
+  watched the same thing happen while testing and documented the broken form
+  anyway.
+
+  Every shell command on the page now uses a tilde. `~1.0@beta` is the same
+  range as `^1.0@beta`, and `~0.7.0` the same as `^0.7`.
+
+  The quiet half was worse than the loud one. `composer require --dev
+  synerdy/modsx:^0.7` succeeds on PowerShell and writes `0.7` into
+  composer.json - an exact pin where a range was meant, with nothing to say so.
+  Measured by reading composer.json back, not inferred from the resolver's
+  output, which looked correct.
+
 ## [1.0.0-beta.4] - 2026-09-07
 
 ### Added

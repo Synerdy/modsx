@@ -235,21 +235,27 @@ export default defineConfig({
 <p>If a run was interrupted before it could tidy up, <code>modsx:doctor</code> lists the staging directories left behind and <code>modsx:doctor --fix</code> removes them. They are named <code>.modsx-tmp-*</code> and hold nothing you need.</p>
 <h3 id="upgrading">Upgrading</h3>
 <p>While Modsx is on <code>0.x</code>, a new minor does <strong>not</strong> arrive with a plain <code>composer update</code>. Ask for it by name:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
+<pre><code class="language-bash">composer require --dev synerdy/modsx:~0.7.0
 </code></pre>
-<p>Composer treats anything below <code>1.0.0</code> with pre-release caution: there, <code>^0.6.1</code> means <code>&gt;=0.6.1 &lt;0.7.0</code>, putting the minor where the major normally sits. So <code>composer update</code> stays on the minor you installed — by design, not by accident — and <code>composer why-not synerdy/modsx 0.7.0</code> will tell you as much. Requiring the new minor rewrites the constraint and updates in one step.</p>
+<p>Composer treats anything below <code>1.0.0</code> with pre-release caution: <code>^0.6.1</code> means <code>&gt;=0.6.1 &lt;0.7.0</code>, putting the minor where the major normally sits. <code>~0.7.0</code> says the same thing without a character PowerShell eats — see the note below. So <code>composer update</code> stays on the minor you installed — by design, not by accident — and <code>composer why-not synerdy/modsx 0.7.0</code> will tell you as much. Requiring the new minor rewrites the constraint and updates in one step.</p>
 <p>Worth reading the <a href="https://github.com/Synerdy/modsx/blob/master/CHANGELOG.md">changelog</a> first: on <code>0.x</code> a minor is allowed to carry a breaking change, and they are called out there when it does.</p>
 <h4 id="trying-the-10-beta">Trying the 1.0 beta</h4>
 <p>The commands marked <strong>1.0</strong> in the table below are not in <code>0.7.0</code>. They are in a prerelease, which Composer will not install unless you say so:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:^1.0@beta        # the newest 1.0 prerelease
+<pre><code class="language-bash">composer require --dev &quot;synerdy/modsx:~1.0@beta&quot;      # the newest 1.0 prerelease
 </code></pre>
-<p><code>@beta</code> lifts the stability filter for this package alone — there is no need to touch <code>minimum-stability</code> — and <code>^1.0</code> keeps you on the newest prerelease as they come out, so a later <code>composer update synerdy/modsx</code> picks up the next one.</p>
+<p><code>@beta</code> lifts the stability filter for this package alone — there is no need to touch <code>minimum-stability</code> — and <code>~1.0</code> means <code>&gt;=1.0 &lt;2.0</code>, so it keeps you on the newest prerelease as they come out and a later <code>composer update synerdy/modsx</code> picks up the next one.</p>
+<p><strong>Written with a tilde on purpose, here and everywhere else on this page.</strong> <code>^1.0@beta</code> means exactly the same thing to Composer, but PowerShell removes a <code>^</code> from an argument whether it is quoted or not, and Composer then sees <code>1.0@beta</code> and refuses it:</p>
+<pre><code>Root composer.json requires synerdy/modsx 1.0@beta (exact version match) ...
+but it does not match the constraint.
+</code></pre>
+<p>The tilde has no such problem in any shell.</p>
+<p>Worse is what a caret does when the result still resolves: <code>composer require --dev synerdy/modsx:^0.7</code> writes <strong><code>0.7</code></strong> into <code>composer.json</code>, an exact pin rather than a range, and nothing says so. <code>~0.7.0</code> means what <code>^0.7</code> meant and survives the shell. If you want a caret on Windows, put the constraint in <code>composer.json</code> by hand, where no shell touches it.</p>
 <p>Pin an exact prerelease instead if you want to stay on the one you tested against:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.4     # this exact beta
 </code></pre>
 <p>The newest prerelease is <strong><code>1.0.0-beta.4</code></strong>. Every one is listed on the <a href="https://github.com/Synerdy/modsx/releases">releases page</a>, with what changed in each.</p>
 <p>A plain <code>composer require synerdy/modsx</code> still resolves to the newest <strong>stable</strong> release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:^0.7
+<pre><code class="language-bash">composer require --dev synerdy/modsx:~0.7.0
 </code></pre>
 <p>It is a beta because two things it writes — <code>modsx-state.json</code> and <code>_snapshots/*.json</code> — have never been used outside its own tests. If either turns out to need a different shape, changing it now costs nothing; after <code>1.0.0</code> it costs a migration path or a major version. Treat the backup tree it writes as something you may be asked to delete and recreate.</p>
 <hr />
