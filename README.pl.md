@@ -139,10 +139,10 @@ Gorsze jest to, co daszek robi, gdy wynik mimo wszystko się rozwiąże: `compos
 Przypnij konkretne wydanie, jeśli wolisz zostać przy tym, na którym testowałeś:
 
 ```bash
-composer require --dev synerdy/modsx:1.0.0-beta.4     # dokładnie ta beta
+composer require --dev synerdy/modsx:1.0.0-beta.5     # dokładnie ta beta
 ```
 
-Najnowsza przedpremiera to **`1.0.0-beta.4`**. Wszystkie są wypisane na [stronie wydań](https://github.com/Synerdy/modsx/releases), razem z tym, co się w każdej zmieniło.
+Najnowsza przedpremiera to **`1.0.0-beta.5`**. Wszystkie są wypisane na [stronie wydań](https://github.com/Synerdy/modsx/releases), razem z tym, co się w każdej zmieniło.
 
 Zwykłe `composer require synerdy/modsx` nadal wybierze najnowsze wydanie **stabilne**, więc nikt nie dostanie bety przypadkiem. Powrót to ta sama komenda ze stabilnym ograniczeniem:
 
@@ -328,7 +328,7 @@ Uruchom dowolną komendę bez argumentów, a zapyta Cię o resztę — z listą 
 | `modsx:snapshotprune` | **1.0** &nbsp; Usunięcie starych snapshotów, zachowując najnowsze |
 | `modsx:doctor` | Szuka problemów z nazwami i osieroconych backupów |
 
-Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.4` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
+Komendy oznaczone **1.0** są w wydaniu przedpremierowym `1.0.0-beta.5` i nie ma ich w bieżącym wydaniu stabilnym — patrz [Wypróbowanie bety 1.0](#wypróbowanie-bety-10).
 
 ### Opcje wspólne dla komend
 

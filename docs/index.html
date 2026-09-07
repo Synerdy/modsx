@@ -251,9 +251,9 @@ but it does not match the constraint.
 <p>The tilde has no such problem in any shell.</p>
 <p>Worse is what a caret does when the result still resolves: <code>composer require --dev synerdy/modsx:^0.7</code> writes <strong><code>0.7</code></strong> into <code>composer.json</code>, an exact pin rather than a range, and nothing says so. <code>~0.7.0</code> means what <code>^0.7</code> meant and survives the shell. If you want a caret on Windows, put the constraint in <code>composer.json</code> by hand, where no shell touches it.</p>
 <p>Pin an exact prerelease instead if you want to stay on the one you tested against:</p>
-<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.4     # this exact beta
+<pre><code class="language-bash">composer require --dev synerdy/modsx:1.0.0-beta.5     # this exact beta
 </code></pre>
-<p>The newest prerelease is <strong><code>1.0.0-beta.4</code></strong>. Every one is listed on the <a href="https://github.com/Synerdy/modsx/releases">releases page</a>, with what changed in each.</p>
+<p>The newest prerelease is <strong><code>1.0.0-beta.5</code></strong>. Every one is listed on the <a href="https://github.com/Synerdy/modsx/releases">releases page</a>, with what changed in each.</p>
 <p>A plain <code>composer require synerdy/modsx</code> still resolves to the newest <strong>stable</strong> release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:</p>
 <pre><code class="language-bash">composer require --dev synerdy/modsx:~0.7.0
 </code></pre>
@@ -606,7 +606,7 @@ resources/views/livewire/modsx-blog/post-list.blade.php
 </tr>
 </tbody>
 </table>
-<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.4</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
+<p>Commands marked <strong>1.0</strong> are in the <code>1.0.0-beta.5</code> prerelease and not in the current stable release — see <a href="#trying-the-10-beta">Trying the 1.0 beta</a>.</p>
 <h3 id="options-every-command-shares">Options every command shares</h3>
 <p>Three options mean the same thing wherever they appear.</p>
 <table>

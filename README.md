@@ -139,10 +139,10 @@ Worse is what a caret does when the result still resolves: `composer require --d
 Pin an exact prerelease instead if you want to stay on the one you tested against:
 
 ```bash
-composer require --dev synerdy/modsx:1.0.0-beta.4     # this exact beta
+composer require --dev synerdy/modsx:1.0.0-beta.5     # this exact beta
 ```
 
-The newest prerelease is **`1.0.0-beta.4`**. Every one is listed on the [releases page](https://github.com/Synerdy/modsx/releases), with what changed in each.
+The newest prerelease is **`1.0.0-beta.5`**. Every one is listed on the [releases page](https://github.com/Synerdy/modsx/releases), with what changed in each.
 
 A plain `composer require synerdy/modsx` still resolves to the newest **stable** release, so nobody gets a beta by accident. Going back is the same command with a stable constraint:
 
@@ -328,7 +328,7 @@ Run any command without arguments and it will prompt you, with a picker for exis
 | `modsx:snapshotprune` | **1.0** &nbsp; Remove old snapshots, keeping the newest |
 | `modsx:doctor` | Check for naming problems and orphaned backups |
 
-Commands marked **1.0** are in the `1.0.0-beta.4` prerelease and not in the current stable release — see [Trying the 1.0 beta](#trying-the-10-beta).
+Commands marked **1.0** are in the `1.0.0-beta.5` prerelease and not in the current stable release — see [Trying the 1.0 beta](#trying-the-10-beta).
 
 ### Options every command shares
 
